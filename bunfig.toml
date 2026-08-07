@@ -1,0 +1,3 @@
+# Always save exact versions to package.json (no ^ or ~ ranges) for `bun add`/`bun install`.
+[install]
+exact = true
