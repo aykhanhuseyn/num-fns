@@ -1,5 +1,5 @@
-import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants';
-import type { NumberFormatOptions, NumberParseOptions } from '../shared/types';
+import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants'
+import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 
 /**
  * Formats a number using Azerbaijani conventions by default: a space between
@@ -10,26 +10,26 @@ import type { NumberFormatOptions, NumberParseOptions } from '../shared/types';
  */
 export function formatNumber(value: number, options: NumberFormatOptions = {}): string {
   if (!Number.isFinite(value)) {
-    throw new RangeError(`formatNumber: value must be finite, received ${value}`);
+    throw new RangeError(`formatNumber: value must be finite, received ${value}`)
   }
 
   const {
     decimals,
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
-  } = options;
+  } = options
 
-  const isNegative = value < 0 && value !== 0;
-  const absolute = Math.abs(value);
-  const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals);
-  const [integerDigits, fractionDigits] = fixed.split('.');
+  const isNegative = value < 0 && value !== 0
+  const absolute = Math.abs(value)
+  const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals)
+  const [integerDigits, fractionDigits] = fixed.split('.')
 
-  const groupedInteger = groupDigits(integerDigits ?? '0', thousandsSeparator);
+  const groupedInteger = groupDigits(integerDigits ?? '0', thousandsSeparator)
   const result = fractionDigits
     ? `${groupedInteger}${decimalSeparator}${fractionDigits}`
-    : groupedInteger;
+    : groupedInteger
 
-  return isNegative ? `-${result}` : result;
+  return isNegative ? `-${result}` : result
 }
 
 /**
@@ -43,33 +43,31 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
   const {
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
-  } = options;
+  } = options
 
-  const trimmed = value.trim();
+  const trimmed = value.trim()
   if (trimmed === '') {
-    throw new SyntaxError('parseNumber: cannot parse an empty string');
+    throw new SyntaxError('parseNumber: cannot parse an empty string')
   }
 
-  const withoutThousands = removeAll(trimmed, thousandsSeparator);
+  const withoutThousands = removeAll(trimmed, thousandsSeparator)
   const normalized =
-    decimalSeparator === '.'
-      ? withoutThousands
-      : withoutThousands.split(decimalSeparator).join('.');
+    decimalSeparator === '.' ? withoutThousands : withoutThousands.split(decimalSeparator).join('.')
 
-  const numeric = Number(normalized);
+  const numeric = Number(normalized)
   if (Number.isNaN(numeric)) {
-    throw new SyntaxError(`parseNumber: unable to parse "${value}" as a number`);
+    throw new SyntaxError(`parseNumber: unable to parse "${value}" as a number`)
   }
 
-  return numeric;
+  return numeric
 }
 
 function groupDigits(digits: string, separator: string): string {
-  if (separator === '') return digits;
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+  if (separator === '') return digits
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, separator)
 }
 
 function removeAll(value: string, token: string): string {
-  if (token === '') return value;
-  return value.split(token).join('');
+  if (token === '') return value
+  return value.split(token).join('')
 }

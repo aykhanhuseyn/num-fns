@@ -1,6 +1,6 @@
-import { formatNumber, parseNumber } from '../number/format';
-import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants';
-import type { PercentageFormatOptions, PercentageParseOptions } from '../shared/types';
+import { formatNumber, parseNumber } from '../number/format'
+import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants'
+import type { PercentageFormatOptions, PercentageParseOptions } from '../shared/types'
 
 /**
  * Formats a number as a percentage string. By default the input is treated
@@ -18,15 +18,15 @@ export function formatPercentage(value: number, options: PercentageFormatOptions
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
     space = false,
     multiplyBy100 = false,
-  } = options;
+  } = options
 
-  const percentValue = multiplyBy100 ? value * 100 : value;
+  const percentValue = multiplyBy100 ? value * 100 : value
   const formattedNumber = formatNumber(percentValue, {
     decimals,
     thousandsSeparator,
     decimalSeparator,
-  });
-  return `${formattedNumber}${space ? ' ' : ''}%`;
+  })
+  return `${formattedNumber}${space ? ' ' : ''}%`
 }
 
 /**
@@ -42,9 +42,9 @@ export function parsePercentage(value: string, options: PercentageParseOptions =
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
     asRatio = false,
-  } = options;
+  } = options
 
-  const withoutPercent = value.split('%').join('').trim();
-  const numeric = parseNumber(withoutPercent, { thousandsSeparator, decimalSeparator });
-  return asRatio ? numeric / 100 : numeric;
+  const withoutPercent = value.split('%').join('').trim()
+  const numeric = parseNumber(withoutPercent, { thousandsSeparator, decimalSeparator })
+  return asRatio ? numeric / 100 : numeric
 }

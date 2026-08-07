@@ -25,10 +25,14 @@ import {
   fromRoman,
   toShortNotation,
   toLongNotation,
+  parseShortNotation,
+  parseLongNotation,
   toOrdinal,
+  ordinalToWords,
   withSuffix,
   formatMoney,
   parseMoney,
+  moneyToWords,
   formatPercentage,
   parsePercentage,
 } from 'az-number-utils';
@@ -44,12 +48,16 @@ fromRoman('MCMXCIV'); // 1994
 
 toShortNotation(2500000); // "2,5 mln"
 toLongNotation(1234567); // "1 milyon 234 min 567"
+parseShortNotation('2,5 mln'); // 2500000
+parseLongNotation('1 milyon 234 min 567'); // 1234567
 
 toOrdinal(3); // "3-cü"
+ordinalToWords(3); // "üçüncü"
 withSuffix(120, 'kg'); // "120 kg"
 
 formatMoney(1234.5); // "1 234,50 ₼"
 parseMoney('1 234,50 ₼'); // 1234.5
+moneyToWords(1234.5); // "min iki yüz otuz dörd manat əlli qəpik"
 
 formatPercentage(45.5, { decimals: 1 }); // "45,5%"
 parsePercentage('45,5%', { asRatio: true }); // 0.455

@@ -1,5 +1,5 @@
-import type { SuffixOptions } from '../shared/types';
-import { numberToWords } from './words';
+import type { SuffixOptions } from '../shared/types'
+import { numberToWords } from './words'
 
 /**
  * Maps the last vowel of an Azerbaijani number word to the correct ordinal
@@ -17,14 +17,18 @@ const VOWEL_TO_ORDINAL_SUFFIX: Record<string, string> = {
   u: 'cu',
   ö: 'cü',
   ü: 'cü',
-};
+}
 
 function lastVowel(word: string): string {
   for (let i = word.length - 1; i >= 0; i--) {
-    const char = word[i] as string;
-    if (char in VOWEL_TO_ORDINAL_SUFFIX) return char;
+    const char = word[i] as string
+    if (char in VOWEL_TO_ORDINAL_SUFFIX) return char
   }
-  throw new SyntaxError(`lastVowel: no Azerbaijani vowel found in "${word}"`);
+  throw new SyntaxError(`lastVowel: no Azerbaijani vowel found in "${word}"`)
+}
+
+function isVowel(char: string): boolean {
+  return char in VOWEL_TO_ORDINAL_SUFFIX
 }
 
 /**
@@ -40,12 +44,39 @@ export function getOrdinalSuffix(value: number): string {
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(
       `getOrdinalSuffix: value must be a non-negative integer, received ${value}`,
-    );
+    )
   }
 
-  const words = numberToWords(value);
-  const lastWord = words.split(' ').pop() as string;
-  return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string;
+  const words = numberToWords(value)
+  const lastWord = words.split(' ').pop() as string
+  return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
+}
+
+/**
+ * Spells out a non-negative integer as a full Azerbaijani ordinal word.
+ * Unlike {@link toOrdinal}, which only appends the short digit suffix
+ * (`"5-ci"`), this replaces the last word of the cardinal reading (see
+ * {@link numberToWords}) with its ordinal form — the short suffix from
+ * {@link getOrdinalSuffix} preceded by a buffer `"n"`, plus a connecting
+ * harmony vowel when the word ends in a consonant.
+ *
+ * @example
+ * ordinalToWords(3); // "üçüncü"
+ * ordinalToWords(21); // "iyirmi birinci"
+ * ordinalToWords(100); // "yüzüncü"
+ */
+export function ordinalToWords(value: number): string {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new RangeError(`ordinalToWords: value must be a non-negative integer, received ${value}`)
+  }
+
+  const words = numberToWords(value).split(' ')
+  const lastWord = words.pop() as string
+  const lastChar = lastWord[lastWord.length - 1] as string
+  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
+  const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
+
+  return [...words, `${lastWord}${fullSuffix}`].join(' ')
 }
 
 /**
@@ -57,7 +88,7 @@ export function getOrdinalSuffix(value: number): string {
  * toOrdinal(21); // "21-ci"
  */
 export function toOrdinal(value: number, separator = '-'): string {
-  return `${value}${separator}${getOrdinalSuffix(value)}`;
+  return `${value}${separator}${getOrdinalSuffix(value)}`
 }
 
 /**
@@ -72,6 +103,6 @@ export function withSuffix(
   suffix: string,
   options: SuffixOptions = {},
 ): string {
-  const { separator = ' ' } = options;
-  return `${value}${separator}${suffix}`;
+  const { separator = ' ' } = options
+  return `${value}${separator}${suffix}`
 }

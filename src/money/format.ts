@@ -1,10 +1,10 @@
-import { formatNumber, parseNumber } from '../number/format';
+import { formatNumber, parseNumber } from '../number/format'
 import {
   AZN_SYMBOL,
   DEFAULT_DECIMAL_SEPARATOR,
   DEFAULT_THOUSANDS_SEPARATOR,
-} from '../shared/constants';
-import type { MoneyFormatOptions, MoneyParseOptions } from '../shared/types';
+} from '../shared/constants'
+import type { MoneyFormatOptions, MoneyParseOptions } from '../shared/types'
 
 /**
  * Formats a monetary amount. Defaults to the Azerbaijani manat (₼), two
@@ -21,12 +21,12 @@ export function formatMoney(value: number, options: MoneyFormatOptions = {}): st
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
     symbol = AZN_SYMBOL,
     symbolPosition = 'after',
-  } = options;
+  } = options
 
-  const formattedNumber = formatNumber(value, { decimals, thousandsSeparator, decimalSeparator });
+  const formattedNumber = formatNumber(value, { decimals, thousandsSeparator, decimalSeparator })
   return symbolPosition === 'before'
     ? `${symbol} ${formattedNumber}`
-    : `${formattedNumber} ${symbol}`;
+    : `${formattedNumber} ${symbol}`
 }
 
 /**
@@ -41,8 +41,8 @@ export function parseMoney(value: string, options: MoneyParseOptions = {}): numb
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
     symbol = AZN_SYMBOL,
-  } = options;
+  } = options
 
-  const withoutSymbol = value.split(symbol).join('').trim();
-  return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator });
+  const withoutSymbol = value.split(symbol).join('').trim()
+  return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator })
 }
