@@ -1,7 +1,7 @@
 {
-  "name": "az-number-utils",
+  "name": "num-fns",
   "version": "0.1.0",
-  "description": "Azerbaijani-focused utilities for parsing and formatting numbers, money, and percentages — number-to-words, roman numerals, short/long notation, and ordinal suffixes.",
+  "description": "Modern internationalized number utility library for JavaScript — format and parse numbers, money and percentages, spell numbers out in words, ordinals, short/long notation and roman numerals. Like date-fns, but for numbers.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -24,12 +24,12 @@
   "packageManager": "bun@1.3.14",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aykhanhuseyn/az-number-utils.git"
+    "url": "git+https://github.com/aykhanhuseyn/num-fns.git"
   },
   "bugs": {
-    "url": "https://github.com/aykhanhuseyn/az-number-utils/issues"
+    "url": "https://github.com/aykhanhuseyn/num-fns/issues"
   },
-  "homepage": "https://github.com/aykhanhuseyn/az-number-utils#readme",
+  "homepage": "https://github.com/aykhanhuseyn/num-fns#readme",
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
@@ -44,20 +44,30 @@
     "prepublishOnly": "bun run typecheck && bun run lint && bun run test && bun run build"
   },
   "keywords": [
-    "azerbaijani",
-    "azerbaijan",
     "number",
+    "numbers",
+    "i18n",
+    "internationalization",
+    "l10n",
+    "localization",
+    "locale",
     "money",
-    "manat",
     "currency",
     "percentage",
-    "roman-numerals",
     "number-to-words",
+    "spell-number",
+    "ordinal",
+    "roman-numerals",
+    "notation",
     "formatting",
     "parsing",
-    "az"
+    "typescript",
+    "az",
+    "en",
+    "ru",
+    "es"
   ],
-  "author": "Aykhan <aykhanrh@google.com>",
+  "author": "Aykhan Huseynli <aykhanrh@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "2.5.7",

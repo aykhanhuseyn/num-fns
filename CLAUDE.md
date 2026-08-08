@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## What this package is
+
+`num-fns` is an internationalized number utility library — `date-fns`, but for numbers only. It formats and parses numbers, money and percentages, spells numbers out in words, and handles ordinals, short/long notation and roman numerals.
+
+It was renamed from `az-number-utils`, and the code still reflects that origin: **every module today is hardcoded Azerbaijani**. The target architecture is `date-fns`-style locale objects imported from `num-fns/locale` and passed per call (`numberToWords(1234, { locale: ru })`), with `az`, `en`, `ru` and `es` as the launch locales. That refactor has not happened yet — see `todo.md` §1 for the plan and the open design decisions. When adding a feature, prefer a shape that will survive the locale refactor over one that bakes in more Azerbaijani.
+
+Note the pre-existing `locale: 'az' | 'en'` string option on `toShortNotation` — it is unrelated to the planned locale objects and will be folded into them.
+
 ## Commands
 
 Package manager is Bun.
@@ -37,13 +45,15 @@ Each unit (number, money, percentage) has its own directory under `src/`, with a
 - `src/number/notation.ts` — `toShortNotation` (scaled abbreviation, e.g. `"2,5 mln"` or, with `locale: 'en'`, `"2.5M"`) and `toLongNotation` (digit groups paired with scale words, e.g. `"1 milyon 234 min 567"`). Distinct from `numberToWords`: notation functions keep digits and only localize the scale word, they don't spell every number out.
 - `src/number/roman.ts` — standard `toRoman` / `fromRoman`, integers 1–3999 only, self-contained (no dependency on the words/notation modules).
 - `src/money/format.ts`, `src/percentage/format.ts` — thin wrappers around `formatNumber`/`parseNumber` that add a currency symbol or `%` sign. Money defaults to the manat sign `₼` (`AZN_SYMBOL` in `src/shared/constants.ts`).
-- `src/shared/types.ts` / `src/shared/constants.ts` — shared option interfaces (each domain's options interface extends `NumberFormatOptions`) and the two Azerbaijani-locale defaults every formatter falls back to.
+- `src/shared/types.ts` / `src/shared/constants.ts` — shared option interfaces (each domain's options interface extends `NumberFormatOptions`) and the two Azerbaijani-locale defaults every formatter falls back to. These constants are the seam the locale refactor will cut along: they become properties of a `Locale` object rather than module-level defaults.
 
 All public functions validate input up front and throw (`RangeError`/`TypeError`/`SyntaxError`) rather than returning `NaN`/`undefined` on bad input (non-finite numbers, out-of-range roman numerals, unparseable strings).
 
 ### Build output
 
 `vite.config.ts` builds `src/index.ts` in library mode to both `dist/index.js` (ESM) and `dist/index.cjs` (CJS), targeting `es2018` for compatibility with older consumers, with `vite-plugin-dts` emitting per-module `.d.ts` files (not rolled up into one file — rollup-based type bundling pulls in `@microsoft/api-extractor`, which was unreliable in this environment, so `rollupTypes` is intentionally left off). `build.emptyOutDir` is set to `false`; the `dist/` directory is not cleaned before each build.
+
+Adding the `num-fns/locale` entry point will require a second Vite input and a matching `exports` entry in `package.json` — the export map currently declares only `.` and `./package.json`, so `import { ru } from 'num-fns/locale'` will not resolve until both are added.
 
 ### Testing conventions
 

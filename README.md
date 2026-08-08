@@ -1,20 +1,49 @@
-# az-number-utils
+# num-fns
 
-Azerbaijani-focused utilities for parsing and formatting numbers, money, and
-percentages: number-to-words, roman numerals, short/long notation, and
-ordinal suffixes. Written in TypeScript, built with Vite as dual ESM/CJS
-output with type declarations, so it works in both modern and older
-projects.
+Modern internationalized number utility library for JavaScript — like
+`date-fns`, but for numbers.
+
+Format and parse numbers, money and percentages; spell numbers out in words;
+ordinals, short/long notation and roman numerals. Written in TypeScript, built
+as dual ESM/CJS with type declarations, so it works in modern and older
+projects alike.
+
+> **Status: pre-release.** The package is currently Azerbaijani-only and is
+> being generalized into a multi-locale library. `en`, `ru` and `es` are on the
+> roadmap — see [`todo.md`](./todo.md). The locale API shown below is the target
+> design and is not implemented yet.
 
 ## Install
 
 ```sh
-bun add az-number-utils
+bun add num-fns
 # or
-npm install az-number-utils
+npm install num-fns
 ```
 
 ## Usage
+
+Functions are imported individually from the package root; locales are imported
+from `num-fns/locale` and passed in per call, so a bundler only ships the
+locales you actually use.
+
+```ts
+import { formatNumber, numberToWords, formatMoney } from 'num-fns';
+import { az, en, ru, es } from 'num-fns/locale';
+
+formatNumber(1234567.89, { locale: az, decimals: 2 }); // "1 234 567,89"
+formatNumber(1234567.89, { locale: en, decimals: 2 }); // "1,234,567.89"
+
+numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
+numberToWords(1234, { locale: en }); // "one thousand two hundred thirty-four"
+numberToWords(1234, { locale: ru }); // "одна тысяча двести тридцать четыре"
+numberToWords(1234, { locale: es }); // "mil doscientos treinta y cuatro"
+
+formatMoney(1234.5, { locale: az, currency: 'AZN' }); // "1 234,50 ₼"
+formatMoney(1234.5, { locale: en, currency: 'USD' }); // "$1,234.50"
+```
+
+### Full surface
 
 ```ts
 import {
@@ -35,8 +64,12 @@ import {
   moneyToWords,
   formatPercentage,
   parsePercentage,
-} from 'az-number-utils';
+} from 'num-fns';
+```
 
+Examples below use the Azerbaijani locale, the only one currently implemented:
+
+```ts
 formatNumber(1234567.89, { decimals: 2 }); // "1 234 567,89"
 parseNumber('1 234 567,89'); // 1234567.89
 
@@ -63,21 +96,40 @@ formatPercentage(45.5, { decimals: 1 }); // "45,5%"
 parsePercentage('45,5%', { asRatio: true }); // 0.455
 ```
 
-Every formatter accepts an options object for overriding separators,
-decimals, currency symbol, or locale — see the JSDoc on each function for
-details.
+Every formatter accepts an options object for overriding separators, decimals,
+currency, or locale — see the JSDoc on each function for details.
+
+Roman numerals are locale-independent and take no `locale` option.
+
+## Locale support
+
+| Locale | Code | Status |
+| --- | --- | --- |
+| Azerbaijani | `az` | Implemented |
+| English | `en` | Planned |
+| Russian | `ru` | Planned |
+| Spanish | `es` | Planned |
+
+Adding a locale means implementing one object against a shared conformance test
+suite. Contributions welcome — a locale-authoring guide is on the roadmap.
 
 ## Development
 
 This project uses Bun, TypeScript, and Vite.
 
 ```sh
-bun install        # install dependencies
+bun install         # install dependencies
 bun test            # run the test suite
-bun run typecheck    # type-check without emitting
-bun run lint         # lint with Biome
-bun run build        # build dist/ (ESM + CJS + .d.ts)
+bun run typecheck   # type-check without emitting
+bun run lint        # lint with Biome
+bun run build       # build dist/ (ESM + CJS + .d.ts)
 ```
+
+## History
+
+This package was previously published-in-progress as `az-number-utils`. It was
+renamed to `num-fns` when the scope widened from Azerbaijani-only to a general
+internationalized number library.
 
 ## License
 
