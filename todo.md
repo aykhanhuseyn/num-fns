@@ -13,7 +13,7 @@ list to pull from.
 - [x] `CLAUDE.md` architecture section updated.
 - [x] `bun.lock` workspace name.
 - [x] Git remote pointed at `github.com/aykhanhuseyn/num-fns`.
-- [ ] Rename the local directory `az-number-utils` → `num-fns` (must be done
+- [x] Rename the local directory `az-number-utils` → `num-fns` (must be done
       outside the editor session — the folder is mounted and can't rename itself).
 - [ ] Rename the GitHub repo `az-number-utils` → `num-fns` so the remote resolves.
 - [ ] Check `num-fns` availability on npm and reserve it.
@@ -24,7 +24,7 @@ Everything below blocks the rest of the i18n work. Current code hardcodes
 Azerbaijani words and separators; the goal is to lift all of that into locale
 objects, `date-fns` style.
 
-- [ ] Define the `Locale` interface in `src/locale/types.ts`. Minimum surface:
+- [x] Define the `Locale` interface in `src/locale/types.ts`. Minimum surface:
   - `code` — BCP 47 tag (`'az'`, `'en'`, `'ru'`, `'es'`).
   - `formatDefaults` — `{ thousandsSeparator, decimalSeparator }`.
   - `words` — `{ zero, ones, teens, tens, hundreds, scales, negative, and }`
