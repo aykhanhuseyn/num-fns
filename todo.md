@@ -38,8 +38,22 @@ objects, `date-fns` style.
       `notation`, `currency`.
 - [x] `src/locale/az.ts` — port the existing hardcoded Azerbaijani data over
       unchanged; this is the reference implementation and must not regress.
-- [ ] `src/locale/en.ts`, `src/locale/ru.ts`, `src/locale/es.ts`.
-- [ ] Thread a `locale` option through every public function; default to `az`
+- [x] `src/locale/en.ts`, `src/locale/ru.ts`, `src/locale/es.ts` — vocabulary,
+      `compose`, `ordinal`, `notation`, and `currency` for all three, plus a
+      `*.test.ts` per locale (`az.test.ts`'s structure, but hand-built
+      `WordChunk`s since none of these locales are wired into `numberToWords`
+      yet). `en.words.compose` is the default join-and-space-scale-words
+      pattern; `ru.words.compose` flips a trailing "один"/"два" to feminine
+      "одна"/"две" before "тысяча" only (million+ stays masculine); `es.words.compose`
+      special-cases standalone 100 to "cien" and apocopates "uno"/"veintiuno" to
+      "un"/"veintiún" before millón/millardo/billón, while "mil" drops "uno"
+      entirely like `az`'s "min". `es.ordinal.words` ordinalizes every token of
+      a compound number (not just the last), which is the one Spanish-specific
+      deviation from the "transform the last word" pattern the interface
+      otherwise assumes — see the doc comments in `locale/es.ts` for the
+      round-scale-multiple gap this leaves (e.g. "dos mil" -> "segundo
+      milésimo" instead of idiomatic "dosmilésimo").
+- [ ] Thread a `locale` option through every public function; default to `en`
       only if no locale is passed (see the "default locale" decision below).
 - [ ] `src/locale/index.ts` barrel re-exporting every locale.
 - [ ] Add a `./locale` subpath export to `package.json` and a second Vite entry
@@ -55,10 +69,11 @@ objects, `date-fns` style.
 
 ### Decisions to make before writing code
 
-- [ ] **Default locale.** `date-fns` defaults to `en-US`. Options: default to
-      `en` (conventional), default to `az` (current behavior, no breaking
-      change), or require an explicit locale (most honest, worst DX). Leaning
-      `en` as the library default, with `az` a one-line import.
+- [x] **Default locale.** Decided: `en`, per explicit direction from the
+      project owner (2026-08-09) — this is a breaking change from the current
+      implicit-`az` behavior, so it should land in the same change that
+      threads `locale` through every public function, not silently. `az`
+      remains a one-line import (`numberToWords(1234, { locale: az })`).
 - [ ] **Number formatting vs `Intl.NumberFormat`.** The platform already does
       grouping/decimal separators well. Decide whether `formatNumber` delegates
       to `Intl` when available (smaller bundle, correct for every locale) or
