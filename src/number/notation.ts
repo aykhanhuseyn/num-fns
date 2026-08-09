@@ -6,7 +6,8 @@ import type {
 import { parseNumber } from './format'
 import { SCALE_WORDS } from './words'
 
-const SHORT_SCALES_AZ: ReadonlyArray<readonly [number, string]> = [
+/** Short-scale magnitude/abbreviation pairs, largest first. Reused by `locale/az.ts`. */
+export const SHORT_SCALES_AZ: ReadonlyArray<readonly [number, string]> = [
   [1e12, 'trln'],
   [1e9, 'mlrd'],
   [1e6, 'mln'],

@@ -1,5 +1,18 @@
-const ONES = ['', 'bir', 'iki', 'üç', 'dörd', 'beş', 'altı', 'yeddi', 'səkkiz', 'doqquz']
-const TENS = ['', 'on', 'iyirmi', 'otuz', 'qırx', 'əlli', 'altmış', 'yetmiş', 'səksən', 'doxsan']
+/** Words for digits 1-9. Index `0` is unused so digits can index directly. Reused by `locale/az.ts`. */
+export const ONES = ['', 'bir', 'iki', 'üç', 'dörd', 'beş', 'altı', 'yeddi', 'səkkiz', 'doqquz']
+/** Words for the tens digit: 10, 20, ..., 90. Index `0` is unused. Reused by `locale/az.ts`. */
+export const TENS = [
+  '',
+  'on',
+  'iyirmi',
+  'otuz',
+  'qırx',
+  'əlli',
+  'altmış',
+  'yetmiş',
+  'səksən',
+  'doxsan',
+]
 
 /**
  * Scale words indexed by group-of-three-digits position, read from the
@@ -7,11 +20,17 @@ const TENS = ['', 'on', 'iyirmi', 'otuz', 'qırx', 'əlli', 'altmış', 'yetmiş
  */
 export const SCALE_WORDS = ['', 'min', 'milyon', 'milyard', 'trilyon']
 
-const ZERO_WORD = 'sıfır'
+/** Word for `0`. Reused by `locale/az.ts`. */
+export const ZERO_WORD = 'sıfır'
 
 /** Word prefixed to the spelled-out form of a negative number. */
 export const NEGATIVE_WORD = 'mənfi'
-const DECIMAL_WORD = 'tam'
+
+/** Connector joining the integer and fractional part when spelling decimals. Reused by `locale/az.ts`. */
+export const DECIMAL_WORD = 'tam'
+
+/** Hundreds-digit multiplier noun, reused for every digit 1-9. Reused by `locale/az.ts`. */
+export const HUNDRED_WORD = 'yüz'
 
 const MAX_SUPPORTED_INTEGER = 1000 ** SCALE_WORDS.length - 1
 
@@ -94,7 +113,7 @@ function threeDigitGroupToWords(value: number): string {
   const parts: string[] = []
   if (hundreds > 0) {
     if (hundreds > 1) parts.push(ONES[hundreds] as string)
-    parts.push('yüz')
+    parts.push(HUNDRED_WORD)
   }
   if (tens > 0) parts.push(TENS[tens] as string)
   if (ones > 0) parts.push(ONES[ones] as string)

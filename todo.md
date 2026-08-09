@@ -36,7 +36,7 @@ objects, `date-fns` style.
   - `notation` — short scale abbreviations (`mln` / `M` / `млн` / `M`) and long
     scale words.
   - `currency` — default currency code, major/minor unit words with plural forms.
-- [ ] `src/locale/az.ts` — port the existing hardcoded Azerbaijani data over
+- [x] `src/locale/az.ts` — port the existing hardcoded Azerbaijani data over
       unchanged; this is the reference implementation and must not regress.
 - [ ] `src/locale/en.ts`, `src/locale/ru.ts`, `src/locale/es.ts`.
 - [ ] Thread a `locale` option through every public function; default to `az`

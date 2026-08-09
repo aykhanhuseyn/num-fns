@@ -53,12 +53,33 @@ export function getOrdinalSuffix(value: number): string {
 }
 
 /**
+ * Transforms an already-computed cardinal reading (see {@link numberToWords})
+ * into its full ordinal form — the short suffix from {@link getOrdinalSuffix}
+ * preceded by a buffer `"n"`, plus a connecting harmony vowel when the word
+ * ends in a consonant. Split out from {@link ordinalToWords} so `locale/az.ts`
+ * can reuse it via `Locale.ordinal.words`, which receives the cardinal words
+ * instead of recomputing them.
+ *
+ * @example
+ * cardinalToOrdinalWords('üç'); // "üçüncü"
+ * cardinalToOrdinalWords('iyirmi bir'); // "iyirmi birinci"
+ * cardinalToOrdinalWords('yüz'); // "yüzüncü"
+ */
+export function cardinalToOrdinalWords(cardinalWords: string): string {
+  const words = cardinalWords.split(' ')
+  const lastWord = words.pop() as string
+  const lastChar = lastWord[lastWord.length - 1] as string
+  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
+  const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
+
+  return [...words, `${lastWord}${fullSuffix}`].join(' ')
+}
+
+/**
  * Spells out a non-negative integer as a full Azerbaijani ordinal word.
  * Unlike {@link toOrdinal}, which only appends the short digit suffix
  * (`"5-ci"`), this replaces the last word of the cardinal reading (see
- * {@link numberToWords}) with its ordinal form — the short suffix from
- * {@link getOrdinalSuffix} preceded by a buffer `"n"`, plus a connecting
- * harmony vowel when the word ends in a consonant.
+ * {@link numberToWords}) with its ordinal form via {@link cardinalToOrdinalWords}.
  *
  * @example
  * ordinalToWords(3); // "üçüncü"
@@ -70,13 +91,7 @@ export function ordinalToWords(value: number): string {
     throw new RangeError(`ordinalToWords: value must be a non-negative integer, received ${value}`)
   }
 
-  const words = numberToWords(value).split(' ')
-  const lastWord = words.pop() as string
-  const lastChar = lastWord[lastWord.length - 1] as string
-  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
-  const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
-
-  return [...words, `${lastWord}${fullSuffix}`].join(' ')
+  return cardinalToOrdinalWords(numberToWords(value))
 }
 
 /**
