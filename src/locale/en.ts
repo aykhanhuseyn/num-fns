@@ -17,6 +17,9 @@ const ORDINAL_IRREGULARS: Readonly<Record<string, string>> = {
   twelve: 'twelfth',
 }
 
+/** Splits on whitespace/hyphen while keeping the separator, e.g. "twenty-one" -> ["twenty", "-", "one"]. */
+const WORD_SPLIT_REGEX = /([\s-])/
+
 function ordinalizeWord(word: string): string {
   const irregular = ORDINAL_IRREGULARS[word]
   if (irregular) return irregular
@@ -89,7 +92,7 @@ export const en: Locale = {
     // that word is hyphen-joined ("twenty-one" -> "twenty-first") or
     // space-joined ("one hundred one" -> "one hundred first").
     words: (_value: number, cardinalWords: string): string => {
-      const tokens = cardinalWords.split(/([\s-])/)
+      const tokens = cardinalWords.split(WORD_SPLIT_REGEX)
       const lastIndex = tokens.length - 1
       tokens[lastIndex] = ordinalizeWord(tokens[lastIndex] as string)
       return tokens.join('')

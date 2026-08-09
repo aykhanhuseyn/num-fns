@@ -250,6 +250,19 @@ New domain from the vision doc.
 - [ ] Scaffolding script(s) under `scripts/` for "add a new function" and "add
       a new locale" — generates the file + colocated test + index.ts export,
       so `CONTRIBUTING.md` (§8) can point at a command instead of prose.
+- [x] Fix all violations surfaced by the tightened `biome.json` ruleset
+      (2026-08-09: added `noExcessiveCognitiveComplexity`, `noUnusedImports`,
+      `useTopLevelRegex`, `useExplicitLengthCheck`, `useConsistentArrayType`
+      (the actual v2 rule name — `useShorthandArrayType` doesn't exist in
+      Biome 2.5.7, config would have failed to load), `noSkippedTests`, and
+      bumped `noUnusedVariables`/`noUnusedFunctionParameters` to error).
+      `biome check .` only flagged `useTopLevelRegex` (11 hits, none of the
+      other new rules fired) — hoisted the inline regexes in `locale/en.ts`,
+      `locale/es.ts`, `locale/ru.ts`, and `number/notation.ts` to module-level
+      constants. `biome check`, `tsc --noEmit`, and `bun test` (164 pass) are
+      all clean; `bun run build` wasn't re-verified in this pass (sandbox's
+      installed `rolldown`/`vite` native bindings are for a different
+      platform) — worth a local `bun run build` sanity check.
 
 ## 7. CI/CD & release
 

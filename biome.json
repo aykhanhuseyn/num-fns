@@ -25,11 +25,24 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "complexity": {
+        "noExcessiveCognitiveComplexity": "error"
+      },
       "correctness": {
-        "noUnusedVariables": "warn"
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUnusedFunctionParameters": "error"
+      },
+      "performance": {
+        "useTopLevelRegex": "error"
       },
       "style": {
-        "useImportType": "warn"
+        "useImportType": "warn",
+        "useExplicitLengthCheck": "error",
+        "useConsistentArrayType": "error"
+      },
+      "suspicious": {
+        "noSkippedTests": "error"
       }
     }
   }

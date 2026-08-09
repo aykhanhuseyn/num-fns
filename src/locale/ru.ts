@@ -76,6 +76,13 @@ const ORDINAL_WORDS: Readonly<Record<string, string>> = {
   триллионов: 'триллионный',
 }
 
+/** Matches a trailing "один" (agreeing form needed before feminine "тысяча"). */
+const ODIN_REGEX = /(^|\s)один$/
+/** Matches a trailing "два" (agreeing form needed before feminine "тысяча"). */
+const DVA_REGEX = /(^|\s)два$/
+/** Splits a spelled-out cardinal into tokens to isolate the last word for ordinalization. */
+const WHITESPACE_REGEX = /\s+/
+
 /** Best-effort fallback for a word not in {@link ORDINAL_WORDS}. */
 function deriveOrdinalWord(word: string): string {
   if (word.endsWith('ь') || word.endsWith('о')) return `${word.slice(0, -1)}ый`
@@ -153,7 +160,7 @@ export const ru: Locale = {
             // "тысяча" is feminine: a trailing "один"/"два" must agree
             // ("одна тысяча", "двадцать две тысячи"), unlike "миллион" and
             // above which stay masculine ("двадцать один миллион").
-            words = words.replace(/(^|\s)один$/, '$1одна').replace(/(^|\s)два$/, '$1две')
+            words = words.replace(ODIN_REGEX, '$1одна').replace(DVA_REGEX, '$1две')
           }
           return chunk.scaleWord ? `${words} ${chunk.scaleWord}` : words
         })
@@ -173,7 +180,7 @@ export const ru: Locale = {
       return 'й'
     },
     words: (_value: number, cardinalWords: string): string => {
-      const tokens = cardinalWords.toLowerCase().split(/\s+/)
+      const tokens = cardinalWords.toLowerCase().split(WHITESPACE_REGEX)
       const lastWord = tokens.pop() as string
       const ordinalLastWord = ORDINAL_WORDS[lastWord] ?? deriveOrdinalWord(lastWord)
       return [...tokens, ordinalLastWord].join(' ')

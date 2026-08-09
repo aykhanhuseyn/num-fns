@@ -53,9 +53,14 @@ export function toShortNotation(value: number, options: ShortNotationOptions = {
   return `${sign}${absolute.toFixed(0)}`
 }
 
+/** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */
+const TRAILING_ZEROS_REGEX = /0+$/
+/** Matches a decimal point left dangling after trailing zeros are stripped, e.g. "2." */
+const TRAILING_DOT_REGEX = /\.$/
+
 function trimTrailingZeros(fixed: string): string {
   if (!fixed.includes('.')) return fixed
-  return fixed.replace(/0+$/, '').replace(/\.$/, '')
+  return fixed.replace(TRAILING_ZEROS_REGEX, '').replace(TRAILING_DOT_REGEX, '')
 }
 
 /**
@@ -156,6 +161,11 @@ export function toLongNotation(value: number, options: LongNotationOptions = {})
  * @example
  * parseLongNotation("1 milyon 234 min 567"); // 1234567
  */
+/** Splits a long-notation string into its digit-group and scale-word tokens. */
+const WHITESPACE_REGEX = /\s+/
+/** Matches a token that is purely digits, i.e. a digit-group count. */
+const DIGITS_ONLY_REGEX = /^\d+$/
+
 export function parseLongNotation(value: string, options: LongNotationOptions = {}): number {
   const { groupSeparator = ' ' } = options
 
@@ -170,13 +180,13 @@ export function parseLongNotation(value: string, options: LongNotationOptions = 
   if (body === '0') return 0
 
   const normalized = groupSeparator === '' ? body : body.split(groupSeparator).join(' ')
-  const tokens = normalized.split(/\s+/).filter(Boolean)
+  const tokens = normalized.split(WHITESPACE_REGEX).filter(Boolean)
 
   let total = 0
   let i = 0
   while (i < tokens.length) {
     const countToken = tokens[i] as string
-    if (!/^\d+$/.test(countToken)) {
+    if (!DIGITS_ONLY_REGEX.test(countToken)) {
       throw new SyntaxError(`parseLongNotation: unable to parse "${value}" as a number`)
     }
     const count = Number(countToken)

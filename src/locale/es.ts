@@ -60,6 +60,13 @@ const ORDINAL_WORDS: Readonly<Record<string, string>> = {
   billones: 'billonésimo',
 }
 
+/** Matches a trailing "veintiuno" so it can apocopate to "veintiún" before a scale noun. */
+const VEINTIUNO_SUFFIX_REGEX = /veintiuno$/
+/** Matches a trailing "uno" so it can apocopate to "un" before a scale noun. */
+const UNO_SUFFIX_REGEX = /uno$/
+/** Splits a spelled-out cardinal into tokens for per-token ordinalization. */
+const WHITESPACE_REGEX = /\s+/
+
 /**
  * Spanish locale (`todo.md` §1/§2). Two composition irregularities live in
  * `words.compose`: the "cien"/"ciento" split (100 alone is "cien", but
@@ -144,8 +151,8 @@ export const es: Locale = {
           // "uno"/"veintiuno" apocopate to "un"/"veintiún" before a masculine
           // scale noun ("un millón", "veintiún millones", "treinta y un millones").
           const apocopated = words.endsWith('veintiuno')
-            ? words.replace(/veintiuno$/, 'veintiún')
-            : words.replace(/uno$/, 'un')
+            ? words.replace(VEINTIUNO_SUFFIX_REGEX, 'veintiún')
+            : words.replace(UNO_SUFFIX_REGEX, 'un')
           return `${apocopated} ${chunk.scaleWord}`
         })
         .join(' '),
@@ -171,7 +178,7 @@ export const es: Locale = {
     words: (_value: number, cardinalWords: string): string =>
       cardinalWords
         .toLowerCase()
-        .split(/\s+/)
+        .split(WHITESPACE_REGEX)
         .filter((token) => token !== 'y')
         .map((token) => ORDINAL_WORDS[token] ?? token)
         .join(' '),
