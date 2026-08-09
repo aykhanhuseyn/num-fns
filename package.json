@@ -12,6 +12,31 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./locale": {
+      "types": "./dist/locale/index.d.ts",
+      "import": "./dist/locale/index.js",
+      "require": "./dist/locale/index.cjs"
+    },
+    "./locale/az": {
+      "types": "./dist/locale/az.d.ts",
+      "import": "./dist/locale/az.js",
+      "require": "./dist/locale/az.cjs"
+    },
+    "./locale/en": {
+      "types": "./dist/locale/en.d.ts",
+      "import": "./dist/locale/en.js",
+      "require": "./dist/locale/en.cjs"
+    },
+    "./locale/ru": {
+      "types": "./dist/locale/ru.d.ts",
+      "import": "./dist/locale/ru.js",
+      "require": "./dist/locale/ru.cjs"
+    },
+    "./locale/es": {
+      "types": "./dist/locale/es.d.ts",
+      "import": "./dist/locale/es.js",
+      "require": "./dist/locale/es.cjs"
+    },
     "./package.json": "./package.json"
   },
   "files": [

@@ -16,10 +16,20 @@ export default defineConfig({
     minify: false,
     emptyOutDir: false,
     lib: {
-      entry: resolve(import.meta.dirname, 'src/index.ts'),
-      name: 'AzNumberUtils',
+      // One entry per package subpath: `.` plus `./locale` (the barrel) and
+      // one per-locale subpath (`./locale/az`, etc.) so a consumer can import
+      // a single locale without pulling in the others (todo.md §1). Keep
+      // this object in sync with the `exports` map in `package.json`.
+      entry: {
+        index: resolve(import.meta.dirname, 'src/index.ts'),
+        'locale/index': resolve(import.meta.dirname, 'src/locale/index.ts'),
+        'locale/az': resolve(import.meta.dirname, 'src/locale/az.ts'),
+        'locale/en': resolve(import.meta.dirname, 'src/locale/en.ts'),
+        'locale/ru': resolve(import.meta.dirname, 'src/locale/ru.ts'),
+        'locale/es': resolve(import.meta.dirname, 'src/locale/es.ts'),
+      },
       formats: ['es', 'cjs'],
-      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs'),
+      fileName: (format, entryName) => `${entryName}.${format === 'es' ? 'js' : 'cjs'}`,
     },
     rollupOptions: {
       output: {
