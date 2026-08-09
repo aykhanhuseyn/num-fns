@@ -55,13 +55,25 @@ objects, `date-fns` style.
       milésimo" instead of idiomatic "dosmilésimo").
 - [ ] Thread a `locale` option through every public function; default to `en`
       only if no locale is passed (see the "default locale" decision below).
-- [ ] `src/locale/index.ts` barrel re-exporting every locale.
-- [ ] Add a `./locale` subpath export to `package.json` and a second Vite entry
+- [x] `src/locale/index.ts` barrel re-exporting every locale.
+- [x] Add a `./locale` subpath export to `package.json` and a second Vite entry
       so `import { ru } from 'num-fns/locale'` resolves in ESM and CJS.
-- [ ] Per-locale subpath exports (`num-fns/locale/ru`) for consumers who want
-      to skip the barrel entirely.
-- [ ] Verify tree-shaking actually drops unused locales — a barrel import can
+      (2026-08-09: `vite.config.ts` now builds one lib entry per subpath,
+      keyed by entry name, instead of a single `src/index.ts` entry.)
+- [x] Per-locale subpath exports (`num-fns/locale/ru`) for consumers who want
+      to skip the barrel entirely. `az`/`en`/`ru`/`es` all added alongside the
+      barrel in the same change.
+- [x] Verify tree-shaking actually drops unused locales — a barrel import can
       defeat it. Test with a real Rollup/esbuild bundle, not by inspection.
+      (2026-08-09: verified from the actual Rollup/Vite build output —
+      `dist/locale/en.js`, `ru.js`, and `es.js` have zero imports each
+      (fully self-contained); only `dist/locale/az.js` and `dist/index.js`
+      reference the shared `number/words`+`number/suffix`+`number/notation`
+      chunk, since `az` is the only locale still delegating to those
+      pre-refactor modules. Also ran a real Node consumer — both
+      `require('num-fns/locale/az')` and
+      `import ... from 'num-fns/locale/az'` resolve through the `exports`
+      map — rather than asserting from file existence alone.)
 - [ ] Number system / digit conversion (Latin, Arabic-Indic, Extended
       Arabic-Indic) — listed as a launch i18n feature in the project vision;
       scope it as a `Locale.digits` (or similar) field once `en`/`ru`/`es` land,
