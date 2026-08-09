@@ -151,10 +151,13 @@ New domains the vision doc calls for that don't conflict with anything above —
 these can be added as new top-level directories regardless of how the
 format/parse question resolves:
 
-- [ ] `src/arithmetic/` (see §4).
+- [x] `src/arithmetic/` (see §4). (2026-08-09: created with `clamp`/`inRange`;
+      `add`/`subtract`/`multiply`/`divide`/`round` still pending on the
+      decimal-safe-representation and rounding-mode decisions in §1/§4.)
 - [ ] `src/stats/` (see §4).
 - [ ] `src/financial/` (see §4).
-- [ ] `src/utils/` for the base-conversion and common utility helpers (see §4).
+- [x] `src/utils/` for the base-conversion and common utility helpers (see §4).
+      (2026-08-09: created with `toBase`/`fromBase` and `isEven`/`isOdd`.)
 - [ ] `scripts/` — currently doesn't exist. Natural home for the "add a new
       function" / "add a new locale" scaffolding scripts §8's `CONTRIBUTING.md`
       needs to reference, so the guide points at something real instead of
@@ -188,7 +191,10 @@ classic `0.1 + 0.2 !== 0.3` floating-point traps. Not started.
 - [ ] `round(value, precision, mode)` — ties into the rounding-mode decision
       above; should be the one rounding implementation the rest of the package
       (money, percentage, stats) delegates to rather than reimplementing.
-- [ ] `clamp` / `inRange` — cheap, currently-unimplemented wins.
+- [x] `clamp` / `inRange` — cheap, currently-unimplemented wins. (2026-08-09:
+      `src/arithmetic/clamp.ts` and `src/arithmetic/in-range.ts`, both
+      inclusive-range, both throwing `RangeError` on non-finite input or
+      `min > max`.)
 - [ ] Decide precision limits and failure mode (throw vs. silently lose
       precision) for inputs beyond safe-integer range; document the tradeoff
       vs. a real decimal/bignum library the package deliberately isn't taking
@@ -222,13 +228,19 @@ New domain from the vision doc.
 
 ### New: base conversion & common utilities (`src/utils/`)
 
-- [ ] `toBase` / `fromBase` — arbitrary-radix conversion (binary, octal, hex,
+- [x] `toBase` / `fromBase` — arbitrary-radix conversion (binary, octal, hex,
       base36), distinct from the locale digit-system conversion in §1 (that's
       Latin ↔ Arabic-Indic *within* base 10; this is base-10 ↔ base-N).
       Self-contained, no locale dependency — the vision doc lists this as a
-      "common number utilities" item, not an i18n one.
-- [ ] `isEven` / `isOdd`, `isInteger`, other small predicates if they earn
-      their keep beyond what's already trivial in plain JS.
+      "common number utilities" item, not an i18n one. (2026-08-09:
+      `src/utils/base.ts`, radix 2–36, negative-integer support, throws
+      `SyntaxError` on characters outside the target radix's alphabet.)
+- [x] `isEven` / `isOdd`, `isInteger`, other small predicates if they earn
+      their keep beyond what's already trivial in plain JS. (2026-08-09:
+      `src/utils/predicates.ts` adds `isEven`/`isOdd` — real value-add over
+      plain JS. Deliberately skipped `isInteger`: it would just be
+      `Number.isInteger` with a rename, which is the "doesn't earn its keep"
+      case this item itself calls out.)
 
 ## 5. Testing & quality
 
@@ -296,19 +308,23 @@ New domain from the vision doc.
       and where a locale is knowingly incomplete.
 - [ ] Migration note for anyone who found the package as `az-number-utils`.
 - [ ] Badges: npm version, CI status, license, bundle size.
-- [ ] `CONTRIBUTING.md` — doesn't exist yet. Needs, per the project vision,
-      explicit sections for:
-  - [ ] Local setup (`bun install`).
-  - [ ] Running tests, typecheck, and lint (`bun test`, `bun run typecheck`,
+- [x] `CONTRIBUTING.md` — doesn't exist yet. Needs, per the project vision,
+      explicit sections for: (2026-08-09: written, covering all sections
+      below. The §6 scaffolding script and §2 locale conformance suite don't
+      exist yet, so those two sections describe the current manual process
+      and note what they'll point at once built — revisit both sections when
+      those land so the guide doesn't go stale.)
+  - [x] Local setup (`bun install`).
+  - [x] Running tests, typecheck, and lint (`bun test`, `bun run typecheck`,
         `bun run lint` / `bun run check`).
-  - [ ] How to add a new function (one file per function, colocated test,
+  - [x] How to add a new function (one file per function, colocated test,
         flat re-export from `src/index.ts` — point at the §6 scaffolding
         script once it exists).
-  - [ ] How to add a new locale (point at the §2 locale-authoring guide and
+  - [x] How to add a new locale (point at the §2 locale-authoring guide and
         conformance suite).
-  - [ ] Coding conventions — Biome rules, TypeScript strict mode, no `any`,
+  - [x] Coding conventions — Biome rules, TypeScript strict mode, no `any`,
         named exports only, pure functions.
-  - [ ] Pull request process.
-  - [ ] Commit message style — recommend Conventional Commits.
+  - [x] Pull request process.
+  - [x] Commit message style — recommend Conventional Commits.
 - [ ] `CHANGELOG.md`.
 - [ ] Azerbaijani-language README variant.
