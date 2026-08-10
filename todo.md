@@ -165,7 +165,9 @@ format/parse question resolves:
       `RangeError` on empty input or non-finite values, per the package-wide
       convention — resolves the §4 "empty arrays and non-finite values" open
       question in favor of throwing, matching arithmetic/utils.)
-- [ ] `src/financial/` (see §4).
+- [x] `src/financial/` (see §4). (2026-08-10: created with `simpleInterest`/
+      `compoundInterest`/`presentValue`/`futureValue`; `PMT`-style loan/annuity
+      payment and amortization schedule still pending, see §4.)
 - [x] `src/utils/` for the base-conversion and common utility helpers (see §4).
       (2026-08-09: created with `toBase`/`fromBase` and `isEven`/`isOdd`.)
 - [ ] `scripts/` — currently doesn't exist. Natural home for the "add a new
@@ -183,7 +185,16 @@ format/parse question resolves:
       per-locale symbol placement — replaces the manual `symbol` string.
 - [ ] Fraction words — `yarım` / `half` / `половина` / `medio`, plus `1/3`, `1/4`.
 - [ ] Digit-by-digit reading for phone numbers and codes.
-- [ ] Byte-size notation (KB/MB/GB) reusing the `toShortNotation` scale logic.
+- [x] Byte-size notation (KB/MB/GB) reusing the `toShortNotation` scale logic.
+      (2026-08-10: `src/number/byte-size.ts` — `toByteSize`/`parseByteSize`,
+      same descending-threshold-scan and trailing-zero-trim pattern as
+      `toShortNotation`/`parseShortNotation`, but self-contained rather than
+      importing from `notation.ts` since the scale table is keyed by exponent
+      of a configurable `base` (`1024` binary default, or `1000` decimal SI)
+      instead of a fixed magnitude. Labels (`KB`/`MB`/...) stay the same
+      regardless of `base` — same ambiguity every OS/file-manager has, noted
+      in the doc comment. Locale-independent, unlike `toShortNotation`'s
+      `az`/`en` option.)
 - [ ] Rounding-mode option on `formatNumber` (half-up/half-down/half-even/ceil/floor).
 - [ ] Permille (‰) and basis-point support in `formatPercentage`.
 - [ ] Shared range-validation helper instead of repeating checks per module.
@@ -233,13 +244,22 @@ doc.
 
 New domain from the vision doc.
 
-- [ ] Simple and compound interest.
+- [x] Simple and compound interest. (2026-08-10: `src/financial/simple-interest.ts`
+      (`simpleInterest`, `P * r * t`) and `src/financial/compound-interest.ts`
+      (`compoundInterest`, takes a `{ compoundsPerPeriod }` option, default
+      `1`). Both return interest earned only, not the resulting balance —
+      matches the "raw numbers" decision below.)
 - [ ] Loan/annuity payment (`PMT`-style) and amortization schedule.
-- [ ] Present value / future value.
-- [ ] Decide whether these take a `locale` for output formatting or return raw
+- [x] Present value / future value. (2026-08-10: `src/financial/present-value.ts`
+      / `src/financial/future-value.ts`, single compounding-per-period
+      formula (`PV = FV / (1+r)^n`), round-trip-tested against each other.)
+- [x] Decide whether these take a `locale` for output formatting or return raw
       numbers or return raw numbers for the caller to format with
       `formatMoney` — leaning the latter, to keep this module decoupled from
-      i18n.
+      i18n. (2026-08-10: decided in favor of raw numbers — none of the four
+      functions added so far take a `locale` option or format their output;
+      callers pipe the result through `formatMoney` themselves if they want a
+      currency-formatted string.)
 
 ### New: base conversion & common utilities (`src/utils/`)
 
@@ -314,7 +334,18 @@ New domain from the vision doc.
 
 - [x] CI workflow (`.github/workflows/ci.yml`) — installs, typechecks, lints,
       format-checks, tests, and builds on every push/PR to `main`.
-- [ ] npm publish workflow on version tag, with provenance.
+- [x] npm publish workflow on version tag, with provenance. (2026-08-10:
+      `.github/workflows/release.yml`, triggered on `v*` tags. Re-runs the
+      full CI gate (typecheck/lint/format/test/build), verifies the tag
+      matches `package.json`'s version, then `bun publish --provenance
+      --access public` (Bun's publish provenance support, not npm CLI's,
+      to stay consistent with the rest of the bun-only pipeline) plus a
+      GitHub release via `softprops/action-gh-release`. Requires an
+      `NPM_TOKEN` repo secret — not yet added, so this workflow will fail
+      until that's configured in GitHub repo settings. Untested end-to-end,
+      since that requires an actual tag push; worth a dry run against a
+      pre-release tag (e.g. `v0.1.0-rc.1`) before relying on it for a real
+      release.)
 - [ ] CI matrix across Node 14/16/18/20/22 (current CI only runs on whatever
       Bun's default Node compat target is — doesn't yet verify the
       `engines.node: >=14` claim in `package.json`).
