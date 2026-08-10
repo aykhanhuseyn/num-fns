@@ -58,6 +58,9 @@
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
+    "site:dev": "vite dev --config site/vite.config.ts",
+    "site:build": "vite build --config site/vite.config.ts",
+    "site:preview": "vite preview --config site/vite.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.build.json",
     "test": "bun test",
     "test:watch": "bun test --watch",

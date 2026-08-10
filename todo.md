@@ -415,8 +415,32 @@ New domain from the vision doc.
 - [ ] Renovate or Dependabot (relevant given `bunfig.toml` pins exact versions).
 - [ ] TypeDoc site from the existing JSDoc, published to GitHub Pages.
 - [ ] `examples/` folder with runnable snippets per module and per locale.
-- [ ] Playground page where you pick a locale and see every function's output —
-      doubles as documentation and as a manual QA tool for new locales.
+- [x] Playground page — landing page with docs + a live, runnable example per
+      public function. (2026-08-10: `site/` — a separate Vite root (own
+      `vite.config.ts`/`tsconfig.json`, not part of the published package)
+      that imports directly from `../src` so every example calls the real,
+      current source rather than a built artifact. `site/src/registry.ts`
+      catalogs all ~40 public functions with a field schema per parameter;
+      `site/src/engine.ts` generically turns form state into a real call
+      (positional args always included; option-object keys included
+      whenever a field has one, since a field's UI default is usually not
+      the same as the function's own default — see the `isOmittedWhenDefault`
+      doc comment for the bug this fixed) plus the matching code snippet.
+      Errors are caught and rendered as the real thrown `RangeError`/
+      `TypeError`/`SyntaxError`, not a synthesized message. Verified against
+      a built bundle in jsdom: initial render matches each function's own
+      JSDoc `@example`, live input changes recompute correctly, and invalid
+      input surfaces the real error. Does *not* yet do the "pick a locale"
+      half of this item — `numberToWords`/`formatNumber`/etc. are still
+      Azerbaijani-only (§1's locale-threading item is unstarted), so the
+      page has a separate "Locales" section that previews the real `az`/
+      `en`/`ru`/`es` `Locale` data objects read-only instead, with an
+      explicit note on what isn't wired in yet. Run with `bun run
+      site:dev` / `bun run site:build` (outputs to `site-dist/`, gitignored
+      via `site-dist*`); `build.emptyOutDir: false` for the same reason as
+      the root `vite.config.ts` — this repo's connected-folder mount blocks
+      `unlink()`, so emptying the out dir before a second build fails with
+      `EPERM`.)
 - [ ] Scaffolding script(s) under `scripts/` for "add a new function" and "add
       a new locale" — generates the file + colocated test + index.ts export,
       so `CONTRIBUTING.md` (§8) can point at a command instead of prose.
