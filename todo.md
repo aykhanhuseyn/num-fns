@@ -365,11 +365,10 @@ New domain from the vision doc.
       versioned `.githooks/pre-commit` approach below with
       [lefthook](https://lefthook.dev) (`lefthook.yml`), installed
       automatically via the `prepare` script in `package.json` — so it's no
-      longer opt-in. `.githooks/pre-commit` is now a no-op stub;
-      `.githooks/` should be deleted once someone with normal filesystem
-      access to the repo can run `rm -rf .githooks` — the session that made
-      this change was on a mounted filesystem that doesn't support deleting
-      files. Original 2026-08-10 note, now outdated: "versioned
+      longer opt-in. `.githooks/` (the old no-op-stub `pre-commit`) has since
+      been deleted — confirmed gone from the repo as of 2026-08-10, resolving
+      the earlier note about needing normal (non-mounted) filesystem access
+      to remove it. Original 2026-08-10 note, now outdated: "versioned
       `.githooks/pre-commit`, opt-in via `git config core.hooksPath
       .githooks` — documented in `CONTRIBUTING.md`'s 'Local setup' section.
       Not wired up automatically since `bun install` has no standard
@@ -380,26 +379,18 @@ New domain from the vision doc.
       hook — see `commitlint.config.js`. Enforces the Conventional Commits
       style already documented in `CONTRIBUTING.md`'s "Commit message style"
       section, at commit time rather than only in review.)
-- [ ] `check:circular` (`madge --circular --extensions ts src/index.ts`,
-      added 2026-08-10) currently crashes at require-time, not just on
-      finding a cycle: madge's TypeScript support goes through
-      `@typescript-eslint/typescript-estree`, whose installed version
-      (8.66.0) declares `peerDependencies: { typescript: ">=4.8.4 <6.1.0" }`
-      — incompatible with this repo's pinned `typescript@7.0.2`, which
-      restructures the `ts.Extension` enum that `typescript-estree` reads at
-      module-load time. Confirmed this is a real incompatibility, not a
-      sandbox artifact (pure JS/peer-dep resolution, not a native binary).
-      Bun's `overrides` field doesn't support npm's nested/scoped
-      overrides (`bun install` warns "Bun currently does not support nested
-      'overrides'"), so there's no low-risk way to point just
-      `typescript-estree` at the existing `@typescript/typescript6`
-      devDependency without a flat `typescript` override that would also
-      change what `vite-plugin-dts` and other tools resolve. Options: (a)
-      wait for `typescript-estree` to support TS 7, (b) make the check
-      non-blocking the way `check:unused` already is (`knip
-      --no-exit-code`), or (c) swap `madge` for a circular-dependency tool
-      that doesn't depend on `typescript-estree`. Needs a decision before
-      this check can run in CI/pre-commit.
+- [x] `check:circular` — was `madge --circular`, which crashed at
+      require-time against this repo's pinned `typescript@7.0.2` (see the
+      now-resolved note this replaces: `@typescript-eslint/typescript-estree`
+      declares `peerDependencies: { typescript: ">=4.8.4 <6.1.0" }`). Fixed
+      2026-08-10 (commit `374fa7b`) by swapping to `dpdm` (option (c) from
+      the original list — a circular-dependency tool that doesn't depend on
+      `typescript-estree`), not by waiting for a fix or making the check
+      permanently non-blocking. `bun run check:circular` now runs clean
+      ("no circular dependency was found") — verified directly, not just by
+      reading the script. `continue-on-error: true` removed from both
+      `ci.yml` and `release.yml` for this step now that it's a real gate
+      again; `check:unused` (knip) stays non-blocking, see below.
 - [ ] `check:unused` (`knip --cache --no-exit-code`, added 2026-08-10)
       crashed with `RangeError: Array buffer allocation failed` inside
       `oxc-parser`'s native `raw-transfer` buffer allocation when tested in
@@ -510,8 +501,19 @@ New domain from the vision doc.
 - [ ] Full API reference covering every export and its options.
 - [ ] Locale support matrix — which functions are implemented for which locale,
       and where a locale is knowingly incomplete.
-- [ ] Migration note for anyone who found the package as `az-number-utils`.
-- [ ] Badges: npm version, CI status, license, bundle size.
+- [x] Migration note for anyone who found the package as `az-number-utils`.
+      (2026-08-10: expanded the README's old one-line "History" section into
+      "Migrating from `az-number-utils`" — confirmed via the npm registry
+      that `az-number-utils` was never published, so the note says so
+      explicitly rather than leaving readers to wonder whether they need to
+      `npm uninstall` an old package.)
+- [x] Badges: npm version, CI status, license, bundle size. (2026-08-10:
+      added to the top of `README.md` — npm version and bundlephobia bundle
+      size point at the `num-fns` npm page/API and will render "not found"
+      until the first publish lands (§7); CI status links
+      `.github/workflows/ci.yml`'s badge, license is a static shields.io
+      badge rather than the npm-registry-backed one, so it renders correctly
+      even pre-publish.)
 - [x] `CONTRIBUTING.md` — doesn't exist yet. Needs, per the project vision,
       explicit sections for: (2026-08-09: written, covering all sections
       below. The §6 scaffolding script and §2 locale conformance suite don't

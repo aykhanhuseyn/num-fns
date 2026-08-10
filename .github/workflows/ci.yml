@@ -31,12 +31,10 @@ jobs:
 
       - run: bun run format:check
 
-      # Non-blocking for now — see todo.md §6 for why (typescript-estree/TS7
-      # incompatibility for check:circular; unverified native-binding crash
-      # for check:unused in at least one sandboxed ARM64 environment).
       - run: bun run check:circular
-        continue-on-error: true
 
+      # Non-blocking — check:unused (knip) hits an unverified native-binding
+      # crash in at least one sandboxed ARM64 environment; see todo.md §6.
       - run: bun run check:unused
         continue-on-error: true
 

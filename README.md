@@ -1,5 +1,10 @@
 # num-fns
 
+[![npm version](https://img.shields.io/npm/v/num-fns.svg)](https://www.npmjs.com/package/num-fns)
+[![CI](https://github.com/aykhanhuseyn/num-fns/actions/workflows/ci.yml/badge.svg)](https://github.com/aykhanhuseyn/num-fns/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/num-fns)](https://bundlephobia.com/package/num-fns)
+
 Modern internationalized number utility library for JavaScript — like
 `date-fns`, but for numbers.
 
@@ -135,11 +140,14 @@ on GitHub Pages via `.github/workflows/pages.yml`) is a separate Vite root
 that imports directly from `src/`, so every example runs the real, current
 source.
 
-## History
+## Migrating from `az-number-utils`
 
-This package was previously published-in-progress as `az-number-utils`. It was
-renamed to `num-fns` when the scope widened from Azerbaijani-only to a general
-internationalized number library.
+This project started as `az-number-utils` and was renamed to `num-fns` when
+its scope widened from Azerbaijani-only to a general internationalized number
+library. `az-number-utils` was never published to npm, so there's no old
+package to uninstall or deprecate — if you had it cloned or vendored locally,
+just update the directory/import name to `num-fns`. All exported function
+names (`formatNumber`, `numberToWords`, `toRoman`, etc.) are unchanged.
 
 ## License
 
