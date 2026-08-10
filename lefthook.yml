@@ -1,0 +1,27 @@
+# https://lefthook.dev/configuration/
+#
+# Installed automatically by the `prepare` script in package.json (`bun install`
+# runs it for you). To (re)install by hand: `bun run lefthook install`.
+#
+# Personal, uncommitted overrides go in `lefthook-local.yml` (gitignored).
+
+pre-commit:
+  commands:
+    biome:
+      glob: '*.{js,jsx,ts,tsx,json,jsonc,md}'
+      run: bun run check:biome -- {staged_files}
+      stage_fixed: true
+    type:
+      glob: '*.{ts,tsx}'
+      run: bun run check:type
+    circular:
+      glob: '*.{ts,tsx}'
+      run: bun run check:circular
+    unused:
+      glob: '*.{ts,tsx}'
+      run: bun run check:unused
+
+commit-msg:
+  commands:
+    commitlint:
+      run: bunx commitlint --edit {1}

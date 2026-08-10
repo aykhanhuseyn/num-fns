@@ -6,3 +6,4 @@ coverage
 *.log
 .vscode/*
 !.vscode/extensions.json
+lefthook-local.yml

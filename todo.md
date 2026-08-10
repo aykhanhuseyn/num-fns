@@ -299,12 +299,54 @@ New domain from the vision doc.
 
 ## 6. Tooling & DX
 
-- [x] Pre-commit hook running `bun run check`. (2026-08-10: versioned
-      `.githooks/pre-commit`, opt-in via `git config core.hooksPath .githooks`
-      — documented in `CONTRIBUTING.md`'s "Local setup" section. Not wired up
-      automatically since `bun install` has no standard postinstall hook-install
-      convention without adding a devDependency like `husky`/`simple-git-hooks`,
-      which felt like more than this needed.)
+- [x] Pre-commit hook running `bun run check`. (2026-08-10: superseded the
+      versioned `.githooks/pre-commit` approach below with
+      [lefthook](https://lefthook.dev) (`lefthook.yml`), installed
+      automatically via the `prepare` script in `package.json` — so it's no
+      longer opt-in. `.githooks/pre-commit` is now a no-op stub;
+      `.githooks/` should be deleted once someone with normal filesystem
+      access to the repo can run `rm -rf .githooks` — the session that made
+      this change was on a mounted filesystem that doesn't support deleting
+      files. Original 2026-08-10 note, now outdated: "versioned
+      `.githooks/pre-commit`, opt-in via `git config core.hooksPath
+      .githooks` — documented in `CONTRIBUTING.md`'s 'Local setup' section.
+      Not wired up automatically since `bun install` has no standard
+      postinstall hook-install convention without adding a devDependency like
+      `husky`/`simple-git-hooks`, which felt like more than this needed.")
+- [x] Commit message linting. (2026-08-10: commitlint +
+      `@commitlint/config-conventional`, run via lefthook's `commit-msg`
+      hook — see `commitlint.config.js`. Enforces the Conventional Commits
+      style already documented in `CONTRIBUTING.md`'s "Commit message style"
+      section, at commit time rather than only in review.)
+- [ ] `check:circular` (`madge --circular --extensions ts src/index.ts`,
+      added 2026-08-10) currently crashes at require-time, not just on
+      finding a cycle: madge's TypeScript support goes through
+      `@typescript-eslint/typescript-estree`, whose installed version
+      (8.66.0) declares `peerDependencies: { typescript: ">=4.8.4 <6.1.0" }`
+      — incompatible with this repo's pinned `typescript@7.0.2`, which
+      restructures the `ts.Extension` enum that `typescript-estree` reads at
+      module-load time. Confirmed this is a real incompatibility, not a
+      sandbox artifact (pure JS/peer-dep resolution, not a native binary).
+      Bun's `overrides` field doesn't support npm's nested/scoped
+      overrides (`bun install` warns "Bun currently does not support nested
+      'overrides'"), so there's no low-risk way to point just
+      `typescript-estree` at the existing `@typescript/typescript6`
+      devDependency without a flat `typescript` override that would also
+      change what `vite-plugin-dts` and other tools resolve. Options: (a)
+      wait for `typescript-estree` to support TS 7, (b) make the check
+      non-blocking the way `check:unused` already is (`knip
+      --no-exit-code`), or (c) swap `madge` for a circular-dependency tool
+      that doesn't depend on `typescript-estree`. Needs a decision before
+      this check can run in CI/pre-commit.
+- [ ] `check:unused` (`knip --cache --no-exit-code`, added 2026-08-10)
+      crashed with `RangeError: Array buffer allocation failed` inside
+      `oxc-parser`'s native `raw-transfer` buffer allocation when tested in
+      the ARM64 Linux Cowork sandbox, despite ~3.4 GB free memory — looks
+      like a native-binding issue specific to that environment (both
+      `linux-arm64-gnu` and `linux-arm64-musl` bindings were present; glibc
+      2.35 host) rather than a real bug in this repo's code. Unverified on a
+      normal machine — re-run `bun run check:unused` locally to confirm
+      before relying on it.
 - [x] `.editorconfig`. (2026-08-10: mirrors `biome.json` — 2-space indent, LF,
       UTF-8, trim trailing whitespace — for editors that don't read Biome's
       config directly.)

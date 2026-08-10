@@ -16,13 +16,13 @@ bun install
 
 That's the whole setup — no build step is required before you can run tests.
 
-Optionally, enable the versioned pre-commit hook so `bun run check` runs
-automatically before every commit (same gate CI runs, catching lint/format
-issues before they leave your machine):
-
-```sh
-git config core.hooksPath .githooks
-```
+`bun install` also runs [lefthook](https://lefthook.dev)'s `prepare` script,
+which installs this repo's git hooks (`lefthook.yml`) automatically: a
+`pre-commit` hook that runs `bun run check` against staged files, and a
+`commit-msg` hook that lints your commit message with
+[commitlint](https://commitlint.js.org) against the Conventional Commits
+rules described below. Personal, uncommitted hook overrides go in
+`lefthook-local.yml`.
 
 ## Running tests, typecheck, and lint
 
@@ -34,13 +34,19 @@ bun run typecheck                     # tsc --noEmit, gate before publishing
 bun run lint                          # biome lint .
 bun run lint:fix                      # biome lint --write .
 bun run format                        # biome format --write .
-bun run check                         # biome check . (lint + format in one pass)
+bun run format:check                  # biome format .
+bun run check:biome                   # biome check . (lint + format in one pass)
+bun run check:type                    # tsc --noEmit against the full project (incl. tests)
+bun run check:circular                # madge --circular, fails on import cycles
+bun run check:unused                  # knip, reports unused exports/files/deps
+bun run check                         # all of the above; pass file paths to scope check:biome
 bun run build                         # vite build -> dist/
 ```
 
-Before opening a PR, run `bun run check && bun run typecheck && bun test` —
-this is the same gate CI runs on every push and PR to `main`, and what
-`prepublishOnly` runs before a release.
+Before opening a PR, run `bun run check && bun test` — this is the same gate
+CI runs on every push and PR to `main` (plus `bun run build`), the same gate
+the `pre-commit` hook runs against staged files, and what `prepublishOnly`
+runs before a release.
 
 Linting and formatting are both handled by [Biome](https://biomejs.dev)
 (`biome.json`) — there is no separate ESLint or Prettier config.
@@ -73,7 +79,8 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
    path. There is no default export and no namespacing — every function is
    imported directly from the package root (`import { clamp } from
    'num-fns'`), never `num-fns.arithmetic.clamp` or similar.
-5. Run `bun run check && bun run typecheck && bun test` before committing.
+5. Run `bun run check && bun test` before committing (the `pre-commit` hook
+   runs the same checks against staged files automatically).
 
 ## How to add a new locale
 
@@ -140,9 +147,9 @@ depth of testing in the existing locale test files.
 
 1. Fork the repo and create a branch off `main`.
 2. Make your change, following the conventions above.
-3. Run `bun run check && bun run typecheck && bun test` locally — CI runs the
-   same checks (plus `bun run build`) on every push and PR, and a red CI run
-   will block merging.
+3. Run `bun run check && bun test` locally — CI runs the same checks (plus
+   `bun run build`) on every push and PR, and a red CI run will block
+   merging.
 4. Open a PR against `main` with a clear description of what changed and why.
    If it's a new function or locale, mention it in the PR description so it
    can be added to the README's "Full surface" list and the locale support
@@ -153,7 +160,10 @@ depth of testing in the existing locale test files.
 
 ## Commit message style
 
-This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+This project uses [Conventional Commits](https://www.conventionalcommits.org/),
+enforced automatically by commitlint via the `commit-msg` hook (see
+`commitlint.config.js`) — a non-conforming message is rejected at commit
+time, not caught later in review:
 
 ```
 <type>(<scope>): <short summary>
