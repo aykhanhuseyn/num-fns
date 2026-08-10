@@ -1,0 +1,62 @@
+name: Release
+
+# Publishes to npm on every version tag (`v0.2.0`, etc.). Runs the same
+# quality gate as CI (ci.yml) before publishing — a red tag should never
+# reach the registry.
+#
+# Requires an `NPM_TOKEN` repository secret (an npm automation/publish
+# token) with permission to publish the `num-fns` package. `id-token: write`
+# is what lets npm attach a provenance attestation via `--provenance`; the
+# token itself is still required for registry auth.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run typecheck
+
+      - run: bun run lint
+
+      - run: bun run format:check
+
+      - run: bun test
+
+      - run: bun run build
+
+      - name: Verify tag matches package.json version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME (version $TAG_VERSION) does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Configure npm registry auth
+        run: echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to npm
+        run: bun publish --provenance --access public
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
