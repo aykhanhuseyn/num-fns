@@ -45,7 +45,7 @@ import {
   variance,
   withSuffix,
 } from '../../src/index'
-import type { Category, FunctionExample, PlaygroundFn } from './types'
+import type { Category, PlaygroundFn } from './types'
 
 /** Real num-fns exports are precisely typed; the playground engine drives all of them generically, so cast once per entry instead of loosening the library's own types. */
 function fn(value: (...args: never[]) => unknown): PlaygroundFn {
@@ -1561,5 +1561,3 @@ function countExamplesById(): void {
 }
 
 countExamplesById()
-
-export type { FunctionExample }

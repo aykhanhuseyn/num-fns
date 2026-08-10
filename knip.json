@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/locale/index.ts",
+    "src/locale/az.ts",
+    "src/locale/en.ts",
+    "src/locale/ru.ts",
+    "src/locale/es.ts"
+  ],
+  "project": ["src/**/*.ts", "site/src/**/*.ts"],
+  "ignoreDependencies": ["@typescript/typescript6"]
+}

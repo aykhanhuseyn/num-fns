@@ -1,0 +1,71 @@
+{
+  "biome.enabled": true,
+  "editor.accessibilitySupport": "on",
+  "editor.codeActionsOnSave": {
+    "source.action.useSortedKeys.biome": "always",
+    "source.biome": "always",
+    "source.fixAll.biome": "always",
+    "source.organizeImports.biome": "always",
+    "source.removeUnusedImports.biome": "always"
+  },
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "editor.tabSize": 2,
+  "eslint.enable": false,
+  "explorer.confirmDelete": false,
+  "files.autoSave": "off",
+  "files.exclude": {
+    ".editorconfig": true,
+    ".github": true,
+    ".gitignore": true,
+    ".gitleaks.toml": true,
+    "**/.vscode/": false,
+    "biome.json": true,
+    "bun.lock": true,
+    "bunfig.toml": true,
+    "CLAUDE.local.md": true,
+    "CLAUDE.md": true,
+    "CONTRIBUTING.md": true,
+    "commitlint.config.js": true,
+    "knip.json": true,
+    "lefthook.yml": true,
+    "LICENSE": true,
+    "node_modules": true,
+    "tsconfig.json": true,
+    "tsconfig.build.json": true,
+    "tsconfig.tsbuildinfo": true,
+    "vite.config.ts": true
+  },
+  "files.watcherExclude": {
+    "chakra-config.json": true,
+    "src/routeTree.gen.ts": true
+  },
+  "git.autofetch": true,
+  "github.copilot.chat.agent.autoFix": true,
+  "github.copilot.chat.codeGeneration.useInstructionFiles": true,
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Use conventional commit message format. Never include emojis. Always include a scope if applicable. If the commit is a fix, use the 'fix' type. If the commit is a feature, use the 'feat' type. If the commit is a refactor, use the 'refactor' type. If the commit is a chore, use the 'chore' type. If the commit is a docs update, use the 'docs' type. If the commit is a style change, use the 'style' type. If the commit is a test change, use the 'test' type. If the commit is a performance improvement, use the 'perf' type. If the commit is a build change, use the 'build' type. If the commit is a ci change, use the 'ci' type. Do not add co-authors to the commit message. Prefer not to add a body in the commit message. Only include a header with the type, scope, and subject. Do not exceed 100 symbol limit for the header. The subject should be a concise description of the change in lowercase. For example: 'fix(auth): correct password validation logic'. Analyze change and generate an appropriate commit message based on these guidelines. Try detecting main change, may be a lot of files are changed but they are only formatting changes, so try to detect the main change and generate commit message based on that. If there are multiple main changes, try to include them in the commit message. If there are multiple main changes that cannot be included in a single commit message, prefer the most important change or the change that is most representative of the overall change. Always follow these guidelines when generating commit messages."
+    }
+  ],
+  "github.copilot.chat.newWorkspace.useContext7": true,
+  "js/ts.preferences.quoteStyle": "single",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": false,
+  "prettier.enable": false,
+  "redhat.telemetry.enabled": true,
+  "search.exclude": {
+    "**/.github/": true,
+    "**/.vscode/": true,
+    "node_modules": true,
+    "src/routeTree.gen.ts": true
+  },
+  "snyk.advanced.autoSelectOrganization": true,
+  "sonarlint.connectedMode.project": {
+    "connectionId": "sonar.iktex.az",
+    "projectKey": "platform-core_platform-core_frontend_genesis_829111d9-e0a9-4f62-8062-6e0c630780d7"
+  },
+  "workbench.editor.empty.hint": "hidden",
+  "workbench.editor.wrapTabs": true
+}

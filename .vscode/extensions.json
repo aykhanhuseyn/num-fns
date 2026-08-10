@@ -1,0 +1,27 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "swssr.region-wrapper",
+    "wayou.vscode-todo-highlight",
+    "streetsidesoftware.code-spell-checker",
+    "aaron-bond.better-comments",
+    "oven.bun-vscode",
+    "irongeek.vscode-env",
+    "sonarsource.sonarlint-vscode",
+    "tamasfe.even-better-toml",
+    "eamodio.gitlens",
+    "socketsecurity.vscode-socket-security",
+    "upstash.context7-mcp",
+    "GitHub.copilot-chat",
+    "anthropic.claude-code",
+    "openai.chatgpt"
+  ],
+  "unwantedRecommendations": [
+    "mtxr.sqltools",
+    "davidanson.vscode-markdownlint",
+    "ms-mssql.mssql",
+    "christian-kohler.npm-intellisense",
+    "firefox-devtools.vscode-firefox-debug",
+    "ms-edgedevtools.vscode-edge-devtools"
+  ]
+}

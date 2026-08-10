@@ -1,16 +1,16 @@
 /** Which HTML control a field renders as. */
-export type FieldKind = 'number' | 'text' | 'select' | 'boolean'
+type FieldKind = 'number' | 'text' | 'select' | 'boolean'
 
 /** How a field's raw control value is coerced before being passed to the real function. */
-export type ValueType = 'number' | 'string' | 'boolean' | 'numberArray'
+type ValueType = 'number' | 'string' | 'boolean' | 'numberArray'
 
-export interface SelectOption {
+interface SelectOption {
   value: string
   label: string
 }
 
 /** Where a field's value lands in the real function call: a positional argument, or a key on the trailing options object. */
-export type FieldArg = { kind: 'positional'; index: number } | { kind: 'option'; key: string }
+type FieldArg = { kind: 'positional'; index: number } | { kind: 'option'; key: string }
 
 export interface FieldDef {
   /** Unique within its example; used as the form-state key. */
