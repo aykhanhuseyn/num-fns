@@ -462,6 +462,19 @@ New domain from the vision doc.
 
 - [x] CI workflow (`.github/workflows/ci.yml`) — installs, typechecks, lints,
       format-checks, tests, and builds on every push/PR to `main`.
+- [x] GitHub Pages deploy workflow (`.github/workflows/pages.yml`, added
+      2026-08-10) — builds the `site/` playground with `bun run site:build`
+      and publishes `site-dist/` via `actions/upload-pages-artifact` +
+      `actions/deploy-pages`, on push to `main` (paths: `site/**`, `src/**`)
+      or manual dispatch. Relies on `site/vite.config.ts`'s `base: './'`
+      (relative asset paths), so no change was needed for the project-page
+      subpath. Requires a one-time repo setting: Settings -> Pages -> Build
+      and deployment -> Source: "GitHub Actions" — not something this sandbox
+      can flip (no push/GitHub-API access here); do this before the workflow's
+      `deploy` job will succeed. Live at
+      https://aykhanhuseyn.github.io/num-fns/, linked from `README.md`. The
+      separate TypeDoc API-reference site below is unrelated and still
+      unstarted.
 - [x] ~~npm publish workflow on version tag, with provenance.~~ Superseded
       2026-08-10 by the Changesets bot flow below — `release.yml` no longer
       triggers on `v*` tags.

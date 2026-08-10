@@ -8,6 +8,8 @@ ordinals, short/long notation and roman numerals. Written in TypeScript, built
 as dual ESM/CJS with type declarations, so it works in modern and older
 projects alike.
 
+**[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
+
 > **Status: pre-release.** The package is currently Azerbaijani-only and is
 > being generalized into a multi-locale library. `en`, `ru` and `es` are on the
 > roadmap — see [`todo.md`](./todo.md). The locale API shown below is the target
@@ -123,7 +125,15 @@ bun test            # run the test suite
 bun run typecheck   # type-check without emitting
 bun run lint        # lint with Biome
 bun run build       # build dist/ (ESM + CJS + .d.ts)
+
+bun run site:dev    # docs/playground site, dev server
+bun run site:build  # docs/playground site, build to site-dist/
 ```
+
+The `site/` app (deployed to the [live docs & playground](https://aykhanhuseyn.github.io/num-fns/)
+on GitHub Pages via `.github/workflows/pages.yml`) is a separate Vite root
+that imports directly from `src/`, so every example runs the real, current
+source.
 
 ## History
 
