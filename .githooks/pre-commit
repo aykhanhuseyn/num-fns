@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs the same lint+format gate as CI before allowing a commit.
+# Enable with: git config core.hooksPath .githooks
+set -e
+
+echo "Running 'bun run check' (Biome lint + format)..."
+bun run check

@@ -16,6 +16,14 @@ bun install
 
 That's the whole setup — no build step is required before you can run tests.
 
+Optionally, enable the versioned pre-commit hook so `bun run check` runs
+automatically before every commit (same gate CI runs, catching lint/format
+issues before they leave your machine):
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Running tests, typecheck, and lint
 
 ```sh

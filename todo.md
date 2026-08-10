@@ -154,7 +154,17 @@ format/parse question resolves:
 - [x] `src/arithmetic/` (see §4). (2026-08-09: created with `clamp`/`inRange`;
       `add`/`subtract`/`multiply`/`divide`/`round` still pending on the
       decimal-safe-representation and rounding-mode decisions in §1/§4.)
-- [ ] `src/stats/` (see §4).
+- [x] `src/stats/` (see §4). (2026-08-10: created with `sum`/`mean`/`median`/
+      `mode`/`min`/`max`/`variance`/`standardDeviation`/`percentile`/`quantile`,
+      one function per file. `variance`/`standardDeviation` default to
+      population and take `{ sample: true }` for Bessel's-correction sample
+      variants, per the §4 "population vs. sample" decision point. `mode`
+      returns every value tied for the highest frequency (not just one), sorted
+      ascending. `percentile` uses linear interpolation (Excel PERCENTILE.INC /
+      NumPy "linear"); `quantile` is a thin `q * 100` wrapper over it. All throw
+      `RangeError` on empty input or non-finite values, per the package-wide
+      convention — resolves the §4 "empty arrays and non-finite values" open
+      question in favor of throwing, matching arithmetic/utils.)
 - [ ] `src/financial/` (see §4).
 - [x] `src/utils/` for the base-conversion and common utility helpers (see §4).
       (2026-08-09: created with `toBase`/`fromBase` and `isEven`/`isOdd`.)
@@ -205,14 +215,19 @@ classic `0.1 + 0.2 !== 0.3` floating-point traps. Not started.
 Not represented anywhere in the previous backlog — new domain from the vision
 doc.
 
-- [ ] `mean`, `median`, `mode`.
-- [ ] `variance`, `standardDeviation` (population vs. sample variants).
-- [ ] `percentile` / `quantile`.
-- [ ] `sum`, `min`, `max` — likely trivial but worth having for API symmetry
-      with the rest of the module.
-- [ ] Decide behavior on empty arrays and non-finite values (throw, per the
+- [x] `mean`, `median`, `mode`. (2026-08-10)
+- [x] `variance`, `standardDeviation` (population vs. sample variants).
+      (2026-08-10: population is the default, `{ sample: true }` opts into
+      Bessel's correction and throws below 2 values.)
+- [x] `percentile` / `quantile`. (2026-08-10: `percentile` (0-100) does the
+      interpolation work; `quantile` (0-1) delegates to it.)
+- [x] `sum`, `min`, `max` — likely trivial but worth having for API symmetry
+      with the rest of the module. (2026-08-10)
+- [x] Decide behavior on empty arrays and non-finite values (throw, per the
       package-wide convention of throwing on bad input rather than returning
-      `NaN`).
+      `NaN`). (2026-08-10: decided in favor of throwing — every `src/stats/`
+      function throws `RangeError` on empty input or a non-finite element,
+      matching `arithmetic`/`utils`.)
 
 ### New: financial helpers (`src/financial/`)
 
@@ -264,8 +279,15 @@ New domain from the vision doc.
 
 ## 6. Tooling & DX
 
-- [ ] Pre-commit hook running `bun run check`.
-- [ ] `.editorconfig`.
+- [x] Pre-commit hook running `bun run check`. (2026-08-10: versioned
+      `.githooks/pre-commit`, opt-in via `git config core.hooksPath .githooks`
+      — documented in `CONTRIBUTING.md`'s "Local setup" section. Not wired up
+      automatically since `bun install` has no standard postinstall hook-install
+      convention without adding a devDependency like `husky`/`simple-git-hooks`,
+      which felt like more than this needed.)
+- [x] `.editorconfig`. (2026-08-10: mirrors `biome.json` — 2-space indent, LF,
+      UTF-8, trim trailing whitespace — for editors that don't read Biome's
+      config directly.)
 - [ ] Renovate or Dependabot (relevant given `bunfig.toml` pins exact versions).
 - [ ] TypeDoc site from the existing JSDoc, published to GitHub Pages.
 - [ ] `examples/` folder with runnable snippets per module and per locale.
