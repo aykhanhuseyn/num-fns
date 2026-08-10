@@ -462,25 +462,35 @@ New domain from the vision doc.
 
 - [x] CI workflow (`.github/workflows/ci.yml`) — installs, typechecks, lints,
       format-checks, tests, and builds on every push/PR to `main`.
-- [x] npm publish workflow on version tag, with provenance. (2026-08-10:
-      `.github/workflows/release.yml`, triggered on `v*` tags. Re-runs the
-      full CI gate (typecheck/lint/format/test/build), verifies the tag
-      matches `package.json`'s version, then `bun publish --provenance
-      --access public` (Bun's publish provenance support, not npm CLI's,
-      to stay consistent with the rest of the bun-only pipeline) plus a
-      GitHub release via `softprops/action-gh-release`. Requires an
-      `NPM_TOKEN` repo secret — not yet added, so this workflow will fail
-      until that's configured in GitHub repo settings. Untested end-to-end,
-      since that requires an actual tag push; worth a dry run against a
-      pre-release tag (e.g. `v0.1.0-rc.1`) before relying on it for a real
-      release.)
+- [x] ~~npm publish workflow on version tag, with provenance.~~ Superseded
+      2026-08-10 by the Changesets bot flow below — `release.yml` no longer
+      triggers on `v*` tags.
+- [x] Changesets for versioning and an auto-generated `CHANGELOG.md`.
+      (2026-08-10: `@changesets/cli` + `@changesets/changelog-github`
+      installed; `.changeset/config.json` set to `access: public`,
+      `baseBranch: main`. New scripts — `bun run changeset` (add one),
+      `bun run version` (`changeset version`: bump + changelog), `bun run
+      release` (`bun run build && changeset publish`). `.github/workflows/
+      release.yml` rewritten to trigger on push to `main` instead of `v*`
+      tags: `changesets/action@v1` opens/updates a `chore: version packages`
+      PR when changesets are pending, and runs `bun run release` once that
+      PR is merged. Provenance now comes from `npm publish` (which
+      `changeset publish` shells out to) reading `NPM_CONFIG_PROVENANCE=true`
+      from the job env, rather than `bun publish --provenance` directly —
+      `@changesets/cli` doesn't support Bun as a publish backend natively
+      (see changesets/changesets#1152), so `actions/setup-node` is now a
+      step in `release.yml` alongside `oven-sh/setup-bun` to get a modern
+      npm (≥9.5) on `PATH`. Still requires the `NPM_TOKEN` repo secret,
+      not yet added. Untested end-to-end — worth watching the first real
+      "Version Packages" PR closely before trusting it unattended.)
 - [ ] CI matrix across Node 14/16/18/20/22 (current CI only runs on whatever
       Bun's default Node compat target is — doesn't yet verify the
       `engines.node: >=14` claim in `package.json`).
 - [ ] `size-limit` check in CI.
-- [ ] Changesets for versioning and an auto-generated `CHANGELOG.md`.
 - [ ] First publish to npm — still unpublished at `0.1.0`; name is confirmed
-      available (see §0) but not reserved.
+      available (see §0) but not reserved. The first `changeset version` run
+      will bump this off `0.1.0`, so this item and the version number should
+      be revisited together.
 
 ## 8. Documentation
 

@@ -157,6 +157,9 @@ depth of testing in the existing locale test files.
 5. Keep PRs scoped to one logical change — a new function, a locale fix, a
    refactor — rather than bundling unrelated changes together, so review and
    `git blame` stay useful.
+6. If your change affects published behavior (a new function, a bug fix, a
+   breaking change — anything a consumer of the package would care about),
+   add a changeset: `bun run changeset`. See "Releasing" below.
 
 ## Commit message style
 
@@ -182,6 +185,30 @@ docs(contributing): document the locale-authoring workflow
 
 Squash-merge PRs with multiple work-in-progress commits into one
 Conventional Commit message on merge, so `main`'s history stays readable.
+
+## Releasing
+
+Versioning and publishing are automated with [Changesets](https://github.com/changesets/changesets)
+— you don't bump `package.json`'s version or hand-write `CHANGELOG.md`
+entries.
+
+1. Any PR that changes published behavior needs a changeset:
+   ```sh
+   bun run changeset
+   ```
+   Pick a bump type (`patch`/`minor`/`major` — this package hasn't hit 1.0
+   yet, so breaking changes are still `minor`-scoped per semver's `0.x`
+   convention) and write a summary in plain language, as it'll appear
+   verbatim in `CHANGELOG.md`. This writes a small Markdown file under
+   `.changeset/` — commit it as part of your PR.
+2. Docs-only, test-only, or internal tooling changes don't need a changeset.
+3. On merge to `main`, a bot opens (or updates) a `chore: version packages`
+   PR that runs `changeset version` — bumping `package.json` and rewriting
+   `CHANGELOG.md` from the accumulated changesets, consuming those files in
+   the process. You don't need to do anything for this step.
+4. Merging *that* PR triggers the actual release: `bun run build` followed
+   by `changeset publish`, which publishes to npm, tags the commit, and
+   creates a GitHub release. See `.github/workflows/release.yml`.
 
 ## Questions
 
