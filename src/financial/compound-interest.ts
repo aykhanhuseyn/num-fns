@@ -1,4 +1,10 @@
 import type { CompoundInterestOptions } from '../shared/types'
+import {
+  assertFinite,
+  assertFiniteRate,
+  assertNonNegative,
+  assertPositive,
+} from '../shared/validation'
 
 /**
  * Computes compound interest — interest that accrues on both the original
@@ -23,24 +29,12 @@ export function compoundInterest(
   time: number,
   options: CompoundInterestOptions = {},
 ): number {
-  if (!Number.isFinite(principal)) {
-    throw new RangeError(`compoundInterest: principal must be finite, received ${principal}`)
-  }
-  if (!Number.isFinite(rate) || rate <= -1) {
-    throw new RangeError(
-      `compoundInterest: rate must be finite and greater than -1, received ${rate}`,
-    )
-  }
-  if (!Number.isFinite(time) || time < 0) {
-    throw new RangeError(`compoundInterest: time must be a finite number >= 0, received ${time}`)
-  }
+  assertFinite(principal, 'principal', 'compoundInterest')
+  assertFiniteRate(rate, 'compoundInterest')
+  assertNonNegative(time, 'time', 'compoundInterest')
 
   const { compoundsPerPeriod = 1 } = options
-  if (!Number.isFinite(compoundsPerPeriod) || compoundsPerPeriod <= 0) {
-    throw new RangeError(
-      `compoundInterest: compoundsPerPeriod must be a finite number > 0, received ${compoundsPerPeriod}`,
-    )
-  }
+  assertPositive(compoundsPerPeriod, 'compoundsPerPeriod', 'compoundInterest')
 
   const amount = principal * (1 + rate / compoundsPerPeriod) ** (compoundsPerPeriod * time)
   return amount - principal

@@ -183,7 +183,22 @@ format/parse question resolves:
 - [x] `parseLongNotation` — inverse of `toLongNotation`.
 - [ ] Multi-currency support keyed off ISO 4217 codes (AZN, USD, EUR, RUB) with
       per-locale symbol placement — replaces the manual `symbol` string.
-- [ ] Fraction words — `yarım` / `half` / `половина` / `medio`, plus `1/3`, `1/4`.
+- [x] Fraction words (Azerbaijani) — `yarım` / `half` / `половина` / `medio`,
+      plus `1/3`, `1/4`. (2026-08-10: `src/number/fraction.ts` —
+      `fractionToWords(numerator, denominator)`. `1/2` returns the idiomatic
+      `"yarım"`; every other proper fraction returns `"<denominator +
+      locative suffix> <numerator words>"`, e.g. `"üçdə bir"` (1/3), `"onda
+      bir"` (1/10), `"yüzdə bir"` (1/100 — the same phrase Azerbaijani uses
+      for "percent"). The locative suffix ("-da"/"-də") uses a *two-way*
+      front/back vowel harmony on the denominator's last word, distinct from
+      the four-way harmony `suffix.ts` uses for ordinals — kept as a small
+      self-contained table in `fraction.ts` rather than importing
+      `suffix.ts`'s, per the doc comment there. Scoped to proper fractions
+      (`0 < numerator < denominator`) — mixed numbers and improper fractions
+      throw `RangeError`, since there's no single idiomatic reading to fall
+      back to without deciding a mixed-number format first. `en`/`ru`/`es`
+      fraction words still pending the locale refactor (§1) — this is
+      hardcoded Azerbaijani like the rest of `number/`.)
 - [x] Digit-by-digit reading for phone numbers and codes. (2026-08-10:
       `src/number/digits.ts` — `numberToDigitWords`, reuses `ONES`/
       `ZERO_WORD`/`NEGATIVE_WORD` from `words.ts` rather than duplicating the
@@ -224,7 +239,18 @@ format/parse question resolves:
       its own sign (`%`/`‰`/`‱`) and ratio-scale factor (100/1000/10000);
       `multiplyBy100`/`asRatio` now scale by the selected unit's factor
       rather than a hardcoded 100.)
-- [ ] Shared range-validation helper instead of repeating checks per module.
+- [x] Shared range-validation helper instead of repeating checks per module.
+      (2026-08-10: `src/shared/validation.ts` — `assertFinite`/
+      `assertFiniteRate`/`assertNonNegative`/`assertPositive`/
+      `assertPositiveInteger`/`assertFiniteBounds`, each throwing the exact
+      same `RangeError` message the call site previously wrote inline.
+      Applied to `src/arithmetic/` (`clamp`/`inRange`, which had a
+      byte-for-byte identical min/max block — the clearest duplication) and
+      all of `src/financial/`. Deliberately *not* re-exported from
+      `src/index.ts` — these are internal guards, not public API, unlike
+      `shared/types.ts`/`shared/constants.ts`. `src/number/`, `src/stats/`,
+      and `src/utils/` still validate inline; migrate opportunistically
+      rather than in one large sweep.)
 - [ ] BigInt input path for `numberToWords` / `toLongNotation`.
 - [ ] Roman numerals above 3999 (vinculum notation) — currently out of scope.
       Note roman numerals are locale-independent and stay outside the locale system.
@@ -276,7 +302,16 @@ New domain from the vision doc.
       (`compoundInterest`, takes a `{ compoundsPerPeriod }` option, default
       `1`). Both return interest earned only, not the resulting balance —
       matches the "raw numbers" decision below.)
-- [ ] Loan/annuity payment (`PMT`-style) and amortization schedule.
+- [x] Loan/annuity payment (`PMT`-style) and amortization schedule.
+      (2026-08-10: `src/financial/loan-payment.ts` — `loanPayment` (ordinary
+      annuity, standard `PMT` formula, `principal / periods` when `rate` is
+      `0`) and `amortizationSchedule`, which builds the full period-by-period
+      interest/principal split by calling `loanPayment` once and walking the
+      balance down. The final row's `principal`/`balance` are corrected so
+      the schedule always lands on exactly `0`, offsetting the
+      floating-point drift that accumulates from repeatedly subtracting a
+      fixed payment over many periods — the same kind of correction
+      `toByteSize`'s `correctFloatingPointNoise` applies elsewhere.)
 - [x] Present value / future value. (2026-08-10: `src/financial/present-value.ts`
       / `src/financial/future-value.ts`, single compounding-per-period
       formula (`PV = FV / (1+r)^n`), round-trip-tested against each other.)

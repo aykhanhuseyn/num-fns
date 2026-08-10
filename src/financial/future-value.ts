@@ -1,3 +1,5 @@
+import { assertFinite, assertFiniteRate, assertNonNegative } from '../shared/validation'
+
 /**
  * Computes the future value of a present amount, compounding once per period
  * at a fixed rate — the balance you'd have after `periods` periods, not just
@@ -12,15 +14,9 @@
  * futureValue(1000, 0.05, 3); // 1157.625
  */
 export function futureValue(presentAmount: number, rate: number, periods: number): number {
-  if (!Number.isFinite(presentAmount)) {
-    throw new RangeError(`futureValue: presentAmount must be finite, received ${presentAmount}`)
-  }
-  if (!Number.isFinite(rate) || rate <= -1) {
-    throw new RangeError(`futureValue: rate must be finite and greater than -1, received ${rate}`)
-  }
-  if (!Number.isFinite(periods) || periods < 0) {
-    throw new RangeError(`futureValue: periods must be a finite number >= 0, received ${periods}`)
-  }
+  assertFinite(presentAmount, 'presentAmount', 'futureValue')
+  assertFiniteRate(rate, 'futureValue')
+  assertNonNegative(periods, 'periods', 'futureValue')
 
   return presentAmount * (1 + rate) ** periods
 }

@@ -1,3 +1,5 @@
+import { assertFinite, assertNonNegative } from '../shared/validation'
+
 /**
  * Computes simple interest — interest that accrues linearly on the original
  * principal only, with no compounding.
@@ -14,15 +16,9 @@
  * simpleInterest(1000, 0.05, 3); // 150 (1000 * 0.05 * 3)
  */
 export function simpleInterest(principal: number, rate: number, time: number): number {
-  if (!Number.isFinite(principal)) {
-    throw new RangeError(`simpleInterest: principal must be finite, received ${principal}`)
-  }
-  if (!Number.isFinite(rate)) {
-    throw new RangeError(`simpleInterest: rate must be finite, received ${rate}`)
-  }
-  if (!Number.isFinite(time) || time < 0) {
-    throw new RangeError(`simpleInterest: time must be a finite number >= 0, received ${time}`)
-  }
+  assertFinite(principal, 'principal', 'simpleInterest')
+  assertFinite(rate, 'rate', 'simpleInterest')
+  assertNonNegative(time, 'time', 'simpleInterest')
 
   return principal * rate * time
 }
