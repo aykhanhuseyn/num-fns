@@ -65,3 +65,27 @@ export interface SuffixOptions {
   /** String inserted between the value and the suffix. Defaults to `' '`. */
   separator?: string
 }
+
+export interface ByteSizeOptions {
+  /** Number of fractional digits to keep. Defaults to `2`. */
+  decimals?: number
+  /**
+   * Multiple used per scale step — `1024` (binary; the conventional meaning
+   * of "KB"/"MB" in most operating systems and file managers) or `1000`
+   * (decimal SI). Defaults to `1024`.
+   */
+  base?: 1000 | 1024
+  /** Separator between the integer and fractional part. Defaults to `'.'`. */
+  decimalSeparator?: string
+}
+
+export type ByteSizeParseOptions = Pick<ByteSizeOptions, 'base' | 'decimalSeparator'>
+
+export interface CompoundInterestOptions {
+  /**
+   * Number of times interest compounds within each unit of `time` (e.g. `12`
+   * for monthly compounding when `time` is in years). Defaults to `1`
+   * (compounds once per period, i.e. annually if `time` is in years).
+   */
+  compoundsPerPeriod?: number
+}
