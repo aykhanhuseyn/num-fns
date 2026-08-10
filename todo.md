@@ -184,7 +184,15 @@ format/parse question resolves:
 - [ ] Multi-currency support keyed off ISO 4217 codes (AZN, USD, EUR, RUB) with
       per-locale symbol placement — replaces the manual `symbol` string.
 - [ ] Fraction words — `yarım` / `half` / `половина` / `medio`, plus `1/3`, `1/4`.
-- [ ] Digit-by-digit reading for phone numbers and codes.
+- [x] Digit-by-digit reading for phone numbers and codes. (2026-08-10:
+      `src/number/digits.ts` — `numberToDigitWords`, reuses `ONES`/
+      `ZERO_WORD`/`NEGATIVE_WORD` from `words.ts` rather than duplicating the
+      digit vocabulary. Accepts `number | string`; string input preserves
+      leading zeros, which a `number` can't represent. Formatting punctuation
+      common in phone numbers (space, `-`, `(`, `)`, `.`, a leading `+`) is
+      silently ignored rather than spoken. Like the rest of `number/`,
+      hardcoded Azerbaijani for now — not gated on the locale refactor since
+      it only consumes the already-shared word constants.)
 - [x] Byte-size notation (KB/MB/GB) reusing the `toShortNotation` scale logic.
       (2026-08-10: `src/number/byte-size.ts` — `toByteSize`/`parseByteSize`,
       same descending-threshold-scan and trailing-zero-trim pattern as
@@ -195,8 +203,27 @@ format/parse question resolves:
       regardless of `base` — same ambiguity every OS/file-manager has, noted
       in the doc comment. Locale-independent, unlike `toShortNotation`'s
       `az`/`en` option.)
-- [ ] Rounding-mode option on `formatNumber` (half-up/half-down/half-even/ceil/floor).
-- [ ] Permille (‰) and basis-point support in `formatPercentage`.
+- [x] Rounding-mode option on `formatNumber` (half-up/half-down/half-even/ceil/floor).
+      (2026-08-10: `roundingMode` on `NumberFormatOptions` — `'halfUp'`
+      (default, delegates to `toFixed`), `'halfDown'`, `'halfEven'`, `'ceil'`,
+      `'floor'`. Rounding now happens on the signed value before sign
+      extraction (previously `formatNumber` rounded the absolute value and
+      reattached the sign after), which was needed for `ceil`/`floor` to have
+      their standard directional meaning for negative inputs and, as a side
+      effect, fixed a pre-existing bug where a negative value that rounds to
+      zero (e.g. `formatNumber(-0.4, { decimals: 0 })`) rendered as `"-0"`.
+      Threaded through `formatMoney`; `formatPercentage` also takes and
+      forwards it. Not decimal-safe — shares `toFixed`'s floating-point
+      representation quirks for every mode except the `halfUp` fast path; the
+      decimal-safe version is still `arithmetic/round`, tracked separately
+      below.)
+- [x] Permille (‰) and basis-point support in `formatPercentage`.
+      (2026-08-10: `unit?: 'percent' | 'permille' | 'basisPoint'` on
+      `PercentageFormatOptions`/`PercentageParseOptions`, defaulting to
+      `'percent'` — unchanged behavior for existing callers. Each unit has
+      its own sign (`%`/`‰`/`‱`) and ratio-scale factor (100/1000/10000);
+      `multiplyBy100`/`asRatio` now scale by the selected unit's factor
+      rather than a hardcoded 100.)
 - [ ] Shared range-validation helper instead of repeating checks per module.
 - [ ] BigInt input path for `numberToWords` / `toLongNotation`.
 - [ ] Roman numerals above 3999 (vinculum notation) — currently out of scope.

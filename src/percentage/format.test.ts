@@ -13,6 +13,30 @@ describe('formatPercentage', () => {
   it('multiplies a ratio by 100 when requested', () => {
     expect(formatPercentage(0.455, { decimals: 1, multiplyBy100: true })).toBe('45,5%')
   })
+
+  it('formats permille with the ‰ sign', () => {
+    expect(formatPercentage(45, { unit: 'permille' })).toBe('45‰')
+  })
+
+  it('multiplies a ratio by 1000 for permille when requested', () => {
+    expect(formatPercentage(0.0455, { decimals: 1, multiplyBy100: true, unit: 'permille' })).toBe(
+      '45,5‰',
+    )
+  })
+
+  it('formats basis points with the ‱ sign', () => {
+    expect(formatPercentage(125, { unit: 'basisPoint' })).toBe('125‱')
+  })
+
+  it('multiplies a ratio by 10000 for basis points when requested', () => {
+    expect(formatPercentage(0.0125, { decimals: 0, multiplyBy100: true, unit: 'basisPoint' })).toBe(
+      '125‱',
+    )
+  })
+
+  it('applies roundingMode like formatNumber', () => {
+    expect(formatPercentage(2.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('2%')
+  })
 })
 
 describe('parsePercentage', () => {
@@ -22,5 +46,15 @@ describe('parsePercentage', () => {
 
   it('returns a ratio when asRatio is set', () => {
     expect(parsePercentage('45,5%', { asRatio: true })).toBeCloseTo(0.455)
+  })
+
+  it('parses permille strings', () => {
+    expect(parsePercentage('45,5‰', { unit: 'permille' })).toBeCloseTo(45.5)
+    expect(parsePercentage('45,5‰', { unit: 'permille', asRatio: true })).toBeCloseTo(0.0455)
+  })
+
+  it('parses basis-point strings', () => {
+    expect(parsePercentage('125‱', { unit: 'basisPoint' })).toBeCloseTo(125)
+    expect(parsePercentage('125‱', { unit: 'basisPoint', asRatio: true })).toBeCloseTo(0.0125)
   })
 })

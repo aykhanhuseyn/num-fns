@@ -1,5 +1,5 @@
 import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants'
-import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
+import type { NumberFormatOptions, NumberParseOptions, RoundingMode } from '../shared/types'
 
 /**
  * Formats a number using Azerbaijani conventions by default: a space between
@@ -7,6 +7,7 @@ import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
  *
  * @example
  * formatNumber(1234567.891, { decimals: 2 }); // "1 234 567,89"
+ * formatNumber(-1.5, { decimals: 0, roundingMode: 'ceil' }); // "-1"
  */
 export function formatNumber(value: number, options: NumberFormatOptions = {}): string {
   if (!Number.isFinite(value)) {
@@ -17,10 +18,12 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
     decimals,
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    roundingMode = 'halfUp',
   } = options
 
-  const isNegative = value < 0 && value !== 0
-  const absolute = Math.abs(value)
+  const rounded = decimals === undefined ? value : roundToDecimals(value, decimals, roundingMode)
+  const isNegative = rounded < 0 && rounded !== 0
+  const absolute = Math.abs(rounded)
   const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals)
   const [integerDigits, fractionDigits] = fixed.split('.')
 
@@ -60,6 +63,44 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
   }
 
   return numeric
+}
+
+/**
+ * Rounds `value` to `decimals` fractional digits per `mode`. Operates on the
+ * signed value (not its absolute value) so `'ceil'`/`'floor'` have their
+ * standard directional meaning for negative inputs.
+ */
+function roundToDecimals(value: number, decimals: number, mode: RoundingMode): number {
+  if (mode === 'halfUp') {
+    // toFixed already implements round-half-away-from-zero for the vast
+    // majority of inputs; reusing it keeps this the default, zero-risk path.
+    return Number(value.toFixed(decimals))
+  }
+
+  const factor = 10 ** decimals
+  const scaled = value * factor
+
+  if (mode === 'ceil') return Math.ceil(scaled) / factor
+  if (mode === 'floor') return Math.floor(scaled) / factor
+
+  const sign = scaled < 0 ? -1 : 1
+  const magnitude = Math.abs(scaled)
+  const roundedMagnitude = roundTieMagnitude(magnitude, mode)
+
+  return (sign * roundedMagnitude) / factor
+}
+
+/** Rounds a non-negative magnitude for the two tie-breaking modes: half-down (toward zero) and half-even (banker's rounding). */
+function roundTieMagnitude(magnitude: number, mode: 'halfDown' | 'halfEven'): number {
+  const flooredMagnitude = Math.floor(magnitude)
+  const fraction = magnitude - flooredMagnitude
+
+  if (fraction > 0.5) return flooredMagnitude + 1
+  if (fraction < 0.5) return flooredMagnitude
+  if (mode === 'halfDown') return flooredMagnitude
+
+  // halfEven: an exact tie rounds to the nearest even digit.
+  return flooredMagnitude % 2 === 0 ? flooredMagnitude : flooredMagnitude + 1
 }
 
 function groupDigits(digits: string, separator: string): string {

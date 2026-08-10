@@ -19,11 +19,17 @@ export function formatMoney(value: number, options: MoneyFormatOptions = {}): st
     decimals = 2,
     thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
     decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    roundingMode,
     symbol = AZN_SYMBOL,
     symbolPosition = 'after',
   } = options
 
-  const formattedNumber = formatNumber(value, { decimals, thousandsSeparator, decimalSeparator })
+  const formattedNumber = formatNumber(value, {
+    decimals,
+    thousandsSeparator,
+    decimalSeparator,
+    roundingMode,
+  })
   return symbolPosition === 'before'
     ? `${symbol} ${formattedNumber}`
     : `${formattedNumber} ${symbol}`
