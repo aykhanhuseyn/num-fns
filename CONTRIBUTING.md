@@ -53,6 +53,14 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
 
 ## How to add a new function
 
+0. **Scaffold it.** `bun run new:function <directory> <functionName>` (e.g.
+   `bun run new:function arithmetic average`) generates
+   `src/<directory>/<kebab-name>.ts` and its colocated
+   `<kebab-name>.test.ts`, and inserts the `export * from` line into
+   `src/index.ts` at the correct alphabetical position. It generates the
+   file stubs for steps 2–3 below and fully handles step 4 — you still write
+   the real implementation, real assertions, and a real JSDoc `@example`
+   yourself. See `scripts/new-function.ts`.
 1. **Pick the right directory.** Each unit of functionality lives in its own
    directory under `src/` (`number/`, `money/`, `percentage/`, `arithmetic/`,
    `utils/`, ...). If your function is a new formatter/parser pair for an

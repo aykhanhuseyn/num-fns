@@ -6,8 +6,9 @@
     "src/locale/az.ts",
     "src/locale/en.ts",
     "src/locale/ru.ts",
-    "src/locale/es.ts"
+    "src/locale/es.ts",
+    "scripts/*.ts"
   ],
-  "project": ["src/**/*.ts", "site/src/**/*.ts"],
+  "project": ["src/**/*.ts", "site/src/**/*.ts", "scripts/**/*.ts"],
   "ignoreDependencies": ["@typescript/typescript6"]
 }

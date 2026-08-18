@@ -17,5 +17,5 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src", "scripts"]
 }

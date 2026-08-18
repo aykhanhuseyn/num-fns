@@ -352,8 +352,13 @@ New domain from the vision doc.
       coverage" is an explicit success criterion in the project vision, so this
       needs a real number and a CI gate, not just running tests.
 - [ ] Smoke-test built `dist/index.cjs` on Node 14/16 to back the compatibility claim.
-- [ ] Bundle-size assertion per locale — the selling point is that importing
-      one locale doesn't pull in four.
+- [x] Bundle-size assertion per locale — the selling point is that importing
+      one locale doesn't pull in four. (2026-08-10: covered by the same
+      `size-limit` config as §7's CI item — see that entry for details. The
+      barrel (`dist/locale/index.js`, all four locales) measures 3.34 kB
+      brotli vs. 0.72–1.4 kB for any single `locale/<code>` subpath import,
+      which is the actual evidence for the tree-shaking claim, not just an
+      assertion of it.)
 - [ ] Micro-benchmarks for `formatNumber` / `numberToWords` on large inputs.
 - [ ] Test coverage for the new arithmetic/stats/financial/utils domains once
       built — same bar as existing modules (default behavior, option override,
@@ -403,7 +408,22 @@ New domain from the vision doc.
 - [x] `.editorconfig`. (2026-08-10: mirrors `biome.json` — 2-space indent, LF,
       UTF-8, trim trailing whitespace — for editors that don't read Biome's
       config directly.)
-- [ ] Renovate or Dependabot (relevant given `bunfig.toml` pins exact versions).
+- [x] Renovate or Dependabot (relevant given `bunfig.toml` pins exact versions).
+      (2026-08-10: `renovate.json` at the repo root, extending
+      `config:recommended`. `rangeStrategy: "bump"` everywhere — every
+      dependency in `package.json` is already an exact version because of
+      `bunfig.toml`'s `install.exact = true`, so Renovate bumps the pinned
+      version in place rather than widening it to a range. Grouped
+      lockstep-versioned tool pairs (`@biomejs/biome`, the Changesets pair,
+      the commitlint pair, `vite`+`vite-plugin-dts`) so a partial bump can't
+      land. `typescript`/`@typescript/typescript6` require manual dashboard
+      approval — they're pinned to the 7.x prerelease line on purpose (see
+      `CLAUDE.md`'s tech stack table) and shouldn't move without a human
+      looking. Weekly schedule (`before 6am on monday`) plus lock-file
+      maintenance on the same cadence. Unverified against a live Renovate
+      run — no Renovate GitHub App install/token available in this sandbox
+      to confirm the config parses and onboards cleanly; worth checking the
+      Dependency Dashboard issue after the app is enabled on the repo.)
 - [ ] TypeDoc site from the existing JSDoc, published to GitHub Pages.
 - [ ] `examples/` folder with runnable snippets per module and per locale.
 - [x] Playground page — landing page with docs + a live, runnable example per
@@ -432,9 +452,33 @@ New domain from the vision doc.
       the root `vite.config.ts` — this repo's connected-folder mount blocks
       `unlink()`, so emptying the out dir before a second build fails with
       `EPERM`.)
-- [ ] Scaffolding script(s) under `scripts/` for "add a new function" and "add
+- [x] Scaffolding script(s) under `scripts/` for "add a new function" and "add
       a new locale" — generates the file + colocated test + index.ts export,
       so `CONTRIBUTING.md` (§8) can point at a command instead of prose.
+      (2026-08-10: "add a new function" half done —
+      `scripts/new-function.ts`, run via `bun run new:function <directory>
+      <functionName>`. Generates `src/<directory>/<kebab-name>.ts` +
+      colocated `<kebab-name>.test.ts` from templates matching the
+      conventions in `CONTRIBUTING.md`/`src/arithmetic/clamp.ts` (named
+      export, JSDoc `@example` placeholder, throw-on-bad-input reminder
+      comment), inserts the `export * from` line into `src/index.ts` at the
+      correct alphabetical position (parses existing lines rather than
+      assuming a fixed insertion point), rejects a name that already
+      exists, and runs `biome format --write` on the generated files before
+      exiting. `CONTRIBUTING.md`'s "How to add a new function" section now
+      leads with this as step 0. Verified against a real scratch copy of
+      the repo (not just read) — insertion at the start/middle/end of
+      `src/index.ts`, PascalCase-to-camelCase and camelCase-to-kebab-case
+      name conversion, duplicate-name rejection, and that the generated
+      test file actually passes `bun test` and `biome lint`. Added
+      `scripts` to `tsconfig.json`'s `include` and to `knip.json`'s
+      `entry`/`project` so the script itself is typechecked and doesn't
+      trip `check:unused` as a dead file. "add a new locale" scaffolding
+      still unstarted — locale files are more structurally varied (see
+      `src/locale/es.ts`'s ordinal-of-every-token deviation) than a single
+      template can cleanly cover; worth revisiting once a second
+      from-scratch locale (beyond `en`/`ru`/`es`) exists to generalize
+      from.)
 - [x] Fix all violations surfaced by the tightened `biome.json` ruleset
       (2026-08-09: added `noExcessiveCognitiveComplexity`, `noUnusedImports`,
       `useTopLevelRegex`, `useExplicitLengthCheck`, `useConsistentArrayType`
@@ -490,7 +534,22 @@ New domain from the vision doc.
 - [ ] CI matrix across Node 14/16/18/20/22 (current CI only runs on whatever
       Bun's default Node compat target is — doesn't yet verify the
       `engines.node: >=14` claim in `package.json`).
-- [ ] `size-limit` check in CI.
+- [x] `size-limit` check in CI. (2026-08-10: `size-limit` +
+      `@size-limit/preset-small-lib` (esbuild + brotli, matching the
+      preset's own "libraries < 10 kB" scope this package fits). Config
+      lives in package.json's `size-limit` array — six entries: the full
+      `dist/index.js` surface (6 KB limit, measures 4.32 kB), the
+      `dist/locale/index.js` barrel (5 KB limit, 3.34 kB), and each of
+      `locale/az`/`en`/`ru`/`es` individually (limits 1.1–2 KB, each
+      measuring under 1.4 kB) — also resolves the §5 "bundle-size assertion
+      per locale" item, since the per-locale entries are exactly that
+      assertion. Limits set with roughly 30–50% headroom over the measured
+      brotli size, not exact-fit, so routine growth doesn't false-positive
+      but a real regression (e.g. an accidental cross-locale import) still
+      trips it. New `bun run size` script; `ci.yml` runs it after `bun run
+      build` (size-limit needs the built `dist/` output, not source).
+      Verified with a real `bunx size-limit` run against a fresh build, not
+      just by reading the config.)
 - [ ] First publish to npm — still unpublished at `0.1.0`; name is confirmed
       available (see §0) but not reserved. The first `changeset version` run
       will bump this off `0.1.0`, so this item and the version number should
@@ -519,7 +578,11 @@ New domain from the vision doc.
       below. The §6 scaffolding script and §2 locale conformance suite don't
       exist yet, so those two sections describe the current manual process
       and note what they'll point at once built — revisit both sections when
-      those land so the guide doesn't go stale.)
+      those land so the guide doesn't go stale. 2026-08-10: "How to add a new
+      function" revisited now that the function half of the §6 scaffolding
+      script exists — leads with `bun run new:function` as step 0. "How to
+      add a new locale" is unchanged and still describes the manual process,
+      since locale scaffolding is still unstarted.)
   - [x] Local setup (`bun install`).
   - [x] Running tests, typecheck, and lint (`bun test`, `bun run typecheck`,
         `bun run lint` / `bun run check`).

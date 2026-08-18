@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommitTypeAll(chore)", ":semanticCommitScope(deps)"],
+  "timezone": "UTC",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "rangeStrategy": "bump",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "packageRules": [
+    {
+      "description": "bunfig.toml pins install.exact = true, so every dependency in package.json is already an exact version — bump in place rather than widening to a range.",
+      "matchManagers": ["npm"],
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Group Biome lint/format updates together — they version in lockstep and a partial bump between biome.json's schema and @biomejs/biome tends to break `bun run check`.",
+      "matchPackageNames": ["@biomejs/biome"],
+      "groupName": "biome"
+    },
+    {
+      "description": "Group Changesets tooling together.",
+      "matchPackageNames": ["@changesets/cli", "@changesets/changelog-github"],
+      "groupName": "changesets"
+    },
+    {
+      "description": "Group commitlint tooling together.",
+      "matchPackageNames": ["@commitlint/cli", "@commitlint/config-conventional"],
+      "groupName": "commitlint"
+    },
+    {
+      "description": "TypeScript is pinned to the 7.x prerelease line on purpose (see CLAUDE.md's tech stack table) — don't let Renovate silently jump major/minor without a human looking, since @typescript-eslint-style tooling elsewhere in the ecosystem often lags new TS releases.",
+      "matchPackageNames": ["typescript", "@typescript/typescript6"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Vite and its dts plugin need to move together — vite-plugin-dts pins to a Vite major internally.",
+      "matchPackageNames": ["vite", "vite-plugin-dts"],
+      "groupName": "vite"
+    }
+  ],
+  "ignorePaths": ["site-dist/**", "dist/**"]
+}
