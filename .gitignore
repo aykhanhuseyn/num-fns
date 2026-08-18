@@ -9,3 +9,4 @@ coverage
 !.vscode/extensions.json
 !.vscode/settings.json
 lefthook-local.yml
+CLAUDE.local.md
