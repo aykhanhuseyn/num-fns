@@ -1,3 +1,5 @@
+import type { Locale } from '../locale/types'
+
 /**
  * How `formatNumber` (and anything that delegates to it) rounds a value to
  * `decimals` fractional digits:
@@ -21,38 +23,42 @@ export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
 export interface NumberFormatOptions {
   /** Number of fractional digits to keep. Omit to keep the value's natural precision. */
   decimals?: number
-  /** Separator inserted between groups of three integer digits. Defaults to `' '`. */
+  /** Separator inserted between groups of three integer digits. Defaults to `locale.formatDefaults.thousandsSeparator`. */
   thousandsSeparator?: string
-  /** Separator between the integer and fractional part. Defaults to `','`. */
+  /** Separator between the integer and fractional part. Defaults to `locale.formatDefaults.decimalSeparator`. */
   decimalSeparator?: string
   /** How to round to `decimals` fractional digits. Defaults to `'halfUp'`. Has no effect when `decimals` is omitted. */
   roundingMode?: RoundingMode
+  /** Locale supplying the default separators. Defaults to `en` — pass `{ locale: az }` for the pre-refactor default. */
+  locale?: Locale
 }
 
 export type NumberParseOptions = Pick<
   NumberFormatOptions,
-  'thousandsSeparator' | 'decimalSeparator'
+  'thousandsSeparator' | 'decimalSeparator' | 'locale'
 >
 
 export interface MoneyFormatOptions extends NumberFormatOptions {
-  /** Currency symbol to render. Defaults to the manat sign `'₼'`. */
+  /** Currency symbol to render. Defaults to `locale.currency.symbol`. */
   symbol?: string
-  /** Whether the symbol is placed before or after the amount. Defaults to `'after'`. */
+  /** Whether the symbol is placed before or after the amount. Defaults to `locale.currency.symbolPosition`. */
   symbolPosition?: 'before' | 'after'
 }
 
 export interface MoneyParseOptions extends NumberParseOptions {
-  /** Currency symbol to strip before parsing. Defaults to the manat sign `'₼'`. */
+  /** Currency symbol to strip before parsing. Defaults to `locale.currency.symbol`. */
   symbol?: string
 }
 
 export interface MoneyWordsOptions {
-  /** Word for the major currency unit. Defaults to `'manat'`. */
+  /** Word for the major currency unit. Defaults to `locale.currency.major`'s word, resolved for the amount's plural category. */
   majorUnit?: string
-  /** Word for the minor currency unit (subunit). Defaults to `'qəpik'`. */
+  /** Word for the minor currency unit (subunit). Defaults to `locale.currency.minor`'s word, resolved for the amount's plural category. */
   minorUnit?: string
   /** Include the minor unit part even when its value is zero. Defaults to `false`. */
   includeZeroMinor?: boolean
+  /** Locale supplying the default currency words and cardinal number reading. Defaults to `en`. */
+  locale?: Locale
 }
 
 /**
@@ -89,9 +95,19 @@ export interface PercentageParseOptions extends NumberParseOptions {
 export interface ShortNotationOptions {
   /** Number of fractional digits to keep. Defaults to `1`. */
   decimals?: number
-  /** `'az'` uses `min/mln/mlrd/trln`, `'en'` uses `K/M/B/T`. Defaults to `'az'`. */
-  locale?: 'az' | 'en'
-  /** Separator between the integer and fractional part. Defaults to `','` for `'az'`, `'.'` for `'en'`. */
+  /**
+   * Locale supplying the scale abbreviations (`locale.notation.scales`) and
+   * default decimal separator. Defaults to `en` (`K`/`M`/`B`/`T`); pass
+   * `{ locale: az }` for the pre-refactor default (`min`/`mln`/`mlrd`/`trln`).
+   *
+   * Before 2026-08-18 this was a bare `'az' | 'en'` string, unrelated to the
+   * `Locale` objects in `num-fns/locale` (see `CLAUDE.md`'s note on this).
+   * That string option is now folded into the full `Locale` system, per the
+   * `todo.md` §1 plan — pass a `Locale` object (`az`, `en`, `ru`, `es`, or a
+   * custom one), not the old string.
+   */
+  locale?: Locale
+  /** Separator between the integer and fractional part. Defaults to `locale.formatDefaults.decimalSeparator`. */
   decimalSeparator?: string
 }
 
@@ -100,11 +116,38 @@ export type ShortNotationParseOptions = Pick<ShortNotationOptions, 'locale' | 'd
 export interface LongNotationOptions {
   /** Separator inserted between each scale group. Defaults to `' '`. */
   groupSeparator?: string
+  /** Locale supplying the scale words (`locale.words.scales`). Defaults to `en`. */
+  locale?: Locale
 }
 
 export interface SuffixOptions {
   /** String inserted between the value and the suffix. Defaults to `' '`. */
   separator?: string
+}
+
+/** Shared shape for the ordinal-family options (`getOrdinalSuffix`, `ordinalToWords`). */
+export interface OrdinalOptions {
+  /** Locale supplying the ordinal suffix/word rules (`locale.ordinal`). Defaults to `en`. */
+  locale?: Locale
+}
+
+export interface ToOrdinalOptions extends OrdinalOptions {
+  /** String inserted between the value and the suffix. Defaults to `'-'`. */
+  separator?: string
+}
+
+export interface NumberWordsOptions {
+  /** Locale supplying the cardinal word data (`locale.words`). Defaults to `en`. */
+  locale?: Locale
+}
+
+export interface FractionWordsOptions {
+  /**
+   * Locale supplying the fraction-word composition. Defaults to `en`.
+   * Currently only `az` and `en` are implemented — see `number/fraction.ts`'s
+   * doc comment for why `ru`/`es` throw instead of guessing.
+   */
+  locale?: Locale
 }
 
 export interface ByteSizeOptions {
@@ -125,6 +168,8 @@ export type ByteSizeParseOptions = Pick<ByteSizeOptions, 'base' | 'decimalSepara
 export interface DigitWordsOptions {
   /** String inserted between each spoken digit. Defaults to `' '`. */
   separator?: string
+  /** Locale supplying the spoken digit words (`locale.words.zero`/`ones`/`negative`). Defaults to `en`. */
+  locale?: Locale
 }
 
 export interface CompoundInterestOptions {

@@ -3,9 +3,10 @@ import { es } from './es'
 import type { WordChunk } from './types'
 
 /**
- * Builds a `WordChunk` by hand — `es` isn't wired into any public function
- * yet (`todo.md` §1), so there's no existing `numberToWords` to derive
- * `words` from. The per-group cardinal reading is supplied directly.
+ * Builds a `WordChunk` by hand for the `compose`-only tests below, so those
+ * stay focused on chunk-joining behavior independent of `renderGroup`
+ * (which has its own `describe` block, and is exercised end-to-end via
+ * `numberToWords(value, { locale: es })` in `number/words.test.ts`).
  */
 function chunk(value: number, words: string, scaleIndex: number, scaleWord: string): WordChunk {
   return { value, words, scaleIndex, scaleWord }
@@ -53,6 +54,30 @@ describe('es.words', () => {
     expect(es.words.scales[1]).toBe('mil')
     expect(es.words.scales[2]).toEqual({ one: 'millón', other: 'millones' })
     expect(es.words.scales[3]).toEqual({ one: 'millardo', other: 'millardos' })
+  })
+
+  describe('renderGroup', () => {
+    it('joins a tens word (30+) and a nonzero ones digit with "y"', () => {
+      expect(es.words.renderGroup(234)).toBe('doscientos treinta y cuatro')
+      expect(es.words.renderGroup(35)).toBe('treinta y cinco')
+    })
+
+    it('contracts 21-29 into a single word instead of using "y"', () => {
+      expect(es.words.renderGroup(21)).toBe('veintiuno')
+      expect(es.words.renderGroup(22)).toBe('veintidós')
+      expect(es.words.renderGroup(23)).toBe('veintitrés')
+      expect(es.words.renderGroup(29)).toBe('veintinueve')
+    })
+
+    it('always renders the regular "ciento" hundreds form — "cien" is compose’s job', () => {
+      expect(es.words.renderGroup(100)).toBe('ciento')
+      expect(es.words.renderGroup(101)).toBe('ciento uno')
+    })
+
+    it('uses the irregular teens', () => {
+      expect(es.words.renderGroup(11)).toBe('once')
+      expect(es.words.renderGroup(19)).toBe('diecinueve')
+    })
   })
 
   describe('compose', () => {

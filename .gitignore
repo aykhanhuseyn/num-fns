@@ -10,3 +10,5 @@ coverage
 !.vscode/settings.json
 lefthook-local.yml
 CLAUDE.local.md
+.env
+.env.local

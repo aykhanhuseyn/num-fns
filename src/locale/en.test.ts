@@ -3,11 +3,10 @@ import { en } from './en'
 import type { WordChunk } from './types'
 
 /**
- * Builds a `WordChunk` by hand. Unlike `az.test.ts`, there is no existing
- * hardcoded `numberToWords` for English to derive `words` from — `en` isn't
- * wired into any public function yet (`todo.md` §1) — so the per-group
- * cardinal reading is supplied directly and checked against hand-verified
- * English.
+ * Builds a `WordChunk` by hand for the `compose`-only tests below, so those
+ * stay focused on chunk-joining behavior independent of `renderGroup`
+ * (which has its own `describe` block, and is exercised end-to-end via
+ * `numberToWords(value, { locale: en })` in `number/words.test.ts`).
  */
 function chunk(value: number, words: string, scaleIndex: number, scaleWord: string): WordChunk {
   return { value, words, scaleIndex, scaleWord }
@@ -41,6 +40,27 @@ describe('en.words', () => {
 
   it('lists short-scale words, largest last', () => {
     expect(en.words.scales).toEqual(['', 'thousand', 'million', 'billion', 'trillion'])
+  })
+
+  describe('renderGroup', () => {
+    it('hyphenates a tens+ones pair', () => {
+      expect(en.words.renderGroup(21)).toBe('twenty-one')
+      expect(en.words.renderGroup(99)).toBe('ninety-nine')
+    })
+
+    it('never drops "one" before "hundred"', () => {
+      expect(en.words.renderGroup(100)).toBe('one hundred')
+      expect(en.words.renderGroup(101)).toBe('one hundred one')
+    })
+
+    it('uses the irregular teens', () => {
+      expect(en.words.renderGroup(11)).toBe('eleven')
+      expect(en.words.renderGroup(19)).toBe('nineteen')
+    })
+
+    it('matches the hand-built chunk used by the compose tests below', () => {
+      expect(en.words.renderGroup(234)).toBe('two hundred thirty-four')
+    })
   })
 
   describe('compose', () => {

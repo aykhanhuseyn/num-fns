@@ -1,74 +1,66 @@
+import { en } from '../locale/en'
+import type { FractionWordsOptions } from '../shared/types'
+import { ordinalToWords } from './suffix'
 import { numberToWords } from './words'
 
 /**
- * Word for one half — the one Azerbaijani fraction with an idiomatic name
- * rather than a "<denominator + locative> <numerator>" construction.
- * {@link fractionToWords} returns this directly for `1/2` instead of the
- * grammatically valid but unidiomatic "ikidə bir".
- */
-const HALF_WORD = 'yarım'
-
-/**
- * Classifies a vowel by front/back harmony for the locative-case suffix
- * ("-da"/"-də") that reads a fraction's denominator, e.g. "üçdə" ("in
- * three") in "üçdə bir" (one third), or "yüzdə" ("in a hundred") in "yüzdə
- * bir" (one percent — "percent" and "one hundredth" are the same phrase in
- * Azerbaijani).
+ * English fraction words: `<numerator cardinal> <denominator ordinal>`,
+ * pluralizing the ordinal with a trailing "s" when the numerator is more
+ * than one — e.g. `1/3` becomes `"one third"`, `2/3` becomes `"two thirds"`.
+ * English's ordinal words happen to double as fraction-noun words for every
+ * denominator this covers, so no separate vocabulary is needed (contrast
+ * Spanish, where "tercero" (third, ordinal) and "tercio" (a third, fraction
+ * noun) diverge — one reason `es` isn't implemented, see this module's
+ * top-level doc comment).
  *
- * This is a *two-way* harmony (back vs. front only), unlike the four-way
- * harmony `suffix.ts` uses for the ordinal suffix ("-cı"/"-ci"/"-cu"/"-cü").
- * Azerbaijani's low-vowel suffixes (locative, dative, plural) only track
- * backness, not rounding — "doqquz" (back, rounded "u") and "altı" (back,
- * unrounded "ı") both take "-da" even though they take different ordinal
- * suffixes ("doqquzuncu" vs. "altıncı"). Kept self-contained rather than
- * importing from `suffix.ts`'s table, matching `number/`'s existing pattern
- * of small, independent modules (see `roman.ts`).
+ * Lives here rather than as `en.fractions` (the hook every other
+ * locale implements — see `Locale.fractions` in `locale/types.ts`) because
+ * it needs `numberToWords`/`ordinalToWords`, and those depend on `en` for
+ * their own default locale — `en` can never import back from `number/`
+ * without creating a circular dependency, so its composer is special-cased
+ * here instead of being locale-owned.
  */
-const VOWEL_TO_LOCATIVE_SUFFIX: Record<string, string> = {
-  a: 'da',
-  ı: 'da',
-  o: 'da',
-  u: 'da',
-  e: 'də',
-  ə: 'də',
-  i: 'də',
-  ö: 'də',
-  ü: 'də',
-}
-
-function lastVowel(word: string): string {
-  for (let i = word.length - 1; i >= 0; i--) {
-    const char = word[i] as string
-    if (char in VOWEL_TO_LOCATIVE_SUFFIX) return char
-  }
-  throw new SyntaxError(`fractionToWords: no Azerbaijani vowel found in "${word}"`)
+function enFractionWords(numerator: number, denominator: number): string {
+  const ordinal = ordinalToWords(denominator, { locale: en })
+  const denominatorWord = numerator > 1 ? `${ordinal}s` : ordinal
+  return `${numberToWords(numerator, { locale: en })} ${denominatorWord}`
 }
 
 /**
- * Spells out a proper fraction (`0 < numerator < denominator`) as Azerbaijani
- * words. The denominator takes the locative case ("üçdə" = "in three") and
- * the numerator follows as a cardinal number — e.g. `1/3` becomes `"üçdə
- * bir"` (one third), `2/3` becomes `"üçdə iki"` (two thirds). `1/2` is the
- * one exception: it returns the idiomatic `"yarım"` (half) rather than the
- * grammatically valid but unidiomatic `"ikidə bir"`.
+ * Spells out a proper fraction (`0 < numerator < denominator`) as words, per
+ * `options.locale` (defaults to `en`). Every locale but `en` composes its
+ * fraction words via its own `Locale.fractions` hook (`az.fractions`, e.g.)
+ * — `en`'s composer lives in this module instead, see {@link enFractionWords}.
  *
- * Scoped to proper fractions for now. Mixed numbers (e.g. "bir yarım" for
- * `3/2`) and fractions with a numerator `>=` the denominator aren't handled
- * and throw `RangeError` — there's no single idiomatic Azerbaijani reading
- * to fall back to without deciding a mixed-number format first.
+ * Scoped to proper fractions (`0 < numerator < denominator`) — mixed numbers
+ * and improper fractions throw `RangeError`, since there's no single
+ * idiomatic reading to fall back to without deciding a mixed-number format
+ * first.
  *
- * Like the rest of `number/`, this is hardcoded Azerbaijani for now — not
- * gated on the locale refactor (`todo.md` §1) since it only consumes the
- * already-shared cardinal-number logic in {@link numberToWords}.
+ * Only `az` and `en` are implemented. `ru` and `es` fraction nouns are not
+ * simple derivations of their `Locale.ordinal.words` output — Russian
+ * fractions need feminine noun forms ("треть", "четверть") distinct from
+ * the masculine ordinal adjectives `ru.ordinal.words` produces ("третий"),
+ * and Spanish's fraction noun for 1/3 ("tercio") differs from its ordinal
+ * ("tercero") even though every other denominator's forms coincide.
+ * Guessing at these risks exactly the "wrong in embarrassing, specific ways"
+ * failure mode `todo.md` §5 calls out for machine-generated `ru`/`es` word
+ * lists, so `fractionToWords` throws for these locales (no `Locale.fractions`
+ * defined) instead of guessing; building real `ru`/`es` fraction-noun
+ * vocabulary is tracked in `todo.md` §2 as follow-up linguistic work, not
+ * part of this locale-threading pass.
  *
  * @example
- * fractionToWords(1, 2); // "yarım"
- * fractionToWords(1, 3); // "üçdə bir"
- * fractionToWords(2, 3); // "üçdə iki"
- * fractionToWords(1, 4); // "dörddə bir"
- * fractionToWords(1, 100); // "yüzdə bir"
+ * fractionToWords(1, 3); // "one third"
+ * fractionToWords(2, 3); // "two thirds"
+ * fractionToWords(1, 2, { locale: az }); // "yarım"
+ * fractionToWords(1, 3, { locale: az }); // "üçdə bir"
  */
-export function fractionToWords(numerator: number, denominator: number): string {
+export function fractionToWords(
+  numerator: number,
+  denominator: number,
+  options: FractionWordsOptions = {},
+): string {
   if (!Number.isInteger(denominator) || denominator < 2) {
     throw new RangeError(
       `fractionToWords: denominator must be an integer >= 2, received ${denominator}`,
@@ -80,11 +72,21 @@ export function fractionToWords(numerator: number, denominator: number): string 
     )
   }
 
-  if (denominator === 2 && numerator === 1) return HALF_WORD
+  const { locale = en } = options
+  const isEnglish = locale.code === en.code
 
-  const denominatorWords = numberToWords(denominator)
-  const denominatorLastWord = denominatorWords.split(' ').pop() as string
-  const suffix = VOWEL_TO_LOCATIVE_SUFFIX[lastVowel(denominatorLastWord)] as string
+  if (denominator === 2 && numerator === 1) {
+    if (isEnglish) return 'half'
+    if (locale.fractions?.half) return locale.fractions.half
+  }
 
-  return `${denominatorWords}${suffix} ${numberToWords(numerator)}`
+  if (isEnglish) return enFractionWords(numerator, denominator)
+
+  if (!locale.fractions) {
+    throw new RangeError(
+      `fractionToWords: locale "${locale.code}" does not define fraction words yet — see todo.md §2`,
+    )
+  }
+
+  return locale.fractions.words(numerator, denominator)
 }

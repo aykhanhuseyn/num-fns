@@ -15,10 +15,13 @@ projects alike.
 
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
-> **Status: pre-release.** The package is currently Azerbaijani-only and is
-> being generalized into a multi-locale library. `en`, `ru` and `es` are on the
-> roadmap — see [`todo.md`](./todo.md). The locale API shown below is the target
-> design and is not implemented yet.
+> **Status: pre-release.** Not yet published to npm — see [`todo.md`](./todo.md)
+> for what's left. The locale system is implemented: `az`, `en`, `ru`, and `es`
+> are all wired into `numberToWords`, ordinals, notation, and money/percentage
+> formatting. **The default locale is `en`** if you don't pass one — `az` was
+> the implicit default before 2026-08-18 and now requires `{ locale: az }`
+> explicitly. `fractionToWords` currently only has real vocabulary for `az`
+> and `en`; see its JSDoc for why `ru`/`es` throw instead of guessing.
 
 ## Install
 
@@ -46,8 +49,8 @@ numberToWords(1234, { locale: en }); // "one thousand two hundred thirty-four"
 numberToWords(1234, { locale: ru }); // "одна тысяча двести тридцать четыре"
 numberToWords(1234, { locale: es }); // "mil doscientos treinta y cuatro"
 
-formatMoney(1234.5, { locale: az, currency: 'AZN' }); // "1 234,50 ₼"
-formatMoney(1234.5, { locale: en, currency: 'USD' }); // "$1,234.50"
+formatMoney(1234.5, { locale: az }); // "1 234,50 ₼" (az.currency defaults to AZN)
+formatMoney(1234.5, { locale: en }); // "$ 1,234.50" (en.currency defaults to USD)
 ```
 
 ### Full surface
@@ -74,48 +77,59 @@ import {
 } from 'num-fns';
 ```
 
-Examples below use the Azerbaijani locale, the only one currently implemented:
+Examples below use the default locale (`en`) unless a `locale` is passed:
 
 ```ts
-formatNumber(1234567.89, { decimals: 2 }); // "1 234 567,89"
-parseNumber('1 234 567,89'); // 1234567.89
+formatNumber(1234567.89, { decimals: 2 }); // "1,234,567.89"
+formatNumber(1234567.89, { decimals: 2, locale: az }); // "1 234 567,89"
+parseNumber('1,234,567.89'); // 1234567.89
 
-numberToWords(1234); // "min iki yüz otuz dörd"
-numberToWords(1000000); // "bir milyon"
+numberToWords(1234); // "one thousand two hundred thirty-four"
+numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
 
 toRoman(1994); // "MCMXCIV"
 fromRoman('MCMXCIV'); // 1994
 
-toShortNotation(2500000); // "2,5 mln"
-toLongNotation(1234567); // "1 milyon 234 min 567"
-parseShortNotation('2,5 mln'); // 2500000
-parseLongNotation('1 milyon 234 min 567'); // 1234567
+toShortNotation(2500000); // "2.5M"
+toLongNotation(1234567); // "1 million 234 thousand 567"
+parseShortNotation('2.5M'); // 2500000
+parseLongNotation('1 million 234 thousand 567'); // 1234567
 
-toOrdinal(3); // "3-cü"
-ordinalToWords(3); // "üçüncü"
+toOrdinal(3); // "3rd"
+ordinalToWords(3); // "third"
 withSuffix(120, 'kg'); // "120 kg"
 
-formatMoney(1234.5); // "1 234,50 ₼"
-parseMoney('1 234,50 ₼'); // 1234.5
-moneyToWords(1234.5); // "min iki yüz otuz dörd manat əlli qəpik"
+formatMoney(1234.5); // "$ 1,234.50"
+parseMoney('$ 1,234.50'); // 1234.5
+moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
 
-formatPercentage(45.5, { decimals: 1 }); // "45,5%"
-parsePercentage('45,5%', { asRatio: true }); // 0.455
+formatPercentage(45.5, { decimals: 1 }); // "45.5%"
+parsePercentage('45.5%', { asRatio: true }); // 0.455
 ```
 
 Every formatter accepts an options object for overriding separators, decimals,
 currency, or locale — see the JSDoc on each function for details.
 
-Roman numerals are locale-independent and take no `locale` option.
+Roman numerals and byte-size notation (`toByteSize`/`parseByteSize`) are
+locale-independent and take no `locale` option, as are the financial,
+statistics, arithmetic, and base-conversion utilities.
 
 ## Locale support
 
-| Locale | Code | Status |
-| --- | --- | --- |
-| Azerbaijani | `az` | Implemented |
-| English | `en` | Planned |
-| Russian | `ru` | Planned |
-| Spanish | `es` | Planned |
+| Locale | Code | `numberToWords`, ordinals, notation, money, percentage | `fractionToWords` |
+| --- | --- | --- | --- |
+| Azerbaijani | `az` | Implemented | Implemented |
+| English | `en` | Implemented (default) | Implemented |
+| Russian | `ru` | Implemented | Throws — see below |
+| Spanish | `es` | Implemented | Throws — see below |
+
+`fractionToWords` only has real fraction-noun vocabulary for `az` and `en`.
+Russian and Spanish fraction nouns aren't simple derivations of their ordinal
+words (Russian needs feminine forms like "треть"/"четверть"; Spanish's
+"tercio" diverges from its ordinal "tercero"), so rather than guess and risk
+being wrong in specific, embarrassing ways, `fractionToWords` throws a
+`RangeError` for those two locales until real vocabulary is added — see the
+function's JSDoc.
 
 Adding a locale means implementing one object against a shared conformance test
 suite. Contributions welcome — a locale-authoring guide is on the roadmap.

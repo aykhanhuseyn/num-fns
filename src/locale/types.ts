@@ -67,20 +67,47 @@ export interface LocaleWords {
   /** Word prefixed to the spelled-out form of a negative number, e.g. az `'mənfi'`, en `'negative'`. */
   negative: string
   /**
-   * Connector word used where this locale needs one: joining the integer
-   * and fractional part when spelling decimals (Azerbaijani `'tam'`), or
-   * between a hundreds/tens group and the trailing ones digit (Spanish and
-   * British English `'y'`/`'and'`). `compose` decides exactly where, or
-   * whether, it gets inserted — omit for locales that never need it.
+   * Connector word inserted between a hundreds/tens group and the trailing
+   * ones digit within a single 0-999 group, e.g. Spanish `'y'` in `"treinta
+   * y cinco"` (35), or (unimplemented here) British English `'and'` in
+   * `"one hundred and one"`. Consumed by {@link renderGroup}, not `compose` —
+   * `compose` only ever sees already-built chunk words. Omit for locales
+   * that never need a connector here (az, en-US, ru).
+   *
+   * Before 2026-08-18 this field also doubled as the integer/fraction
+   * decimal connector; that meaning was split out into
+   * {@link decimalConnector} once `numberToWords` actually threaded a
+   * `locale` option (`todo.md` §1) and the double duty became ambiguous —
+   * a locale that sets one now doesn't accidentally get it misused for the
+   * other purpose.
    */
   and?: string
   /**
+   * Word or phrase joining the spelled-out integer and fractional parts of
+   * a decimal number, e.g. Azerbaijani `'tam'` (`12.34` -> `"on iki tam
+   * otuz dörd"`). Omit for locales that haven't defined a decimal-reading
+   * convention yet (`en`/`ru`/`es` — see `todo.md` §2); `numberToWords`
+   * then joins the two parts with a plain space, which is a placeholder,
+   * not a claim of linguistic correctness.
+   */
+  decimalConnector?: string
+  /**
+   * Renders a single 0-999 group as cardinal words using this locale's own
+   * `ones`/`teens`/`tens`/`hundreds` vocabulary and composition rules
+   * (hyphenation, the `and` connector, irregular contractions like Spanish
+   * `veinte` + `uno` -> `"veintiuno"`). Always produces the *regular* form —
+   * chunk-level irregularities that depend on context (Azerbaijani dropping
+   * "bir" before "min", Spanish "cien" vs "ciento") are `compose`'s job, not
+   * this one, since only `compose` knows a chunk's scale position.
+   */
+  renderGroup: (value: number) => string
+  /**
    * Joins ordered chunks (largest scale first) into the final string. This
-   * is the seam where word order, hyphenation (English `twenty-one`) and
-   * elision (Spanish `veintiuno` contracting `veinte y uno`) live. A locale
-   * whose grouping already matches `numberToWords`'s default order can
-   * implement this as `chunks.map(c => \`${c.words} ${c.scaleWord}\`.trim()).join(' ')`;
-   * locales that need to reorder or contract adjacent chunks override it.
+   * is the seam where chunk-level irregularities live — dropping a leading
+   * "one" (Azerbaijani "min", not "bir min"), inflecting for gender
+   * (Russian "одна тысяча"), or contracting before a scale word (Spanish
+   * "un millón"). A locale with no such irregularities can implement this
+   * as `chunks.map(c => \`${c.words} ${c.scaleWord}\`.trim()).join(' ')`.
    */
   compose: (chunks: readonly WordChunk[]) => string
 }
@@ -150,15 +177,23 @@ export interface LocaleCurrency {
 /**
  * A complete set of linguistic and formatting data for one locale, in the
  * spirit of `date-fns`'s `Locale` object (see `CLAUDE.md` and `todo.md` §1).
- * Every public function that currently hardcodes Azerbaijani —
+ * Every public function that used to hardcode Azerbaijani —
  * `numberToWords`, `formatNumber`/`parseNumber`, `formatMoney`/`parseMoney`/
- * `moneyToWords`, `toShortNotation`/`toLongNotation`, `toOrdinal`/
- * `ordinalToWords` — will accept a `{ locale?: Locale }` option that
- * defaults to `az` and reads from this shape instead of the module-level
- * constants in `shared/constants.ts` and `number/words.ts`.
+ * `moneyToWords`, `formatPercentage`/`parsePercentage`,
+ * `toShortNotation`/`parseShortNotation`/`toLongNotation`/`parseLongNotation`,
+ * `toOrdinal`/`ordinalToWords`/`getOrdinalSuffix`, `numberToDigitWords`, and
+ * (partially — see `number/fraction.ts`'s doc comment) `fractionToWords` —
+ * accepts a `{ locale?: Locale }` option that **defaults to `en`**, not
+ * `az`, per the explicit direction recorded in `todo.md` §1's "default
+ * locale" decision. `az` remains fully supported as an explicit
+ * `{ locale: az }` — it is the reference implementation these functions are
+ * verified against (`locale/az.test.ts`), not a fallback.
  *
- * `toRoman`/`fromRoman` are deliberately excluded: roman numerals are
- * locale-independent and stay outside this system (see `todo.md` §3).
+ * `toRoman`/`fromRoman` and `toByteSize`/`parseByteSize` are deliberately
+ * excluded: both are locale-independent and stay outside this system (see
+ * `todo.md` §3 and `number/byte-size.ts`'s doc comment). Financial, stats,
+ * arithmetic, and utils functions are excluded too, per `todo.md` §4's
+ * "raw numbers, no locale" decision.
  */
 export interface Locale {
   /** BCP 47 language tag, e.g. `'az'`, `'en'`, `'ru'`, `'es'`. */
@@ -187,4 +222,23 @@ export interface Locale {
   notation: LocaleNotation
   /** Default currency for `formatMoney`/`parseMoney`/`moneyToWords`. */
   currency: LocaleCurrency
+  /**
+   * Fraction-word composition for `fractionToWords`. Optional — only `az`
+   * implements this today; `ru`/`es` don't yet have verified fraction-noun
+   * vocabulary (see `number/fraction.ts`'s doc comment for why guessing is
+   * riskier than throwing). `en`, the structural default `number/words.ts`
+   * itself falls back to, is deliberately excluded from this field too: its
+   * composer needs `numberToWords`, and `number/words.ts` depends on `en`
+   * for its default, so `en` can never import back from `number/` without a
+   * cycle — `number/fraction.ts` special-cases `en` directly instead.
+   */
+  fractions?: LocaleFractions
+}
+
+/** Fraction-word composition for a locale that implements it (see `Locale.fractions`). */
+export interface LocaleFractions {
+  /** Idiomatic word for exactly 1/2, e.g. az `'yarım'`, if this locale has one. */
+  half?: string
+  /** Builds the fraction reading for any other proper fraction. */
+  words: (numerator: number, denominator: number) => string
 }

@@ -1,27 +1,26 @@
+import { en } from '../locale/en'
 import { formatNumber, parseNumber } from '../number/format'
-import {
-  AZN_SYMBOL,
-  DEFAULT_DECIMAL_SEPARATOR,
-  DEFAULT_THOUSANDS_SEPARATOR,
-} from '../shared/constants'
 import type { MoneyFormatOptions, MoneyParseOptions } from '../shared/types'
 
 /**
- * Formats a monetary amount. Defaults to the Azerbaijani manat (₼), two
- * decimals, and the symbol placed after the amount.
+ * Formats a monetary amount using `options.locale`'s currency conventions by
+ * default (`en`: `$` before the amount, two decimals — pass `{ locale: az }`
+ * for the pre-refactor default of the manat sign `₼` after the amount).
  *
  * @example
- * formatMoney(1234.5); // "1 234,50 ₼"
- * formatMoney(9.99, { symbol: '$', symbolPosition: 'before' }); // "$ 9,99"
+ * formatMoney(1234.5); // "$ 1,234.50"
+ * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
+ * formatMoney(9.99, { symbol: '€', symbolPosition: 'after' }); // "9.99 €"
  */
 export function formatMoney(value: number, options: MoneyFormatOptions = {}): string {
   const {
+    locale = en,
     decimals = 2,
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
     roundingMode,
-    symbol = AZN_SYMBOL,
-    symbolPosition = 'after',
+    symbol = locale.currency.symbol,
+    symbolPosition = locale.currency.symbolPosition,
   } = options
 
   const formattedNumber = formatNumber(value, {
@@ -40,13 +39,15 @@ export function formatMoney(value: number, options: MoneyFormatOptions = {}): st
  * back into a JavaScript number, stripping the currency symbol.
  *
  * @example
- * parseMoney("1 234,50 ₼"); // 1234.5
+ * parseMoney("$ 1,234.50"); // 1234.5
+ * parseMoney("1 234,50 ₼", { locale: az }); // 1234.5
  */
 export function parseMoney(value: string, options: MoneyParseOptions = {}): number {
   const {
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
-    symbol = AZN_SYMBOL,
+    locale = en,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
+    symbol = locale.currency.symbol,
   } = options
 
   const withoutSymbol = value.split(symbol).join('').trim()

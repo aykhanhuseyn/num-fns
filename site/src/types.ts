@@ -1,8 +1,14 @@
 /** Which HTML control a field renders as. */
 type FieldKind = 'number' | 'text' | 'select' | 'boolean'
 
-/** How a field's raw control value is coerced before being passed to the real function. */
-type ValueType = 'number' | 'string' | 'boolean' | 'numberArray'
+/**
+ * How a field's raw control value is coerced before being passed to the real
+ * function. `'locale'` is special: the control's raw value is a locale code
+ * string (`'az'`/`'en'`/`'ru'`/`'es'`, driving a `select`), but the value
+ * actually passed to the real function is the corresponding `Locale` object
+ * from `src/locale/` — see `engine.ts`'s `coerceValue` and `toLiteral`.
+ */
+type ValueType = 'number' | 'string' | 'boolean' | 'numberArray' | 'locale'
 
 interface SelectOption {
   value: string

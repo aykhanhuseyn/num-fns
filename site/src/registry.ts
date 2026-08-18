@@ -45,7 +45,8 @@ import {
   variance,
   withSuffix,
 } from '../../src/index'
-import type { Category, PlaygroundFn } from './types'
+import { LOCALE_SELECT_OPTIONS } from './locales'
+import type { Category, FieldDef, PlaygroundFn } from './types'
 
 /** Real num-fns exports are precisely typed; the playground engine drives all of them generically, so cast once per entry instead of loosening the library's own types. */
 function fn(value: (...args: never[]) => unknown): PlaygroundFn {
@@ -60,18 +61,63 @@ const ROUNDING_MODES = [
   { value: 'floor', label: 'floor' },
 ]
 
+/**
+ * A `locale` option field, shared by every example whose real function
+ * accepts `options.locale` (everything under "Number formatting & parsing",
+ * "Numbers as words", "Ordinals & suffixes", "Short & long notation",
+ * "Money", and "Percentage" — see each category's functions for which ones;
+ * `toRoman`/`fromRoman`, byte size, arithmetic, financial, stats, and utils
+ * stay locale-independent). Defaults to `'en'` (matching the real function's
+ * own default) and is omitted from the call/snippet until changed, so the
+ * default view matches what a caller who never touches `locale` would see.
+ */
+function localeField(overrides: Partial<FieldDef> = {}): FieldDef {
+  return {
+    id: 'locale',
+    label: 'locale',
+    kind: 'select',
+    valueType: 'locale',
+    default: 'en',
+    selectOptions: LOCALE_SELECT_OPTIONS,
+    arg: { kind: 'option', key: 'locale' },
+    omitWhenDefault: true,
+    ...overrides,
+  }
+}
+
+/**
+ * A text option field whose real default comes from the locale (a
+ * separator, currency symbol, or unit word) rather than a fixed value —
+ * e.g. `formatNumber`'s `thousandsSeparator`. Left blank (the sentinel
+ * default), the option is omitted from the call entirely so the locale's
+ * own default applies; typing a value overrides it explicitly, same as a
+ * real caller would. See `engine.ts`'s `isOmittedWhenDefault`.
+ */
+function localeDefaultTextField(
+  field: Pick<FieldDef, 'id' | 'label' | 'arg'> & Partial<FieldDef>,
+): FieldDef {
+  return {
+    kind: 'text',
+    valueType: 'string',
+    default: '',
+    omitWhenDefault: true,
+    placeholder: 'locale default',
+    ...field,
+  }
+}
+
 const numberCategory: Category = {
   id: 'number-format',
   title: 'Number formatting & parsing',
   description:
-    'The base formatter every other formatter (money, percentage) delegates to for grouping digits and joining the fractional part. Azerbaijani defaults: space as thousands separator, comma as decimal separator.',
+    "The base formatter every other formatter (money, percentage) delegates to for grouping digits and joining the fractional part. Separators default from the locale's own formatDefaults (en: comma thousands, period decimal; az: space thousands, comma decimal) — pick a locale below, or override thousandsSeparator/decimalSeparator explicitly.",
   examples: [
     {
       id: 'formatNumber',
       name: 'formatNumber',
       signature: '(value: number, options?: NumberFormatOptions): string',
       description:
-        'Formats a number using Azerbaijani conventions by default. Throws RangeError if value is not finite.',
+        "Formats a number using the locale's own conventions, defaulting to en. Throws RangeError if value is not finite.",
       sourceFile: 'src/number/format.ts',
       fn: fn(formatNumber),
       fields: [
@@ -93,22 +139,17 @@ const numberCategory: Category = {
           step: '1',
           arg: { kind: 'option', key: 'decimals' },
         },
-        {
+        localeField(),
+        localeDefaultTextField({
           id: 'thousandsSeparator',
           label: 'thousandsSeparator',
-          kind: 'text',
-          valueType: 'string',
-          default: ' ',
           arg: { kind: 'option', key: 'thousandsSeparator' },
-        },
-        {
+        }),
+        localeDefaultTextField({
           id: 'decimalSeparator',
           label: 'decimalSeparator',
-          kind: 'text',
-          valueType: 'string',
-          default: ',',
           arg: { kind: 'option', key: 'decimalSeparator' },
-        },
+        }),
         {
           id: 'roundingMode',
           label: 'roundingMode',
@@ -134,25 +175,20 @@ const numberCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '1 234 567,89',
+          default: '1,234,567.89',
           arg: { kind: 'positional', index: 0 },
         },
-        {
+        localeField(),
+        localeDefaultTextField({
           id: 'thousandsSeparator',
           label: 'thousandsSeparator',
-          kind: 'text',
-          valueType: 'string',
-          default: ' ',
           arg: { kind: 'option', key: 'thousandsSeparator' },
-        },
-        {
+        }),
+        localeDefaultTextField({
           id: 'decimalSeparator',
           label: 'decimalSeparator',
-          kind: 'text',
-          valueType: 'string',
-          default: ',',
           arg: { kind: 'option', key: 'decimalSeparator' },
-        },
+        }),
       ],
     },
   ],
@@ -162,14 +198,14 @@ const wordsCategory: Category = {
   id: 'words',
   title: 'Numbers as words',
   description:
-    'The linguistic core of the package: spells out Azerbaijani cardinal numbers by grouping into base-1000 chunks and applying two irregular rules — "min" (not "bir min") for exactly 1000 at the thousands scale, but "bir milyon" for exactly 1,000,000 at every scale above thousands.',
+    'The linguistic core of the package: spells out cardinal numbers by grouping into base-1000 chunks, then each locale renders and joins those chunks its own way — Azerbaijani\'s "min" (not "bir min") for exactly 1000 but "bir milyon" for exactly 1,000,000; English hyphenation ("twenty-one"); Spanish\'s veinti-contraction and "cien"/"ciento"; Russian gender agreement before "тысяча".',
   examples: [
     {
       id: 'numberToWords',
       name: 'numberToWords',
-      signature: '(value: number): string',
+      signature: '(value: number, options?: NumberWordsOptions): string',
       description:
-        'Spells out a number as Azerbaijani cardinal words. Supports integers up to the trillion range, negative numbers, and up to two decimal digits (read as "tam" + a whole number).',
+        "Spells out a number as cardinal words, per the locale's own vocabulary and composition rules (defaults to en). Supports integers up to the trillion range, negative numbers, and up to two decimal digits.",
       sourceFile: 'src/number/words.ts',
       fn: fn(numberToWords),
       fields: [
@@ -182,6 +218,7 @@ const wordsCategory: Category = {
           step: 'any',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
       ],
     },
     {
@@ -189,7 +226,7 @@ const wordsCategory: Category = {
       name: 'numberToDigitWords',
       signature: '(value: number | string, options?: DigitWordsOptions): string',
       description:
-        'Reads a number or numeric string digit by digit, the way phone numbers and codes are read aloud, e.g. "055" becomes "sıfır beş beş" — not "əlli beş". Punctuation like spaces, "-", "()", "." and a leading "+" is ignored.',
+        'Reads a number or numeric string digit by digit, the way phone numbers and codes are read aloud, per the locale\'s own digit words (defaults to en, e.g. "055" -> "zero five five"). Punctuation like spaces, "-", "()", "." and a leading "+" is ignored.',
       sourceFile: 'src/number/digits.ts',
       fn: fn(numberToDigitWords),
       fields: [
@@ -201,6 +238,7 @@ const wordsCategory: Category = {
           default: '+994 55 123 45 67',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'separator',
           label: 'separator',
@@ -214,9 +252,9 @@ const wordsCategory: Category = {
     {
       id: 'fractionToWords',
       name: 'fractionToWords',
-      signature: '(numerator: number, denominator: number): string',
+      signature: '(numerator: number, denominator: number, options?: FractionWordsOptions): string',
       description:
-        'Spells out a proper fraction as Azerbaijani words. The denominator takes the locative case ("üçdə" = "in three") and 1/2 is the idiomatic "yarım" rather than "ikidə bir". Throws RangeError for mixed numbers or improper fractions.',
+        'Spells out a proper fraction as words. Only az and en have real fraction-noun vocabulary today — ru and es throw RangeError rather than guess at linguistically risky word forms (try switching the locale below to see the real thrown error). Throws RangeError for mixed numbers or improper fractions too.',
       sourceFile: 'src/number/fraction.ts',
       fn: fn(fractionToWords),
       fields: [
@@ -238,6 +276,7 @@ const wordsCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 1 },
         },
+        localeField(),
       ],
     },
   ],
@@ -247,13 +286,14 @@ const ordinalCategory: Category = {
   id: 'ordinals',
   title: 'Ordinals & suffixes',
   description:
-    'The Azerbaijani ordinal suffix ("cı"/"ci"/"cu"/"cü") is derived from vowel harmony on the last vowel of the last word of the cardinal reading, not a hardcoded lookup table — so it stays correct for every value numberToWords can spell.',
+    'Each locale supplies its own ordinal grammar via locale.ordinal: Azerbaijani vowel harmony ("cı"/"ci"/"cu"/"cü", derived from the last vowel of the cardinal reading, not a lookup table), English\'s st/nd/rd/th, Spanish\'s invariant "º", Russian\'s fixed "-й". Defaults to en.',
   examples: [
     {
       id: 'getOrdinalSuffix',
       name: 'getOrdinalSuffix',
-      signature: '(value: number): string',
-      description: 'Returns just the ordinal suffix for a non-negative integer, e.g. 9 -> "cu".',
+      signature: '(value: number, options?: OrdinalOptions): string',
+      description:
+        'Returns just the ordinal suffix for a non-negative integer, per the locale (defaults to en, e.g. 9 -> "th"; az: 9 -> "cu").',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(getOrdinalSuffix),
       fields: [
@@ -266,13 +306,15 @@ const ordinalCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
       ],
     },
     {
       id: 'toOrdinal',
       name: 'toOrdinal',
-      signature: '(value: number, separator?: string): string',
-      description: 'Formats a non-negative integer as an Azerbaijani ordinal, e.g. 3 -> "3-cü".',
+      signature: '(value: number, options?: ToOrdinalOptions): string',
+      description:
+        'Formats a non-negative integer as a short ordinal, e.g. 3 -> "3rd" (defaults to en; az: 3 -> "3-cü"). Before 2026-08-18 separator was a positional second argument — it now lives on the options object alongside locale.',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(toOrdinal),
       fields: [
@@ -285,22 +327,23 @@ const ordinalCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'separator',
           label: 'separator',
           kind: 'text',
           valueType: 'string',
           default: '-',
-          arg: { kind: 'positional', index: 1 },
+          arg: { kind: 'option', key: 'separator' },
         },
       ],
     },
     {
       id: 'ordinalToWords',
       name: 'ordinalToWords',
-      signature: '(value: number): string',
+      signature: '(value: number, options?: OrdinalOptions): string',
       description:
-        'Spells out a non-negative integer as a full Azerbaijani ordinal word by replacing the last word of the cardinal reading with its ordinal form, e.g. 21 -> "iyirmi birinci".',
+        'Spells out a non-negative integer as a full ordinal word, per the locale (defaults to en, e.g. 21 -> "twenty-first"; az: 21 -> "iyirmi birinci").',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(ordinalToWords),
       fields: [
@@ -313,14 +356,15 @@ const ordinalCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
       ],
     },
     {
       id: 'cardinalToOrdinalWords',
       name: 'cardinalToOrdinalWords',
-      signature: '(cardinalWords: string): string',
+      signature: '(cardinalWords: string, options?: OrdinalOptions): string',
       description:
-        'Transforms an already-computed cardinal reading into its full ordinal form. Split out from ordinalToWords so locale objects can reuse it without recomputing the cardinal words.',
+        "Transforms an already-computed cardinal reading directly into its ordinal form, per the locale (defaults to en) — without recomputing the cardinal words via numberToWords first. The cardinalWords input needs to already be in the selected locale's own language (e.g. an Azerbaijani cardinal reading for { locale: az }).",
       sourceFile: 'src/number/suffix.ts',
       fn: fn(cardinalToOrdinalWords),
       fields: [
@@ -329,9 +373,10 @@ const ordinalCategory: Category = {
           label: 'cardinalWords',
           kind: 'text',
           valueType: 'string',
-          default: 'iyirmi bir',
+          default: 'twenty-one',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
       ],
     },
     {
@@ -375,14 +420,14 @@ const notationCategory: Category = {
   id: 'notation',
   title: 'Short & long notation',
   description:
-    'Distinct from numberToWords: these keep digits and only localize the scale word, rather than spelling every number out. toShortNotation abbreviates ("2,5 mln"); toLongNotation pairs digit groups with scale words ("1 milyon 234 min 567").',
+    'Distinct from numberToWords: these keep digits and only localize the scale word, rather than spelling every number out. toShortNotation abbreviates ("2.5M" in en, "2,5 mln" in az); toLongNotation pairs digit groups with scale words ("1 million 234 thousand 567" in en).',
   examples: [
     {
       id: 'toShortNotation',
       name: 'toShortNotation',
       signature: '(value: number, options?: ShortNotationOptions): string',
       description:
-        'Abbreviates a large number to a short scaled form. "az" uses min/mln/mlrd/trln; "en" uses K/M/B/T.',
+        "Abbreviates a large number to a short scaled form, per locale.notation.scales — en uses K/M/B/T, az uses min/mln/mlrd/trln. Before 2026-08-18 locale was a bare 'az' | 'en' string unrelated to the Locale objects; it now takes a full Locale.",
       sourceFile: 'src/number/notation.ts',
       fn: fn(toShortNotation),
       fields: [
@@ -404,18 +449,7 @@ const notationCategory: Category = {
           step: '1',
           arg: { kind: 'option', key: 'decimals' },
         },
-        {
-          id: 'locale',
-          label: 'locale',
-          kind: 'select',
-          valueType: 'string',
-          default: 'az',
-          selectOptions: [
-            { value: 'az', label: 'az' },
-            { value: 'en', label: 'en' },
-          ],
-          arg: { kind: 'option', key: 'locale' },
-        },
+        localeField(),
       ],
     },
     {
@@ -431,21 +465,10 @@ const notationCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '2,5 mln',
+          default: '2.5M',
           arg: { kind: 'positional', index: 0 },
         },
-        {
-          id: 'locale',
-          label: 'locale',
-          kind: 'select',
-          valueType: 'string',
-          default: 'az',
-          selectOptions: [
-            { value: 'az', label: 'az' },
-            { value: 'en', label: 'en' },
-          ],
-          arg: { kind: 'option', key: 'locale' },
-        },
+        localeField(),
       ],
     },
     {
@@ -453,7 +476,7 @@ const notationCategory: Category = {
       name: 'toLongNotation',
       signature: '(value: number, options?: LongNotationOptions): string',
       description:
-        'Expands an integer into digit groups paired with their Azerbaijani scale word, without spelling every number out. Throws TypeError if value is not an integer.',
+        'Expands an integer into digit groups paired with their scale word (locale.words.scales), without spelling every number out. Throws TypeError if value is not an integer.',
       sourceFile: 'src/number/notation.ts',
       fn: fn(toLongNotation),
       fields: [
@@ -466,6 +489,7 @@ const notationCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'groupSeparator',
           label: 'groupSeparator',
@@ -489,9 +513,10 @@ const notationCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '1 milyon 234 min 567',
+          default: '1 million 234 thousand 567',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'groupSeparator',
           label: 'groupSeparator',
@@ -635,13 +660,13 @@ const moneyCategory: Category = {
   id: 'money',
   title: 'Money',
   description:
-    'Thin wrappers around formatNumber/parseNumber that add a currency symbol. Defaults to the manat sign (₼), two decimals, symbol placed after the amount.',
+    "Thin wrappers around formatNumber/parseNumber that add a currency symbol. Symbol, position, and separators default from the locale's own currency data (en: $ sign, two decimals, symbol before the amount; az: ₼, symbol after) — pick a locale below, or override any piece explicitly.",
   examples: [
     {
       id: 'formatMoney',
       name: 'formatMoney',
       signature: '(value: number, options?: MoneyFormatOptions): string',
-      description: 'Formats a monetary amount.',
+      description: "Formats a monetary amount using the locale's own currency (defaults to en).",
       sourceFile: 'src/money/format.ts',
       fn: fn(formatMoney),
       fields: [
@@ -654,6 +679,7 @@ const moneyCategory: Category = {
           step: 'any',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -663,23 +689,22 @@ const moneyCategory: Category = {
           step: '1',
           arg: { kind: 'option', key: 'decimals' },
         },
-        {
+        localeDefaultTextField({
           id: 'symbol',
           label: 'symbol',
-          kind: 'text',
-          valueType: 'string',
-          default: '₼',
           arg: { kind: 'option', key: 'symbol' },
-        },
+        }),
         {
           id: 'symbolPosition',
           label: 'symbolPosition',
           kind: 'select',
           valueType: 'string',
-          default: 'after',
+          default: '',
+          omitWhenDefault: true,
           selectOptions: [
-            { value: 'after', label: 'after' },
+            { value: '', label: '(locale default)' },
             { value: 'before', label: 'before' },
+            { value: 'after', label: 'after' },
           ],
           arg: { kind: 'option', key: 'symbolPosition' },
         },
@@ -690,7 +715,7 @@ const moneyCategory: Category = {
       name: 'parseMoney',
       signature: '(value: string, options?: MoneyParseOptions): number',
       description:
-        'Parses a string produced by formatMoney back into a JavaScript number, stripping the currency symbol.',
+        "Parses a string produced by formatMoney back into a JavaScript number, stripping the locale's currency symbol (defaults to en's $).",
       sourceFile: 'src/money/format.ts',
       fn: fn(parseMoney),
       fields: [
@@ -699,17 +724,15 @@ const moneyCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '1 234,50 ₼',
+          default: '$ 1,234.50',
           arg: { kind: 'positional', index: 0 },
         },
-        {
+        localeField(),
+        localeDefaultTextField({
           id: 'symbol',
           label: 'symbol',
-          kind: 'text',
-          valueType: 'string',
-          default: '₼',
           arg: { kind: 'option', key: 'symbol' },
-        },
+        }),
       ],
     },
     {
@@ -717,7 +740,7 @@ const moneyCategory: Category = {
       name: 'moneyToWords',
       signature: '(value: number, options?: MoneyWordsOptions): string',
       description:
-        'Spells out a monetary amount as Azerbaijani words, pairing the integer part with a major currency unit word and the rounded fractional part with a minor unit word.',
+        'Spells out a monetary amount as words, pairing the integer part with a major currency unit word and the rounded fractional part with a minor unit word, per the locale (defaults to en: dollars/cents). Unit words inflect by the amount\'s plural category where the locale needs it — ru: "один рубль"/"два рубля"/"пять рублей".',
       sourceFile: 'src/money/words.ts',
       fn: fn(moneyToWords),
       fields: [
@@ -730,22 +753,17 @@ const moneyCategory: Category = {
           step: 'any',
           arg: { kind: 'positional', index: 0 },
         },
-        {
+        localeField(),
+        localeDefaultTextField({
           id: 'majorUnit',
           label: 'majorUnit',
-          kind: 'text',
-          valueType: 'string',
-          default: 'manat',
           arg: { kind: 'option', key: 'majorUnit' },
-        },
-        {
+        }),
+        localeDefaultTextField({
           id: 'minorUnit',
           label: 'minorUnit',
-          kind: 'text',
-          valueType: 'string',
-          default: 'qəpik',
           arg: { kind: 'option', key: 'minorUnit' },
-        },
+        }),
         {
           id: 'includeZeroMinor',
           label: 'includeZeroMinor',
@@ -763,13 +781,14 @@ const percentageCategory: Category = {
   id: 'percentage',
   title: 'Percentage',
   description:
-    'By default the input is treated as already being expressed in the target unit (45.5 -> "45,5%"); pass multiplyBy100 to format a ratio instead (0.455 -> "45,5%"). Also supports permille (‰) and basis points (‱).',
+    'By default the input is treated as already being expressed in the target unit (45.5 -> "45.5%" in en, "45,5%" in az); pass multiplyBy100 to format a ratio instead (0.455 -> "45.5%"). Also supports permille (‰) and basis points (‱). Separators default from the locale, same as formatNumber.',
   examples: [
     {
       id: 'formatPercentage',
       name: 'formatPercentage',
       signature: '(value: number, options?: PercentageFormatOptions): string',
-      description: 'Formats a number as a percentage (or permille/basis-point) string.',
+      description:
+        "Formats a number as a percentage (or permille/basis-point) string, using the locale's own separators (defaults to en).",
       sourceFile: 'src/percentage/format.ts',
       fn: fn(formatPercentage),
       fields: [
@@ -782,6 +801,7 @@ const percentageCategory: Category = {
           step: 'any',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -827,7 +847,7 @@ const percentageCategory: Category = {
       name: 'parsePercentage',
       signature: '(value: string, options?: PercentageParseOptions): number',
       description:
-        'Parses a percentage (or permille/basis-point) string back into a JavaScript number. Pass asRatio to divide the result by the unit’s scale factor.',
+        "Parses a percentage (or permille/basis-point) string back into a JavaScript number, using the locale's own separators (defaults to en). Pass asRatio to divide the result by the unit’s scale factor.",
       sourceFile: 'src/percentage/format.ts',
       fn: fn(parsePercentage),
       fields: [
@@ -836,9 +856,10 @@ const percentageCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '45,5%',
+          default: '45.5%',
           arg: { kind: 'positional', index: 0 },
         },
+        localeField(),
         {
           id: 'asRatio',
           label: 'asRatio',

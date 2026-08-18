@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Modern internationalized number utility library for JavaScript — format and parse numbers, money and percentages, spell numbers out in words, ordinals, short/long notation and roman numerals. Like date-fns, but for numbers.",
   "type": "module",
-  "private": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -55,7 +54,7 @@
   "bugs": {
     "url": "https://github.com/aykhanhuseyn/num-fns/issues"
   },
-  "homepage": "https://aykhanhuseyn.github.io/num-fns/",
+  "homepage": "https://github.com/aykhanhuseyn/num-fns#readme",
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
@@ -139,7 +138,7 @@
     {
       "name": "locale/az (single locale, subpath import)",
       "path": "dist/locale/az.js",
-      "limit": "1.75 KB"
+      "limit": "2.5 KB"
     },
     {
       "name": "locale/en (single locale, subpath import)",

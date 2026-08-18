@@ -1,4 +1,4 @@
-import { localeStatus } from './locales'
+import { type LocaleInfo, localeInfo } from './locales'
 
 function buildStatusTable(): HTMLElement {
   const table = document.createElement('table')
@@ -6,7 +6,7 @@ function buildStatusTable(): HTMLElement {
 
   const thead = document.createElement('thead')
   const headRow = document.createElement('tr')
-  for (const label of ['Locale', 'Code', 'Status']) {
+  for (const label of ['Locale', 'Code', 'fractionToWords']) {
     const th = document.createElement('th')
     th.textContent = label
     headRow.appendChild(th)
@@ -15,7 +15,7 @@ function buildStatusTable(): HTMLElement {
   table.appendChild(thead)
 
   const tbody = document.createElement('tbody')
-  for (const row of localeStatus) {
+  for (const row of localeInfo) {
     const tr = document.createElement('tr')
 
     const nameCell = document.createElement('td')
@@ -30,8 +30,8 @@ function buildStatusTable(): HTMLElement {
 
     const statusCell = document.createElement('td')
     const badge = document.createElement('span')
-    badge.className = `locale-badge ${row.status === 'Implemented' ? 'is-live' : 'is-planned'}`
-    badge.textContent = row.status
+    badge.className = `locale-badge ${row.fractionWordsSupported ? 'is-live' : 'is-planned'}`
+    badge.textContent = row.fractionWordsSupported ? 'Implemented' : 'Throws (see todo.md §2)'
     statusCell.appendChild(badge)
     tr.appendChild(statusCell)
 
@@ -48,7 +48,7 @@ function buildPreview(): HTMLElement {
 
   const select = document.createElement('select')
   select.className = 'locale-preview-select'
-  for (const row of localeStatus) {
+  for (const row of localeInfo) {
     const option = document.createElement('option')
     option.value = row.code
     option.textContent = `${row.name} (${row.code})`
@@ -61,8 +61,8 @@ function buildPreview(): HTMLElement {
   wrapper.appendChild(dataBox)
 
   function update(): void {
-    const row = localeStatus.find((entry) => entry.code === select.value) ?? localeStatus[0]
-    if (!row) return
+    const row: LocaleInfo =
+      localeInfo.find((entry) => entry.code === select.value) ?? (localeInfo[0] as LocaleInfo)
     const { locale } = row
 
     const entries: [string, string][] = [
@@ -75,7 +75,10 @@ function buildPreview(): HTMLElement {
       ['currency.symbol', locale.currency.symbol],
       ['currency.major.word', locale.currency.major.word],
       ['currency.minor.word', locale.currency.minor.word],
-      ['notation.scales (short)', locale.notation.scales.map((scale) => scale.short).join(', ')],
+      [
+        'notation.scales (short)',
+        locale.notation.scales.map((scale: { short: string }) => scale.short).join(', '),
+      ],
     ]
 
     dataBox.replaceChildren()
@@ -107,7 +110,7 @@ export function renderLocaleSection(): HTMLElement {
   const description = document.createElement('p')
   description.className = 'category-desc'
   description.textContent =
-    'Every function above is Azerbaijani-only today. The Locale objects below already exist under src/locale/ with the full data date-fns-style locale support will read from, but numberToWords, formatNumber, formatMoney, and friends do not accept a locale option yet — that wiring is tracked in todo.md §1.'
+    'Every function above takes a locale option (default en) and reads from one of these four Locale objects — az, en, ru, es. This reference browser shows the raw vocabulary, currency, and notation data each one carries; try the locale selector on any function card above to see it drive real output. The one gap: fractionToWords only has real fraction-noun vocabulary for az and en (see the table below and its function card for why ru/es throw instead of guessing).'
   section.appendChild(description)
 
   section.appendChild(buildStatusTable())

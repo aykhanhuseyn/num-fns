@@ -1,23 +1,38 @@
 import { az, en, es, ru } from '../../src/locale/index'
 import type { Locale } from '../../src/locale/types'
 
-export interface LocaleStatusRow {
+export interface LocaleInfo {
   code: string
   name: string
-  status: 'Implemented' | 'Data ready — not wired in yet'
   locale: Locale
+  /**
+   * Whether `fractionToWords` has real vocabulary for this locale — the one
+   * function that isn't uniformly implemented across all four launch
+   * locales (see `src/number/fraction.ts`'s doc comment). Every other
+   * locale-dependent function (numberToWords, ordinals, notation, money,
+   * percentage) is implemented for all four.
+   */
+  fractionWordsSupported: boolean
 }
 
 /**
- * `az` is the only locale actually threaded through the public functions
- * today (numberToWords, formatNumber, etc. still read module-level
- * Azerbaijani defaults). `en`/`ru`/`es` exist as real `Locale` objects under
- * `src/locale/` but nothing consumes them yet — see `todo.md` §1's "Thread a
- * locale option through every public function" item.
+ * The four launch locales, in the order shown throughout the playground
+ * (locale selects, the "Locales" reference section's table and preview).
  */
-export const localeStatus: LocaleStatusRow[] = [
-  { code: 'az', name: 'Azerbaijani', status: 'Implemented', locale: az },
-  { code: 'en', name: 'English', status: 'Data ready — not wired in yet', locale: en },
-  { code: 'ru', name: 'Russian', status: 'Data ready — not wired in yet', locale: ru },
-  { code: 'es', name: 'Spanish', status: 'Data ready — not wired in yet', locale: es },
+export const localeInfo: LocaleInfo[] = [
+  { code: 'az', name: 'Azerbaijani', locale: az, fractionWordsSupported: true },
+  { code: 'en', name: 'English', locale: en, fractionWordsSupported: true },
+  { code: 'ru', name: 'Russian', locale: ru, fractionWordsSupported: false },
+  { code: 'es', name: 'Spanish', locale: es, fractionWordsSupported: false },
 ]
+
+/** Locale code -> real `Locale` object, for resolving a playground select's raw value into what the real function call needs. */
+export const localeByCode: Record<string, Locale> = Object.fromEntries(
+  localeInfo.map((entry) => [entry.code, entry.locale]),
+)
+
+/** Shared `<select>` options for a function example's `locale` field. */
+export const LOCALE_SELECT_OPTIONS = localeInfo.map((entry) => ({
+  value: entry.code,
+  label: `${entry.name} (${entry.code})`,
+}))

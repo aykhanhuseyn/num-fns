@@ -89,6 +89,72 @@ function deriveOrdinalWord(word: string): string {
   return `${word}ый`
 }
 
+/** Words for digits 1-9. Index `0` is unused so digits can index directly. */
+const ONES = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять']
+/** Irregular words for 11-19, index `0` corresponding to 11. */
+const TEENS = [
+  'одиннадцать',
+  'двенадцать',
+  'тринадцать',
+  'четырнадцать',
+  'пятнадцать',
+  'шестнадцать',
+  'семнадцать',
+  'восемнадцать',
+  'девятнадцать',
+]
+/** Words for the tens digit: 10, 20, ..., 90. Index `0` is unused. */
+const TENS = [
+  '',
+  'десять',
+  'двадцать',
+  'тридцать',
+  'сорок',
+  'пятьдесят',
+  'шестьдесят',
+  'семьдесят',
+  'восемьдесят',
+  'девяносто',
+]
+/** Irregular per digit 1-9 ("двести", "триста", ... — not a "два сто" compound). Index `0` is unused. */
+const HUNDREDS = [
+  '',
+  'сто',
+  'двести',
+  'триста',
+  'четыреста',
+  'пятьсот',
+  'шестьсот',
+  'семьсот',
+  'восемьсот',
+  'девятьсот',
+]
+
+/**
+ * Renders a single 0-999 group as Russian cardinal words in the regular
+ * masculine form ("двести тридцать четыре" for 234). Gender agreement for a
+ * trailing "один"/"два" before the feminine "тысяча" is handled by
+ * `compose`, not here, since only `compose` knows a chunk's scale position.
+ */
+function renderGroup(value: number): string {
+  const hundreds = Math.floor(value / 100)
+  const remainder = value % 100
+
+  const parts: string[] = []
+  if (hundreds > 0) parts.push(HUNDREDS[hundreds] as string)
+
+  if (remainder >= 11 && remainder <= 19) {
+    parts.push(TEENS[remainder - 11] as string)
+  } else {
+    const tens = Math.floor(remainder / 10)
+    const ones = remainder % 10
+    if (tens > 0) parts.push(TENS[tens] as string)
+    if (ones > 0) parts.push(ONES[ones] as string)
+  }
+
+  return parts.join(' ')
+}
+
 /**
  * Russian locale (`todo.md` §1/§2). The two grammar traps called out in the
  * backlog live in `words.compose`: `тысяча` is feminine, so a trailing
@@ -107,43 +173,11 @@ export const ru: Locale = {
   },
   words: {
     zero: 'ноль',
-    ones: ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять'],
-    teens: [
-      'одиннадцать',
-      'двенадцать',
-      'тринадцать',
-      'четырнадцать',
-      'пятнадцать',
-      'шестнадцать',
-      'семнадцать',
-      'восемнадцать',
-      'девятнадцать',
-    ],
-    tens: [
-      '',
-      'десять',
-      'двадцать',
-      'тридцать',
-      'сорок',
-      'пятьдесят',
-      'шестьдесят',
-      'семьдесят',
-      'восемьдесят',
-      'девяносто',
-    ],
+    ones: ONES,
+    teens: TEENS,
+    tens: TENS,
     // Irregular per digit 1-9 ("двести", "триста", ... — not a "два сто" compound).
-    hundreds: [
-      '',
-      'сто',
-      'двести',
-      'триста',
-      'четыреста',
-      'пятьсот',
-      'шестьсот',
-      'семьсот',
-      'восемьсот',
-      'девятьсот',
-    ],
+    hundreds: HUNDREDS,
     scales: [
       '',
       { one: 'тысяча', few: 'тысячи', many: 'тысяч' },
@@ -152,6 +186,7 @@ export const ru: Locale = {
       { one: 'триллион', few: 'триллиона', many: 'триллионов' },
     ],
     negative: 'минус',
+    renderGroup,
     compose: (chunks: readonly WordChunk[]): string =>
       chunks
         .map((chunk) => {

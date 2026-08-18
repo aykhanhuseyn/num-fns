@@ -1,3 +1,4 @@
+import { localeByCode } from './locales'
 import type { FieldDef, FunctionExample } from './types'
 
 export type FieldValues = Record<string, string | number | boolean>
@@ -19,10 +20,19 @@ function parseNumberArray(raw: string): number[] {
     .map((token) => Number(token))
 }
 
+/**
+ * Coerces a field's raw control value into what the real function call
+ * needs. `'locale'` fields are the odd one out: the control holds a locale
+ * code string (`'az'`, `'en'`, ...), but the real function needs the actual
+ * `Locale` object that code names — resolved here via `localeByCode` so
+ * every other layer (`buildCallPlan`, `runExample`) can stay agnostic to the
+ * distinction and just call `example.fn(...args)`.
+ */
 function coerceValue(field: FieldDef, raw: string | number | boolean): unknown {
   if (field.valueType === 'number') return typeof raw === 'number' ? raw : Number(raw)
   if (field.valueType === 'boolean') return typeof raw === 'boolean' ? raw : raw === 'true'
   if (field.valueType === 'numberArray') return parseNumberArray(String(raw))
+  if (field.valueType === 'locale') return localeByCode[String(raw)] ?? localeByCode.en
   return String(raw)
 }
 
@@ -44,7 +54,17 @@ function isOmittedWhenDefault(field: FieldDef, raw: string | number | boolean): 
   return Boolean(field.omitWhenDefault) && String(raw) === String(field.default)
 }
 
-function toLiteral(value: unknown): string {
+/**
+ * Renders a field's value as it should appear in the displayed call
+ * snippet. `'locale'` fields are special-cased to the bare locale-code
+ * identifier (`az`, not `"az"` or a dump of the resolved `Locale` object) —
+ * that's how a real caller would write it after
+ * `import { az } from 'num-fns/locale'`, and dumping the actual object would
+ * be both unreadable (functions like `renderGroup`/`compose` aren't
+ * serializable) and misleading about what the caller actually writes.
+ */
+function toLiteral(field: FieldDef, raw: string | number | boolean, value: unknown): string {
+  if (field.valueType === 'locale') return String(raw)
   if (typeof value === 'string') return JSON.stringify(value)
   if (Array.isArray(value)) return `[${value.map(String).join(', ')}]`
   return String(value)
@@ -78,7 +98,7 @@ function buildCallPlan(fields: readonly FieldDef[], values: FieldValues): CallPl
     const raw = values[field.id] ?? field.default
     const value = coerceValue(field, raw)
     positionals[field.arg.index] = value
-    positionalLiterals[field.arg.index] = toLiteral(value)
+    positionalLiterals[field.arg.index] = toLiteral(field, raw, value)
   }
 
   const optionEntries: string[] = []
@@ -89,7 +109,7 @@ function buildCallPlan(fields: readonly FieldDef[], values: FieldValues): CallPl
     if (isOmittedWhenDefault(field, raw)) continue
     const value = coerceValue(field, raw)
     optionsObject[field.arg.key] = value
-    optionEntries.push(`${field.arg.key}: ${toLiteral(value)}`)
+    optionEntries.push(`${field.arg.key}: ${toLiteral(field, raw, value)}`)
   }
 
   const hasOptions = optionEntries.length > 0

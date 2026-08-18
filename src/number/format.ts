@@ -1,12 +1,16 @@
-import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants'
+import { en } from '../locale/en'
 import type { NumberFormatOptions, NumberParseOptions, RoundingMode } from '../shared/types'
 
 /**
- * Formats a number using Azerbaijani conventions by default: a space between
- * groups of three digits and a comma between the integer and fractional part.
+ * Formats a number using `options.locale`'s conventions by default (`en`:
+ * comma thousands separator, period decimal separator — pass
+ * `{ locale: az }` for the pre-refactor default of a space and a comma).
+ * An explicit `thousandsSeparator`/`decimalSeparator` always overrides the
+ * locale's default.
  *
  * @example
- * formatNumber(1234567.891, { decimals: 2 }); // "1 234 567,89"
+ * formatNumber(1234567.891, { decimals: 2 }); // "1,234,567.89"
+ * formatNumber(1234567.891, { decimals: 2, locale: az }); // "1 234 567,89"
  * formatNumber(-1.5, { decimals: 0, roundingMode: 'ceil' }); // "-1"
  */
 export function formatNumber(value: number, options: NumberFormatOptions = {}): string {
@@ -16,8 +20,9 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
 
   const {
     decimals,
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    locale = en,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
     roundingMode = 'halfUp',
   } = options
 
@@ -40,12 +45,14 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
  * back into a JavaScript number.
  *
  * @example
- * parseNumber("1 234 567,89"); // 1234567.89
+ * parseNumber("1,234,567.89"); // 1234567.89
+ * parseNumber("1 234 567,89", { locale: az }); // 1234567.89
  */
 export function parseNumber(value: string, options: NumberParseOptions = {}): number {
   const {
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    locale = en,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
   } = options
 
   const trimmed = value.trim()

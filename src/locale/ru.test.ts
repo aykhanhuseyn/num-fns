@@ -3,9 +3,10 @@ import { ru } from './ru'
 import type { WordChunk } from './types'
 
 /**
- * Builds a `WordChunk` by hand — `ru` isn't wired into any public function
- * yet (`todo.md` §1), so there's no existing `numberToWords` to derive
- * `words` from. The per-group cardinal reading is supplied directly.
+ * Builds a `WordChunk` by hand for the `compose`-only tests below, so those
+ * stay focused on chunk-joining behavior independent of `renderGroup`
+ * (which has its own `describe` block, and is exercised end-to-end via
+ * `numberToWords(value, { locale: ru })` in `number/words.test.ts`).
  */
 function chunk(value: number, words: string, scaleIndex: number, scaleWord: string): WordChunk {
   return { value, words, scaleIndex, scaleWord }
@@ -51,6 +52,24 @@ describe('ru.words', () => {
   it('inflects scale words by plural category', () => {
     expect(ru.words.scales[1]).toEqual({ one: 'тысяча', few: 'тысячи', many: 'тысяч' })
     expect(ru.words.scales[2]).toEqual({ one: 'миллион', few: 'миллиона', many: 'миллионов' })
+  })
+
+  describe('renderGroup', () => {
+    it('renders the regular masculine form, gender agreement is compose’s job', () => {
+      expect(ru.words.renderGroup(234)).toBe('двести тридцать четыре')
+      expect(ru.words.renderGroup(1)).toBe('один')
+      expect(ru.words.renderGroup(21)).toBe('двадцать один')
+    })
+
+    it('uses the irregular teens without touching the trailing digit', () => {
+      expect(ru.words.renderGroup(11)).toBe('одиннадцать')
+      expect(ru.words.renderGroup(12)).toBe('двенадцать')
+    })
+
+    it('uses the full irregular hundreds word', () => {
+      expect(ru.words.renderGroup(100)).toBe('сто')
+      expect(ru.words.renderGroup(200)).toBe('двести')
+    })
   })
 
   describe('compose', () => {

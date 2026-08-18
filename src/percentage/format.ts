@@ -1,5 +1,5 @@
+import { en } from '../locale/en'
 import { formatNumber, parseNumber } from '../number/format'
-import { DEFAULT_DECIMAL_SEPARATOR, DEFAULT_THOUSANDS_SEPARATOR } from '../shared/constants'
 import type {
   PercentageFormatOptions,
   PercentageParseOptions,
@@ -20,16 +20,18 @@ const PERCENTAGE_UNITS: Record<PercentageUnit, { sign: string; scale: number }> 
  * instead (`0.455` -> `"45,5%"`).
  *
  * @example
- * formatPercentage(45.5); // "45,5%"
- * formatPercentage(0.455, { multiplyBy100: true }); // "45,5%"
- * formatPercentage(45.5, { unit: 'permille' }); // "45,5‰"
+ * formatPercentage(45.5); // "45.5%"
+ * formatPercentage(0.455, { multiplyBy100: true }); // "45.5%"
+ * formatPercentage(45.5, { unit: 'permille' }); // "45.5‰"
  * formatPercentage(125, { unit: 'basisPoint' }); // "125‱"
+ * formatPercentage(45.5, { locale: az }); // "45,5%"
  */
 export function formatPercentage(value: number, options: PercentageFormatOptions = {}): string {
   const {
+    locale = en,
     decimals = 0,
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
     roundingMode,
     space = false,
     multiplyBy100 = false,
@@ -53,14 +55,16 @@ export function formatPercentage(value: number, options: PercentageFormatOptions
  * divide the result by the unit's scale factor.
  *
  * @example
- * parsePercentage("45,5%"); // 45.5
- * parsePercentage("45,5%", { asRatio: true }); // 0.455
- * parsePercentage("45,5‰", { unit: 'permille', asRatio: true }); // 0.0455
+ * parsePercentage("45.5%"); // 45.5
+ * parsePercentage("45.5%", { asRatio: true }); // 0.455
+ * parsePercentage("45.5‰", { unit: 'permille', asRatio: true }); // 0.0455
+ * parsePercentage("45,5%", { locale: az }); // 45.5
  */
 export function parsePercentage(value: string, options: PercentageParseOptions = {}): number {
   const {
-    thousandsSeparator = DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator = DEFAULT_DECIMAL_SEPARATOR,
+    locale = en,
+    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+    decimalSeparator = locale.formatDefaults.decimalSeparator,
     asRatio = false,
     unit = 'percent',
   } = options

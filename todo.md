@@ -56,8 +56,74 @@ objects, `date-fns` style.
       otherwise assumes — see the doc comments in `locale/es.ts` for the
       round-scale-multiple gap this leaves (e.g. "dos mil" -> "segundo
       milésimo" instead of idiomatic "dosmilésimo").
-- [ ] Thread a `locale` option through every public function; default to `en`
+- [x] Thread a `locale` option through every public function; default to `en`
       only if no locale is passed (see the "default locale" decision below).
+      (2026-08-18: `locale?: Locale` added to every option interface with
+      locale-dependent behavior — `numberToWords`, `toOrdinal`/
+      `ordinalToWords`/`getOrdinalSuffix`, `formatNumber`/`parseNumber`,
+      `formatMoney`/`parseMoney`/`moneyToWords`, `formatPercentage`/
+      `parsePercentage`, `toShortNotation`/`parseShortNotation`/
+      `toLongNotation`/`parseLongNotation`, `numberToDigitWords`, and
+      `fractionToWords` — defaulting to `en` everywhere, per the "default
+      locale" decision below. `toRoman`/`fromRoman`, `toByteSize`/
+      `parseByteSize`, and the arithmetic/stats/financial/utils domains stay
+      locale-independent, per §4's "raw numbers" decision.
+
+      The core engine change is `number/words.ts`'s `numberToWords`: each
+      locale now owns a `words.renderGroup(value: number): string` (renders
+      one 0-999 group — hyphenation for `en`, veinti-contraction and "y" for
+      `es`, gender-neutral masculine for `ru`, the original hardcoded
+      algorithm for `az`, ported unchanged) and `words.compose(chunks)`
+      (joins base-1000 groups with scale words — dropping "bir"/"uno" before
+      "min"/"mil", Russian gender agreement before "тысяча", Spanish "cien"
+      apocopation). Scale words that inflect by count (Russian especially)
+      resolve through the existing `plural` + a new `resolveScaleWord`
+      helper. The old `LocaleWords.and` field was overloaded to mean both
+      "intra-group tens+ones connector" and "integer/fraction decimal
+      joiner" depending on locale — split into `and` (the former) and a new
+      `decimalConnector` (the latter, `az`'s `"tam"`) so each locale sets
+      only the one it needs.
+
+      `az`'s ordinal vowel-harmony logic (`getOrdinalSuffix`/
+      `ordinalToWords`'s old implementation) moved from `number/suffix.ts`
+      into `locale/az.ts` itself, since it's Azerbaijani-specific linguistic
+      data, not generic algorithm — `number/suffix.ts` now just delegates to
+      `locale.ordinal.suffix`/`locale.ordinal.words`. Same reasoning for
+      `az`'s fraction-word composer (`üçdə bir` etc.), which moved into a
+      new `Locale.fractions?: { half?, words }` hook every locale can
+      implement. `fractionToWords` currently only has real vocabulary for
+      `az` and `en` — `ru`/`es` fraction nouns aren't simple derivations of
+      their ordinal words (Russian needs feminine forms like
+      "треть"/"четверть"; Spanish's "tercio" diverges from its ordinal
+      "tercero"), so rather than guess and risk the "wrong in embarrassing,
+      specific ways" failure mode §5 calls out, it throws `RangeError` for
+      those two locales instead — tracked as follow-up linguistic work
+      in §2, not part of this pass. `en` is deliberately excluded from the
+      `Locale.fractions` hook pattern: `number/words.ts` imports `en` as its
+      structural default, so `en.ts` can never import back from `number/`
+      (incl. `ordinalToWords`, which `en`'s fraction composer needs) without
+      a circular dependency — `en`'s fraction composer lives directly in
+      `number/fraction.ts` instead, special-cased.
+
+      Verified byte-identical `az` output against the pre-refactor
+      hardcoded implementation (extensive `{ locale: az }` coverage in every
+      rewritten test file) and correct `en`/`ru`/`es` output hand-checked
+      against the linguistic rules above. `toOrdinal`'s separator moved from
+      a positional second parameter to its options object (to make room for
+      `locale` alongside it) and `toShortNotation`'s pre-existing
+      `'az' | 'en'` string `locale` option was folded into the full `Locale`
+      object system — both are intentional breaking changes, along with the
+      default-locale change itself; documented in a changeset.
+
+      One bundle-size regression surfaced and was fixed during this pass:
+      `number/fraction.ts` initially imported `az` directly (for its
+      fraction composer), which pulled `az`'s entire vocabulary into the
+      default `dist/index.js` bundle for every consumer regardless of which
+      locale they actually use — caught by `bun run size`, fixed by routing
+      through the generic `Locale.fractions` hook instead of a static
+      per-locale import. `bun run check` (typecheck, circular-dependency,
+      lint/format), `bun test` (366/366), `bun run build`, and `bun run
+      size` are all clean after the fix.)
 - [x] `src/locale/index.ts` barrel re-exporting every locale.
 - [x] Add a `./locale` subpath export to `package.json` and a second Vite entry
       so `import { ru } from 'num-fns/locale'` resolves in ESM and CJS.
@@ -444,17 +510,59 @@ New domain from the vision doc.
       `TypeError`/`SyntaxError`, not a synthesized message. Verified against
       a built bundle in jsdom: initial render matches each function's own
       JSDoc `@example`, live input changes recompute correctly, and invalid
-      input surfaces the real error. Does *not* yet do the "pick a locale"
-      half of this item — `numberToWords`/`formatNumber`/etc. are still
-      Azerbaijani-only (§1's locale-threading item is unstarted), so the
-      page has a separate "Locales" section that previews the real `az`/
-      `en`/`ru`/`es` `Locale` data objects read-only instead, with an
-      explicit note on what isn't wired in yet. Run with `bun run
+      input surfaces the real error. Run with `bun run
       site:dev` / `bun run site:build` (outputs to `site-dist/`, gitignored
       via `site-dist*`); `build.emptyOutDir: false` for the same reason as
       the root `vite.config.ts` — this repo's connected-folder mount blocks
       `unlink()`, so emptying the out dir before a second build fails with
-      `EPERM`.)
+      `EPERM`.
+
+      2026-08-18: did the "pick a locale" half, now that §1's locale-threading
+      landed. Every example whose real function accepts `options.locale`
+      (number formatting, words, ordinals, notation, money, percentage — 18
+      of the ~45 examples) gained a live `locale` select, via a new
+      `ValueType: 'locale'` in `site/src/types.ts` that `engine.ts`'s
+      `coerceValue` resolves from a code string to the real `Locale` object
+      (`site/src/locales.ts`'s `localeByCode`), and that `toLiteral` renders
+      as a bare identifier (`az`, not `"az"` or a dump of the object — the
+      object isn't serializable anyway, `renderGroup`/`compose` are
+      functions) in the displayed call snippet. Fields whose real default
+      comes from the locale rather than a fixed value
+      (`thousandsSeparator`/`decimalSeparator`/`symbol`/`symbolPosition`/
+      `majorUnit`/`minorUnit`) were converted to the sentinel
+      `omitWhenDefault` pattern `engine.ts`'s doc comment had anticipated but
+      never used — left blank, they're omitted from the call so the locale's
+      own default applies; typed in, they override it explicitly, same as a
+      real caller. `numberToWords`/`toOrdinal`/etc.'s example `value` fields
+      that were literal az-formatted strings (`'1 234 567,89'`, `'2,5 mln'`)
+      were updated to match the new default locale (`en`). The "Locales"
+      section keeps its read-only per-locale data browser (useful on its own
+      merits) but dropped the "not wired in yet" framing and its
+      Implemented/Planned status column, replacing it with a
+      `fractionToWords`-support column — the one function that isn't
+      uniformly implemented across all four locales.
+
+      Along the way, found and fixed a real regression from the §1
+      locale-threading pass: `cardinalToOrdinalWords` (transforms an
+      already-computed cardinal reading into its ordinal form) was a public
+      export before that pass and got silently dropped when its
+      implementation moved into locale objects — the site's registry.ts
+      still imported it, so the playground wouldn't even have compiled.
+      Restored it in `number/suffix.ts` as a thin wrapper around
+      `locale.ordinal.words` (passing `NaN` for the unused `value`
+      parameter every current locale's `ordinal.words` ignores — see its
+      doc comment), with tests and a changeset. Also fixed two latent bugs
+      the new locale-picker work exposed: `toShortNotation`/
+      `parseShortNotation`'s example fields were still passing a raw
+      `'az'`/`'en'` string where the real function now requires a `Locale`
+      object (silently broken since §1 landed, since nothing had exercised
+      it), and `toOrdinal`'s `separator` field was still wired as a
+      positional argument after that function's separator moved into its
+      options object. Verified end-to-end with an ad hoc jsdom-style smoke
+      test (a headless `happy-dom` window executing the real built bundle,
+      not committed to the repo) confirming all 45 cards mount without
+      errors, all 18 locale selects list `az`/`en`/`ru`/`es`, and switching
+      a card's locale select actually re-renders the result.)
 - [x] Scaffolding script(s) under `scripts/` for "add a new function" and "add
       a new locale" — generates the file + colocated test + index.ts export,
       so `CONTRIBUTING.md` (§8) can point at a command instead of prose.
@@ -561,8 +669,12 @@ New domain from the vision doc.
 ## 8. Documentation
 
 - [ ] Full API reference covering every export and its options.
-- [ ] Locale support matrix — which functions are implemented for which locale,
-      and where a locale is knowingly incomplete.
+- [x] Locale support matrix — which functions are implemented for which locale,
+      and where a locale is knowingly incomplete. (2026-08-18: added as
+      README's "Locale support" section, alongside the locale-threading work
+      above — a two-column table since every threaded function now covers
+      all four locales uniformly, with `fractionToWords`'s `az`/`en`-only
+      status called out separately since it's the one locale-dependent gap.)
 - [x] Migration note for anyone who found the package as `az-number-utils`.
       (2026-08-10: expanded the README's old one-line "History" section into
       "Migrating from `az-number-utils`" — confirmed via the npm registry

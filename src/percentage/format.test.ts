@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { az } from '../locale/az'
 import { formatPercentage, parsePercentage } from './format'
 
 describe('formatPercentage', () => {
@@ -6,12 +7,12 @@ describe('formatPercentage', () => {
     expect(formatPercentage(45)).toBe('45%')
   })
 
-  it('supports decimals and a space before the sign', () => {
-    expect(formatPercentage(45.5, { decimals: 1, space: true })).toBe('45,5 %')
+  it('supports decimals and a space before the sign, using the locale decimal separator', () => {
+    expect(formatPercentage(45.5, { decimals: 1, space: true })).toBe('45.5 %')
   })
 
   it('multiplies a ratio by 100 when requested', () => {
-    expect(formatPercentage(0.455, { decimals: 1, multiplyBy100: true })).toBe('45,5%')
+    expect(formatPercentage(0.455, { decimals: 1, multiplyBy100: true })).toBe('45.5%')
   })
 
   it('formats permille with the ‰ sign', () => {
@@ -20,7 +21,7 @@ describe('formatPercentage', () => {
 
   it('multiplies a ratio by 1000 for permille when requested', () => {
     expect(formatPercentage(0.0455, { decimals: 1, multiplyBy100: true, unit: 'permille' })).toBe(
-      '45,5‰',
+      '45.5‰',
     )
   })
 
@@ -37,24 +38,32 @@ describe('formatPercentage', () => {
   it('applies roundingMode like formatNumber', () => {
     expect(formatPercentage(2.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('2%')
   })
+
+  it('supports a locale for the decimal separator', () => {
+    expect(formatPercentage(45.5, { decimals: 1, locale: az })).toBe('45,5%')
+  })
 })
 
 describe('parsePercentage', () => {
   it('parses a percentage string', () => {
-    expect(parsePercentage('45,5%')).toBeCloseTo(45.5)
+    expect(parsePercentage('45.5%')).toBeCloseTo(45.5)
   })
 
   it('returns a ratio when asRatio is set', () => {
-    expect(parsePercentage('45,5%', { asRatio: true })).toBeCloseTo(0.455)
+    expect(parsePercentage('45.5%', { asRatio: true })).toBeCloseTo(0.455)
   })
 
   it('parses permille strings', () => {
-    expect(parsePercentage('45,5‰', { unit: 'permille' })).toBeCloseTo(45.5)
-    expect(parsePercentage('45,5‰', { unit: 'permille', asRatio: true })).toBeCloseTo(0.0455)
+    expect(parsePercentage('45.5‰', { unit: 'permille' })).toBeCloseTo(45.5)
+    expect(parsePercentage('45.5‰', { unit: 'permille', asRatio: true })).toBeCloseTo(0.0455)
   })
 
   it('parses basis-point strings', () => {
     expect(parsePercentage('125‱', { unit: 'basisPoint' })).toBeCloseTo(125)
     expect(parsePercentage('125‱', { unit: 'basisPoint', asRatio: true })).toBeCloseTo(0.0125)
+  })
+
+  it('supports a locale', () => {
+    expect(parsePercentage('45,5%', { locale: az })).toBeCloseTo(45.5)
   })
 })

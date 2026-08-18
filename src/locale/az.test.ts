@@ -7,18 +7,18 @@ import { numberToWords } from '../number/words'
 import { az } from './az'
 import type { WordChunk } from './types'
 
-/** Builds a `WordChunk` the way the (not-yet-written) chunk builder will: `words` is the
+/** Builds a `WordChunk` the way the chunk builder in `number/words.ts` does: `words` is the
  * group's own 0-999 cardinal reading, which for a bare 1-999 value is exactly what
- * `numberToWords` already produces. */
+ * `numberToWords(value, { locale: az })` already produces. */
 function chunk(value: number, scaleIndex: number, scaleWord: string): WordChunk {
-  return { value, words: numberToWords(value), scaleIndex, scaleWord }
+  return { value, words: numberToWords(value, { locale: az }), scaleIndex, scaleWord }
 }
 
 describe('az.formatDefaults', () => {
-  it('matches the space/comma defaults formatNumber falls back to', () => {
+  it('matches the space/comma defaults formatNumber falls back to with { locale: az }', () => {
     expect(az.formatDefaults.thousandsSeparator).toBe(' ')
     expect(az.formatDefaults.decimalSeparator).toBe(',')
-    expect(formatNumber(1234567.89)).toBe(
+    expect(formatNumber(1234567.89, { locale: az })).toBe(
       `1${az.formatDefaults.thousandsSeparator}234${az.formatDefaults.thousandsSeparator}567${az.formatDefaults.decimalSeparator}89`,
     )
   })
@@ -28,7 +28,7 @@ describe('az.words', () => {
   it('carries the zero, negative, and decimal-connector words unchanged', () => {
     expect(az.words.zero).toBe('sıfır')
     expect(az.words.negative).toBe('mənfi')
-    expect(az.words.and).toBe('tam')
+    expect(az.words.decimalConnector).toBe('tam')
   })
 
   it('indexes ones and tens the same way numberToWords does (index 0 unused)', () => {
@@ -46,24 +46,32 @@ describe('az.words', () => {
     expect(az.words.scales).toEqual(['', 'min', 'milyon', 'milyard', 'trilyon'])
   })
 
+  describe('renderGroup', () => {
+    it('matches numberToWords for a bare 0-999 value', () => {
+      expect(az.words.renderGroup(234)).toBe(numberToWords(234, { locale: az }))
+      expect(az.words.renderGroup(1)).toBe(numberToWords(1, { locale: az }))
+      expect(az.words.renderGroup(100)).toBe(numberToWords(100, { locale: az }))
+    })
+  })
+
   describe('compose', () => {
     it('reproduces numberToWords for a single group', () => {
       const chunks = [chunk(234, 0, '')]
-      expect(az.words.compose(chunks)).toBe(numberToWords(234))
+      expect(az.words.compose(chunks)).toBe(numberToWords(234, { locale: az }))
     })
 
     it('drops "bir" before "min" but keeps it before "milyon", matching numberToWords', () => {
-      expect(az.words.compose([chunk(1, 1, 'min')])).toBe(numberToWords(1000))
-      expect(az.words.compose([chunk(2, 1, 'min')])).toBe(numberToWords(2000))
-      expect(az.words.compose([chunk(1, 2, 'milyon')])).toBe(numberToWords(1000000))
+      expect(az.words.compose([chunk(1, 1, 'min')])).toBe(numberToWords(1000, { locale: az }))
+      expect(az.words.compose([chunk(2, 1, 'min')])).toBe(numberToWords(2000, { locale: az }))
+      expect(az.words.compose([chunk(1, 2, 'milyon')])).toBe(numberToWords(1000000, { locale: az }))
     })
 
     it('joins multiple chunks largest-scale-first, matching numberToWords', () => {
       const chunks = [chunk(1, 1, 'min'), chunk(234, 0, '')]
-      expect(az.words.compose(chunks)).toBe(numberToWords(1234))
+      expect(az.words.compose(chunks)).toBe(numberToWords(1234, { locale: az }))
 
       const millionChunks = [chunk(1, 2, 'milyon'), chunk(234, 1, 'min'), chunk(567, 0, '')]
-      expect(az.words.compose(millionChunks)).toBe(numberToWords(1234567))
+      expect(az.words.compose(millionChunks)).toBe(numberToWords(1234567, { locale: az }))
     })
   })
 })
@@ -80,13 +88,15 @@ describe('az.plural', () => {
 describe('az.ordinal', () => {
   it('suffix matches getOrdinalSuffix', () => {
     for (const value of [1, 3, 5, 9, 20, 100, 1000, 1000000]) {
-      expect(az.ordinal.suffix(value)).toBe(getOrdinalSuffix(value))
+      expect(az.ordinal.suffix(value)).toBe(getOrdinalSuffix(value, { locale: az }))
     }
   })
 
   it('words matches ordinalToWords when given the matching cardinal reading', () => {
     for (const value of [0, 1, 3, 21, 30, 100, 1000, 1000000]) {
-      expect(az.ordinal.words(value, numberToWords(value))).toBe(ordinalToWords(value))
+      expect(az.ordinal.words(value, numberToWords(value, { locale: az }))).toBe(
+        ordinalToWords(value, { locale: az }),
+      )
     }
   })
 })
@@ -100,13 +110,13 @@ describe('az.notation', () => {
     expect(byThreshold.get(1e12)).toBe('trln')
 
     for (const { threshold, short } of az.notation.scales) {
-      expect(toShortNotation(threshold)).toBe(`1 ${short}`)
+      expect(toShortNotation(threshold, { locale: az })).toBe(`1 ${short}`)
     }
   })
 
   it('pairs each threshold with the SCALE_WORDS long form toLongNotation uses', () => {
     for (const { threshold, long } of az.notation.scales) {
-      expect(toLongNotation(threshold)).toBe(`1 ${long}`)
+      expect(toLongNotation(threshold, { locale: az })).toBe(`1 ${long}`)
     }
   })
 
@@ -122,6 +132,6 @@ describe('az.currency', () => {
     expect(az.currency.symbolPosition).toBe('after')
     expect(az.currency.major.word).toBe('manat')
     expect(az.currency.minor.word).toBe('qəpik')
-    expect(formatMoney(10)).toBe(`10,00 ${az.currency.symbol}`)
+    expect(formatMoney(10, { locale: az })).toBe(`10,00 ${az.currency.symbol}`)
   })
 })

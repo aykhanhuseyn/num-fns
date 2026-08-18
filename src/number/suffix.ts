@@ -1,113 +1,100 @@
-import type { SuffixOptions } from '../shared/types'
+import { en } from '../locale/en'
+import type { OrdinalOptions, SuffixOptions, ToOrdinalOptions } from '../shared/types'
 import { numberToWords } from './words'
 
 /**
- * Maps the last vowel of an Azerbaijani number word to the correct ordinal
- * suffix, following vowel harmony: back unrounded (a, ı) -> "cı", front
- * unrounded (e, ə, i) -> "ci", back rounded (o, u) -> "cu", front rounded
- * (ö, ü) -> "cü".
+ * Returns the ordinal suffix for a non-negative integer, per `options.locale`
+ * (defaults to `en`: `'st'`/`'nd'`/`'rd'`/`'th'`). Delegates to
+ * `locale.ordinal.suffix`, which each locale implements itself — Azerbaijani
+ * vowel harmony (`locale/az.ts`), Spanish's invariant `'º'`, and so on.
+ *
+ * Before 2026-08-18 this was hardcoded Azerbaijani vowel-harmony logic; that
+ * logic now lives in `locale/az.ts` as the `az.ordinal.suffix` implementation
+ * (see its doc comment) rather than here, since it's Azerbaijani-specific
+ * data, not a generic algorithm.
+ *
+ * @example
+ * getOrdinalSuffix(1); // "st"
+ * getOrdinalSuffix(1, { locale: az }); // "ci" (bir -> birinci)
  */
-const VOWEL_TO_ORDINAL_SUFFIX: Record<string, string> = {
-  a: 'cı',
-  ı: 'cı',
-  e: 'ci',
-  ə: 'ci',
-  i: 'ci',
-  o: 'cu',
-  u: 'cu',
-  ö: 'cü',
-  ü: 'cü',
-}
-
-function lastVowel(word: string): string {
-  for (let i = word.length - 1; i >= 0; i--) {
-    const char = word[i] as string
-    if (char in VOWEL_TO_ORDINAL_SUFFIX) return char
-  }
-  throw new SyntaxError(`lastVowel: no Azerbaijani vowel found in "${word}"`)
-}
-
-function isVowel(char: string): boolean {
-  return char in VOWEL_TO_ORDINAL_SUFFIX
+export function getOrdinalSuffix(value: number, options: OrdinalOptions = {}): string {
+  const { locale = en } = options
+  return locale.ordinal.suffix(value)
 }
 
 /**
- * Returns the Azerbaijani ordinal suffix ("cı" | "ci" | "cu" | "cü") for a
- * non-negative integer, chosen by vowel harmony on the last word of its
- * cardinal reading (see {@link numberToWords}).
+ * Spells out a non-negative integer as a full ordinal word, per
+ * `options.locale` (defaults to `en`). Unlike {@link toOrdinal}, which only
+ * appends the short digit suffix (`"5th"`), this replaces (or transforms)
+ * the cardinal reading's relevant word(s) via `locale.ordinal.words`.
  *
  * @example
- * getOrdinalSuffix(1); // "ci"  (bir -> birinci)
- * getOrdinalSuffix(9); // "cu"  (doqquz -> doqquzuncu)
+ * ordinalToWords(3); // "third"
+ * ordinalToWords(3, { locale: az }); // "üçüncü"
  */
-export function getOrdinalSuffix(value: number): string {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new RangeError(
-      `getOrdinalSuffix: value must be a non-negative integer, received ${value}`,
-    )
-  }
-
-  const words = numberToWords(value)
-  const lastWord = words.split(' ').pop() as string
-  return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
-}
-
-/**
- * Transforms an already-computed cardinal reading (see {@link numberToWords})
- * into its full ordinal form — the short suffix from {@link getOrdinalSuffix}
- * preceded by a buffer `"n"`, plus a connecting harmony vowel when the word
- * ends in a consonant. Split out from {@link ordinalToWords} so `locale/az.ts`
- * can reuse it via `Locale.ordinal.words`, which receives the cardinal words
- * instead of recomputing them.
- *
- * @example
- * cardinalToOrdinalWords('üç'); // "üçüncü"
- * cardinalToOrdinalWords('iyirmi bir'); // "iyirmi birinci"
- * cardinalToOrdinalWords('yüz'); // "yüzüncü"
- */
-export function cardinalToOrdinalWords(cardinalWords: string): string {
-  const words = cardinalWords.split(' ')
-  const lastWord = words.pop() as string
-  const lastChar = lastWord[lastWord.length - 1] as string
-  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
-  const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
-
-  return [...words, `${lastWord}${fullSuffix}`].join(' ')
-}
-
-/**
- * Spells out a non-negative integer as a full Azerbaijani ordinal word.
- * Unlike {@link toOrdinal}, which only appends the short digit suffix
- * (`"5-ci"`), this replaces the last word of the cardinal reading (see
- * {@link numberToWords}) with its ordinal form via {@link cardinalToOrdinalWords}.
- *
- * @example
- * ordinalToWords(3); // "üçüncü"
- * ordinalToWords(21); // "iyirmi birinci"
- * ordinalToWords(100); // "yüzüncü"
- */
-export function ordinalToWords(value: number): string {
+export function ordinalToWords(value: number, options: OrdinalOptions = {}): string {
   if (!Number.isInteger(value) || value < 0) {
     throw new RangeError(`ordinalToWords: value must be a non-negative integer, received ${value}`)
   }
 
-  return cardinalToOrdinalWords(numberToWords(value))
+  const { locale = en } = options
+  return locale.ordinal.words(value, numberToWords(value, { locale }))
 }
 
 /**
- * Formats a non-negative integer as an Azerbaijani ordinal, e.g. `5` becomes
- * `"5-ci"`.
+ * Transforms an already-computed cardinal reading directly into its ordinal
+ * form, per `options.locale` (defaults to `en`) — without recomputing the
+ * cardinal words via `numberToWords` first. Useful when a caller already has
+ * a cardinal string in hand and only needs the ordinal transformation
+ * applied to it. Delegates to `locale.ordinal.words`, the same hook
+ * {@link ordinalToWords} uses.
+ *
+ * `locale.ordinal.words` accepts a numeric `value` alongside the cardinal
+ * words, in case a locale's ordinal grammar ever needs to know the number
+ * itself rather than just its spelled-out form — none of the four launch
+ * locales' implementations currently do (see each `locale/*.ts`'s
+ * `ordinal.words`, all of which name that parameter `_value`). Since this
+ * convenience wrapper only receives the cardinal string, it passes `NaN`
+ * through as a placeholder; if a future locale's `ordinal.words` genuinely
+ * needs the number, call `locale.ordinal.words(value, cardinalWords)`
+ * directly instead of this helper.
  *
  * @example
- * toOrdinal(3); // "3-cü"
- * toOrdinal(21); // "21-ci"
+ * cardinalToOrdinalWords('twenty-one'); // "twenty-first"
+ * cardinalToOrdinalWords('iyirmi bir', { locale: az }); // "iyirmi birinci"
  */
-export function toOrdinal(value: number, separator = '-'): string {
-  return `${value}${separator}${getOrdinalSuffix(value)}`
+export function cardinalToOrdinalWords(
+  cardinalWords: string,
+  options: OrdinalOptions = {},
+): string {
+  const { locale = en } = options
+  return locale.ordinal.words(Number.NaN, cardinalWords)
 }
 
 /**
- * Attaches an arbitrary suffix to a value, e.g. a unit or label.
+ * Formats a non-negative integer as a short ordinal, e.g. `5` becomes
+ * `"5th"` (or, with `{ locale: az }`, `"5-ci"`).
+ *
+ * Before 2026-08-18 the separator was a positional second parameter
+ * (`toOrdinal(5, ' ')`); it's now part of the options object alongside
+ * `locale`, matching the rest of the package's "consistent options object"
+ * convention (`CLAUDE.md`'s Package Design Principles) now that this
+ * function has more than one optional parameter.
+ *
+ * @example
+ * toOrdinal(3); // "3rd"
+ * toOrdinal(3, { locale: az }); // "3-cü"
+ * toOrdinal(5, { separator: ' ' }); // "5 th"
+ */
+export function toOrdinal(value: number, options: ToOrdinalOptions = {}): string {
+  const { separator = '-', locale } = options
+  return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
+}
+
+/**
+ * Attaches an arbitrary suffix to a value, e.g. a unit or label. Not
+ * locale-dependent — the suffix is caller-supplied text, not derived
+ * linguistic data.
  *
  * @example
  * withSuffix(120, 'kg'); // "120 kg"

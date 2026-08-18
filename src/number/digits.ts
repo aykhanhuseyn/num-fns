@@ -1,5 +1,5 @@
+import { en } from '../locale/en'
 import type { DigitWordsOptions } from '../shared/types'
-import { NEGATIVE_WORD, ONES, ZERO_WORD } from './words'
 
 /**
  * Characters that may appear in a formatted phone number or code but are not
@@ -11,8 +11,8 @@ const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
 /**
  * Reads a number or numeric string digit by digit, the way phone numbers,
  * PIN codes, and postal/tracking codes are normally read aloud rather than
- * as a single cardinal number — e.g. `"055"` becomes `"sıfır beş beş"`, not
- * `"əlli beş"` (which is what {@link numberToWords} would produce).
+ * as a single cardinal number — e.g. `"055"` becomes `"zero five five"`, not
+ * `"fifty-five"` (which is what {@link numberToWords} would produce).
  *
  * Punctuation commonly found in formatted phone numbers (spaces, `-`, `(`,
  * `)`, `.`, a leading `+`) is ignored — it does not produce a spoken word,
@@ -21,19 +21,21 @@ const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
  * Passing a string preserves leading zeros, which a `number` input cannot
  * represent (`numberToDigitWords(55)` and `numberToDigitWords("055")` read
  * differently). A leading `-` (string input) or a negative `number` is
- * prefixed with `"mənfi"`, matching {@link numberToWords}.
+ * prefixed with `options.locale`'s negative word (defaults to `en`
+ * `"negative"`), matching {@link numberToWords}.
  *
  * @example
  * numberToDigitWords("+994 55 123 45 67");
- * // "doqquz doqquz dörd beş beş bir iki üç dörd beş altı yeddi"
- * numberToDigitWords("055"); // "sıfır beş beş"
- * numberToDigitWords(90); // "doqquz sıfır"
+ * // "nine nine four five five one two three four five six seven"
+ * numberToDigitWords("055"); // "zero five five"
+ * numberToDigitWords(90); // "nine zero"
+ * numberToDigitWords("055", { locale: az }); // "sıfır beş beş"
  */
 export function numberToDigitWords(
   value: number | string,
   options: DigitWordsOptions = {},
 ): string {
-  const { separator = ' ' } = options
+  const { separator = ' ', locale = en } = options
   const raw = typeof value === 'number' ? validateNumericInput(value) : value
 
   const isNegative = raw.startsWith('-')
@@ -45,7 +47,7 @@ export function numberToDigitWords(
     if (char < '0' || char > '9') {
       throw new SyntaxError(`numberToDigitWords: unexpected character "${char}" in "${value}"`)
     }
-    words.push(char === '0' ? ZERO_WORD : (ONES[Number(char)] as string))
+    words.push(char === '0' ? locale.words.zero : (locale.words.ones[Number(char)] as string))
   }
 
   if (words.length === 0) {
@@ -53,7 +55,7 @@ export function numberToDigitWords(
   }
 
   const result = words.join(separator)
-  return isNegative ? `${NEGATIVE_WORD}${separator}${result}` : result
+  return isNegative ? `${locale.words.negative}${separator}${result}` : result
 }
 
 function validateNumericInput(value: number): string {
