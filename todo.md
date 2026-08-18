@@ -12,7 +12,7 @@ arithmetic, statistics, financial and base-conversion helpers, and a fuller
 contribution/CI story. See §3 for the structural questions that vision raises
 against what's actually in the repo today.
 
-## 0. Rename to `num-fns` (in progress)
+## 0. Rename to `num-fns` (done)
 
 - [x] `package.json` — name, description, keywords, repository/bugs/homepage URLs.
 - [x] README rewritten around the internationalized positioning.
@@ -24,8 +24,11 @@ against what's actually in the repo today.
 - [x] Check `num-fns` availability on npm — `registry.npmjs.org/num-fns` returns
       empty/404 as of 2026-08-09, so the name is unclaimed. Not yet reserved —
       reservation only happens on first `npm publish` (see §7).
-- [ ] Rename the GitHub repo `az-number-utils` → `num-fns` so the remote resolves
-      (the local remote URL already assumes this happened — confirm on GitHub).
+- [x] Rename the GitHub repo `az-number-utils` → `num-fns` so the remote resolves.
+      (2026-08-18: confirmed done — `git ls-remote https://github.com/aykhanhuseyn/num-fns.git`
+      resolves with `HEAD`/`main`/`changeset-release/main` refs, and the old
+      `az-number-utils.git` URL still resolves to the same commits via GitHub's
+      automatic redirect, as expected after a rename.)
 
 ## 1. Locale architecture (the big one)
 
