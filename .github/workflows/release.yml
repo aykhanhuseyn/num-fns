@@ -9,11 +9,16 @@ name: Release
 #     instead runs `bun run release` (build + `changeset publish`), which
 #     publishes to npm and creates the matching git tag + GitHub release.
 #
-# Requires an `NPM_TOKEN` repository secret (an npm automation/publish
-# token) with permission to publish the `num-fns` package. `id-token: write`
-# plus `NPM_CONFIG_PROVENANCE: true` is what lets npm attach a provenance
-# attestation during `changeset publish` (which shells out to `npm publish`
-# under the hood).
+# Authentication is npm **trusted publishing** (OIDC) — there is no NPM_TOKEN
+# secret. npm verifies the GitHub Actions identity of this workflow directly,
+# so the trusted publisher configured at
+# https://www.npmjs.com/package/num-fns/access must name:
+#   provider = GitHub Actions, org/user = aykhanhuseyn,
+#   repository = num-fns, workflow filename = release.yml
+# Renaming this file breaks publishing until the npm setting is updated.
+#
+# OIDC requires npm >= 11.5.1 and Node >= 22.14.0, and only works on
+# GitHub-hosted runners. Provenance attestations are generated automatically.
 on:
   push:
     branches: [main]
@@ -23,7 +28,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
+  id-token: write # required for npm trusted publishing (OIDC)
 
 jobs:
   release:
@@ -35,8 +40,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: https://registry.npmjs.org
+
+      # Node 24 ships npm 11.x, but pin the floor explicitly: OIDC trusted
+      # publishing is only supported from npm 11.5.1 onward.
+      - name: Ensure npm supports OIDC
+        run: |
+          npm install -g npm@latest
+          npm --version
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -68,5 +80,4 @@ jobs:
           title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
