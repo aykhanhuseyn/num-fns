@@ -4,5 +4,12 @@
   "initialVersions": {
     "num-fns": "0.1.0"
   },
-  "changesets": []
+  "changesets": [
+    "confirm-github-repo-rename",
+    "new-function-scaffold-script",
+    "renovate-dependency-updates",
+    "restore-cardinal-to-ordinal-words",
+    "size-limit-ci-check",
+    "thread-locale-through-every-function"
+  ]
 }
