@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "num-fns": "0.1.0"
+  },
+  "changesets": []
+}
