@@ -37,16 +37,25 @@ bun run format                        # biome format --write .
 bun run format:check                  # biome format .
 bun run check:biome                   # biome check . (lint + format in one pass)
 bun run check:type                    # tsc --noEmit against the full project (incl. tests)
-bun run check:circular                # madge --circular, fails on import cycles
+bun run check:circular                # dpdm, fails on import cycles
 bun run check:unused                  # knip, reports unused exports/files/deps
 bun run check                         # all of the above; pass file paths to scope check:biome
-bun run build                         # vite build -> dist/
+bun run build                         # vite build -> dist/ (ESM + CJS + .d.ts/.d.cts)
+bun run check:attw                    # attw, verifies types resolve for ESM + CJS consumers
+bun run check:publint                 # publint --strict, lints package.json for publishing
+bun run check:pack                    # check:attw + check:publint, against a packed tarball
 ```
 
 Before opening a PR, run `bun run check && bun test` — this is the same gate
-CI runs on every push and PR to `main` (plus `bun run build`), the same gate
-the `pre-commit` hook runs against staged files, and what `prepublishOnly`
-runs before a release.
+CI runs on every push and PR to `main`, and the same checks the `pre-commit`
+hook runs against staged files.
+
+If you touched anything that affects the published package — `vite.config.ts`,
+`scripts/fix-dist-types.ts`, or the `exports`/`files`/`types` fields in
+`package.json` — also run `bun run build && bun run check:pack`. That packs a
+real tarball and runs `attw` and `publint` against it, so it is slower than the
+other checks and needs a full dev install. CI, `release.yml`, and
+`prepublishOnly` all run it after a build.
 
 Linting and formatting are both handled by [Biome](https://biomejs.dev)
 (`biome.json`) — there is no separate ESLint or Prettier config.

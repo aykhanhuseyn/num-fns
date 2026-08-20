@@ -27,13 +27,14 @@ bun run lint:fix           # biome lint --write .
 bun run format              # biome format --write .
 bun run format:check        # biome format .
 bun run check                # biome check . (lint + format in one pass)
-bun run build               # vite build -> dist/ (ESM + CJS + per-module .d.ts)
+bun run check:pack           # attw + publint against a packed tarball (run after build)
+bun run build               # vite build -> dist/ (ESM + CJS + per-module .d.ts/.d.cts)
 bun run dev                 # vite build --watch
 ```
 
 Linting and formatting are handled by a single tool, Biome (`biome.json`), not ESLint/Prettier.
 
-`prepublishOnly` runs typecheck, lint, test, and build in sequence — that's the full gate before `npm publish`.
+`prepublishOnly` runs `check`, the tests, `build`, and finally `check:pack` — that's the full gate before `npm publish`. `check:pack` runs [`attw`](https://github.com/arethetypeswrong/arethetypeswrong.github.io) (`--profile node16`, so the legacy `node10` resolution row is skipped) and `publint --strict` against a packed tarball; it does **not** build, so it needs a `bun run build` ahead of it (both `ci.yml` and `release.yml` order it that way). `check` itself stays build-free and fast.
 
 `bunfig.toml` sets `install.exact = true`, so `bun add`/`bun install` always pin exact versions in `package.json` (no `^`/`~` ranges) — keep that in mind when adding a new dependency.
 
@@ -65,7 +66,13 @@ All public functions validate input up front and throw (`RangeError`/`TypeError`
 
 `vite.config.ts` builds `src/index.ts` in library mode to both `dist/index.js` (ESM) and `dist/index.cjs` (CJS), targeting `es2018` for compatibility with older consumers, with `vite-plugin-dts` emitting per-module `.d.ts` files (not rolled up into one file — rollup-based type bundling pulls in `@microsoft/api-extractor`, which was unreliable in this environment, so `rollupTypes` is intentionally left off). `build.emptyOutDir` is set to `false`; the `dist/` directory is not cleaned before each build.
 
-Adding the `num-fns/locale` entry point will require a second Vite input and a matching `exports` entry in `package.json` — the export map currently declares only `.` and `./package.json`, so `import { ru } from 'num-fns/locale'` will not resolve until both are added.
+`vite-plugin-dts` emits extensionless relative specifiers (`export * from './arithmetic/clamp'`), which `node16`/`nodenext` resolution rejects, and emits only `.d.ts` files — which, with `"type": "module"`, means CJS consumers of `dist/index.cjs` were handed ESM types (attw's `FalseESM`). `scripts/fix-dist-types.ts` fixes both: it rewrites each `.d.ts` in place with explicit `.js` extensions and writes a `.d.cts` twin with `.cjs` extensions, so `exports[...].require.types` points at real CJS declarations. It is idempotent, which matters because `emptyOutDir` is `false`, and it throws rather than guessing when a specifier matches neither `<base>.d.ts` nor `<base>/index.d.ts` (a stale declaration from a deleted module is the usual cause — remove `dist/` and rebuild).
+
+It is invoked from the dts plugin's `afterBuild` hook in `vite.config.ts`, not as a separate step chained onto `build`, so `vite build --watch` (`bun run dev`) produces correct declarations too. Running the file directly (`bun scripts/fix-dist-types.ts`) is the manual escape hatch.
+
+Every `exports` entry therefore has per-condition `types` — `import` → `.d.ts`, `require` → `.d.cts` — and `bun run check:pack` (attw `--profile node16` + `publint --strict`) is the regression test. Legacy `node10` resolution is deliberately out of scope; it would need `typesVersions`.
+
+The export map declares `.`, `./locale`, `./locale/{az,en,ru,es}` and `./package.json`, one per Vite entry in `vite.config.ts` — adding a subpath means adding both, in both files.
 
 ### Testing conventions
 
