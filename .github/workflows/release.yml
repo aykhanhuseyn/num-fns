@@ -71,6 +71,14 @@ jobs:
 
       - run: bun test
 
+      - run: bun run build
+
+      # Fail here rather than half-way through `npm publish`: `changeset
+      # publish` triggers `prepublishOnly`, which runs this same gate, but a
+      # packaging error surfacing at that point aborts a release already in
+      # flight. Needs the build above.
+      - run: bun run check:pack
+
       - name: Create release PR or publish to npm
         uses: changesets/action@v1
         with:

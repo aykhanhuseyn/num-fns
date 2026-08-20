@@ -42,4 +42,10 @@ jobs:
 
       - run: bun run build
 
+      # Lints the published surface off the dist/ built above: attw packs a
+      # tarball and checks that types resolve for ESM and CJS consumers
+      # (node16 profile — the legacy node10 row is skipped), publint checks
+      # the package.json itself. Needs a prior `bun run build`.
+      - run: bun run check:pack
+
       - run: bun run size
