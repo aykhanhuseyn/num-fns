@@ -1,6 +1,7 @@
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import { fixDistTypes } from './scripts/fix-dist-types'
 
 export default defineConfig({
   plugins: [
@@ -8,6 +9,16 @@ export default defineConfig({
       include: ['src'],
       exclude: ['src/**/*.test.ts'],
       insertTypesEntry: true,
+      // The declarations this plugin emits are not consumable as-is: relative
+      // specifiers are extensionless (rejected by `node16`/`nodenext`) and no
+      // `.d.cts` twin is emitted for the `require` condition. See
+      // `scripts/fix-dist-types.ts`. Hooking it here rather than chaining a
+      // separate build step keeps `vite build --watch` correct too — the
+      // plugin resets its `bundled` flag on `watchChange`, so `afterBuild`
+      // fires on every rebuild.
+      afterBuild: () => {
+        fixDistTypes(resolve(import.meta.dirname, 'dist'))
+      },
     }),
   ],
   build: {

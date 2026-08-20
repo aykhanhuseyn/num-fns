@@ -8,34 +8,64 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./locale": {
-      "types": "./dist/locale/index.d.ts",
-      "import": "./dist/locale/index.js",
-      "require": "./dist/locale/index.cjs"
+      "import": {
+        "types": "./dist/locale/index.d.ts",
+        "default": "./dist/locale/index.js"
+      },
+      "require": {
+        "types": "./dist/locale/index.d.cts",
+        "default": "./dist/locale/index.cjs"
+      }
     },
     "./locale/az": {
-      "types": "./dist/locale/az.d.ts",
-      "import": "./dist/locale/az.js",
-      "require": "./dist/locale/az.cjs"
+      "import": {
+        "types": "./dist/locale/az.d.ts",
+        "default": "./dist/locale/az.js"
+      },
+      "require": {
+        "types": "./dist/locale/az.d.cts",
+        "default": "./dist/locale/az.cjs"
+      }
     },
     "./locale/en": {
-      "types": "./dist/locale/en.d.ts",
-      "import": "./dist/locale/en.js",
-      "require": "./dist/locale/en.cjs"
+      "import": {
+        "types": "./dist/locale/en.d.ts",
+        "default": "./dist/locale/en.js"
+      },
+      "require": {
+        "types": "./dist/locale/en.d.cts",
+        "default": "./dist/locale/en.cjs"
+      }
     },
     "./locale/ru": {
-      "types": "./dist/locale/ru.d.ts",
-      "import": "./dist/locale/ru.js",
-      "require": "./dist/locale/ru.cjs"
+      "import": {
+        "types": "./dist/locale/ru.d.ts",
+        "default": "./dist/locale/ru.js"
+      },
+      "require": {
+        "types": "./dist/locale/ru.d.cts",
+        "default": "./dist/locale/ru.cjs"
+      }
     },
     "./locale/es": {
-      "types": "./dist/locale/es.d.ts",
-      "import": "./dist/locale/es.js",
-      "require": "./dist/locale/es.cjs"
+      "import": {
+        "types": "./dist/locale/es.d.ts",
+        "default": "./dist/locale/es.js"
+      },
+      "require": {
+        "types": "./dist/locale/es.d.cts",
+        "default": "./dist/locale/es.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
