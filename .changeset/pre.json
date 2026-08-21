@@ -6,6 +6,10 @@
   },
   "changesets": [
     "confirm-github-repo-rename",
+    "coverage-gate-and-consumer-smoke-tests",
+    "fix-cjs-type-declarations",
+    "grammatical-gender-option",
+    "legacy-node10-type-resolution",
     "new-function-scaffold-script",
     "renovate-dependency-updates",
     "restore-cardinal-to-ordinal-words",

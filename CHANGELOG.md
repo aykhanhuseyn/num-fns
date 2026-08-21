@@ -1,5 +1,48 @@
 # num-fns
 
+## 0.2.0-alpha.1
+
+### Minor Changes
+
+- `numberToWords` now takes a `gender` option (`'masculine' | 'feminine' | 'neuter'`) for locales whose cardinal words inflect by grammatical gender. Each locale declares which genders its words distinguish (`Locale.words.genders` — `ru` all three, `es` masculine/feminine, `az`/`en` none) and its default (`Locale.words.defaultGender`, `'masculine'` for `ru`/`es`), so output is unchanged when the option is omitted; a gender the locale doesn't distinguish throws a `RangeError` instead of being silently ignored.
+
+  The requested gender agrees with the noun being counted, so it applies to the trailing units group and the decimal-fraction group: Russian inflects a trailing «один»/«два» (`одна`, `одно`, `две`), Spanish inflects `uno`/`veintiuno` and the `-cientos` hundreds (`una`, `veintiuna`, `doscientas`). Scale-bound groups keep agreeing with their own scale noun (`одна тысяча` regardless of the requested gender; `millón` and above stay masculine), except Spanish's gender-transparent `mil`, which passes agreement through (`doscientas mil`) while keeping the RAE apocope (`doscientas treinta y un mil`).
+
+  Also fixes a pre-existing Spanish bug: 21 000 read `veintiuno mil` and now correctly apocopates to `veintiún mil`.
+
+### Patch Changes
+
+- Harden the test and release pipeline: a 100%-per-file coverage gate
+  (`bun run test:coverage`, wired into CI in place of `bun test`), `fast-check`
+  round-trip property tests for every format/parse pair across all four locales,
+  and a consumer smoke test (`bun run check:smoke`) that installs the packed
+  tarball into real ESM and CJS projects, executes them, and typechecks the
+  shipped declarations under `moduleResolution: nodenext`. CI now runs those
+  fixtures across Node 18/20/22/24 plus macOS and Windows.
+
+  `engines.node` moves from `>=14` to `>=18`. Nothing in the build requires it —
+  the output still targets es2018 — but 14 and 16 are long EOL and cannot be
+  tested on current CI runners, so the package no longer claims support it
+  cannot verify.
+
+  No runtime behavior changes. The only source edit is internal: `locale/az.ts`'s
+  two duplicate vowel-harmony scans are now one shared helper, which keeps the
+  same thrown `SyntaxError` messages.
+
+- Fix type resolution for CommonJS and `node16`/`nodenext` consumers. The emitted declarations carried extensionless relative specifiers (`export * from './arithmetic/clamp'`), which Node-style TypeScript resolution rejects, and only `.d.ts` files were shipped — so with `"type": "module"` every `exports` entry handed ESM types to consumers loading the `.cjs` build (attw's `FalseESM`). A new post-build step, `scripts/fix-dist-types.ts`, adds explicit extensions and emits a `.d.cts` twin of every declaration, and each `exports` entry now carries per-condition `types` (`import` → `.d.ts`, `require` → `.d.cts`). Bundler-based setups were unaffected and stay unchanged; `attw` and `publint` now pass, and both are enforced in CI and before publish by the new `bun run check:pack`.
+
+- Make the `./locale` and `./locale/{az,en,ru,es}` subpaths resolvable for
+  consumers on legacy TypeScript module resolution (`moduleResolution: node`/
+  `node10`, still the default for CommonJS projects on TypeScript 5.x). Those
+  resolvers cannot read the `exports` map at all, so importing
+  `num-fns/locale/az` failed with `TS2307 Cannot find module` even though the
+  declarations were right there in the tarball; a `typesVersions` map now points
+  each subpath at its `.d.ts`.
+
+  With that in place `attw` runs under its default `strict` profile instead of
+  `--profile node16`, so no resolution mode is skipped any more, and a
+  `moduleResolution: node10` consumer fixture is part of `bun run check:smoke`.
+
 ## 0.2.0-alpha.0
 
 ### Minor Changes
