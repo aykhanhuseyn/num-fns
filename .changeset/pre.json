@@ -6,6 +6,7 @@
   },
   "changesets": [
     "confirm-github-repo-rename",
+    "fix-cjs-type-declarations",
     "new-function-scaffold-script",
     "renovate-dependency-updates",
     "restore-cardinal-to-ordinal-words",
