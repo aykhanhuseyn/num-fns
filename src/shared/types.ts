@@ -1,4 +1,4 @@
-import type { Locale } from '../locale/types'
+import type { GrammaticalGender, Locale } from '../locale/types'
 
 /**
  * How `formatNumber` (and anything that delegates to it) rounds a value to
@@ -139,6 +139,20 @@ export interface ToOrdinalOptions extends OrdinalOptions {
 export interface NumberWordsOptions {
   /** Locale supplying the cardinal word data (`locale.words`). Defaults to `en`. */
   locale?: Locale
+  /**
+   * Grammatical gender of the noun being counted, for locales whose number
+   * words inflect (Russian `один`/`одна`/`одно`, Spanish `uno`/`una`,
+   * `doscientos`/`doscientas`). Defaults to `locale.words.defaultGender`
+   * (`'masculine'` for `ru`/`es`), so omitting it keeps the citation form.
+   * Applies to the trailing units group and the decimal-fraction group —
+   * groups bound to a scale word agree with that scale noun instead
+   * (Russian `одна тысяча` regardless of the requested gender), except
+   * where the scale word is gender-transparent (Spanish `doscientas mil`).
+   * Throws a `RangeError` for a gender the locale's words don't distinguish
+   * (`az`/`en` have none, `es` has no neuter) rather than silently ignoring
+   * it — see `locale/types.ts`'s `GrammaticalGender`.
+   */
+  gender?: GrammaticalGender
 }
 
 export interface FractionWordsOptions {

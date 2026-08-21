@@ -1,4 +1,4 @@
-import type { Locale, PluralCategory, WordChunk } from './types'
+import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from './types'
 
 /**
  * Ordinal word for each cardinal token a Spanish `numberToWords`-style
@@ -60,10 +60,24 @@ const ORDINAL_WORDS: Readonly<Record<string, string>> = {
   billones: 'billonésimo',
 }
 
-/** Matches a trailing "veintiuno" so it can apocopate to "veintiún" before a scale noun. */
-const VEINTIUNO_SUFFIX_REGEX = /veintiuno$/
-/** Matches a trailing "uno" so it can apocopate to "un" before a scale noun. */
-const UNO_SUFFIX_REGEX = /uno$/
+/** Matches a trailing "veintiuno"/"veintiuna" so it can apocopate to "veintiún" before a scale noun. */
+const VEINTIUNO_SUFFIX_REGEX = /veintiun[oa]$/
+/** Matches a trailing "uno"/"una" so it can apocopate to "un" before a scale noun. */
+const UNO_SUFFIX_REGEX = /un[oa]$/
+
+/**
+ * Apocopates a trailing "uno"/"veintiuno" (and their feminine "una"/
+ * "veintiuna") to "un"/"veintiún" before a scale noun ("un millón",
+ * "veintiún mil", "treinta y un millones"). RAE sanctions the apocopated
+ * form before "mil" even in feminine agreement ("doscientas treinta y un
+ * mil personas") — the unapocopated "veintiuna mil" variant is accepted but
+ * not the citation form, so it isn't produced here.
+ */
+function apocopate(words: string): string {
+  return VEINTIUNO_SUFFIX_REGEX.test(words)
+    ? words.replace(VEINTIUNO_SUFFIX_REGEX, 'veintiún')
+    : words.replace(UNO_SUFFIX_REGEX, 'un')
+}
 /** Splits a spelled-out cardinal into tokens for per-token ordinalization. */
 const WHITESPACE_REGEX = /\s+/
 
@@ -132,36 +146,72 @@ const VEINTI = [
   'veintiocho',
   'veintinueve',
 ]
+/**
+ * Feminine agreement forms of {@link HUNDREDS}: the "-cientos" hundreds all
+ * inflect ("doscientas casas"), while the multiplier form "ciento" (and the
+ * standalone "cien" `compose` special-cases) is invariable. Kept as a full
+ * parallel table rather than a mechanical "os" -> "as" rewrite for the same
+ * reason {@link VEINTI} is a table: explicit forms over derivation.
+ */
+const HUNDREDS_FEMININE = [
+  '',
+  'ciento',
+  'doscientas',
+  'trescientas',
+  'cuatrocientas',
+  'quinientas',
+  'seiscientas',
+  'setecientas',
+  'ochocientas',
+  'novecientas',
+]
 
 /**
  * Renders a single 0-999 group as Spanish cardinal words: the regular
  * "ciento" hundreds form (100 alone is special-cased to "cien" by
  * `compose`, which is the only place that knows a chunk's overall value),
  * the irregular 20-29 contraction, and "y" between a tens word (30+) and a
- * nonzero ones digit ("treinta y cinco"). Apocopation of "uno"/"veintiuno"
- * before a scale word ("un millón", "veintiún millones") is `compose`'s
- * job, since only `compose` knows a chunk sits before a scale word at all.
+ * nonzero ones digit ("treinta y cinco"). Feminine `gender` swaps the two
+ * inflecting word families — "uno"/"veintiuno" -> "una"/"veintiuna" and the
+ * "-cientos" hundreds -> "-cientas" ("doscientas treinta y una"); Spanish
+ * has no neuter cardinal forms, so `es.words.genders` never admits one.
+ * Apocopation of "uno"/"veintiuno" before a scale word ("un millón",
+ * "veintiún millones") is `compose`'s job, since only `compose` knows a
+ * chunk sits before a scale word at all.
  */
-function renderGroup(value: number): string {
+function renderGroup(value: number, gender?: GrammaticalGender): string {
+  const feminine = gender === 'feminine'
   const hundreds = Math.floor(value / 100)
   const remainder = value % 100
 
   const parts: string[] = []
-  if (hundreds > 0) parts.push(HUNDREDS[hundreds] as string)
+  if (hundreds > 0) parts.push((feminine ? HUNDREDS_FEMININE : HUNDREDS)[hundreds] as string)
 
-  if (remainder >= 11 && remainder <= 19) {
-    parts.push(TEENS[remainder - 11] as string)
-  } else if (remainder >= 20 && remainder <= 29) {
-    parts.push(VEINTI[remainder - 20] as string)
-  } else {
-    const tens = Math.floor(remainder / 10)
-    const ones = remainder % 10
-    if (tens > 0 && ones > 0) parts.push(`${TENS[tens]} y ${ONES[ones]}`)
-    else if (tens > 0) parts.push(TENS[tens] as string)
-    else if (ones > 0) parts.push(ONES[ones] as string)
-  }
+  const remainderWords = renderRemainder(remainder, feminine)
+  if (remainderWords) parts.push(remainderWords)
 
   return parts.join(' ')
+}
+
+/**
+ * Renders the 0-99 remainder of a group for {@link renderGroup}: the
+ * irregular teens, the 20-29 contraction, and "y" between a tens word (30+)
+ * and a nonzero ones digit. Returns `''` for `0` (the group's reading is
+ * just its hundreds word, if any). Split out of `renderGroup` to keep each
+ * function's branching within the lint budget.
+ */
+function renderRemainder(remainder: number, feminine: boolean): string {
+  if (remainder >= 11 && remainder <= 19) return TEENS[remainder - 11] as string
+  if (remainder >= 20 && remainder <= 29) {
+    return feminine && remainder === 21 ? 'veintiuna' : (VEINTI[remainder - 20] as string)
+  }
+
+  const tens = Math.floor(remainder / 10)
+  const ones = remainder % 10
+  const onesWord = feminine && ones === 1 ? 'una' : (ONES[ones] as string)
+  if (tens > 0 && ones > 0) return `${TENS[tens]} y ${onesWord}`
+  if (tens > 0) return TENS[tens] as string
+  return onesWord
 }
 
 /**
@@ -202,22 +252,35 @@ export const es: Locale = {
     // by `renderGroup`, not `compose` (see `Locale.words.and`'s doc comment
     // in `types.ts`).
     and: 'y',
+    // Spanish cardinals distinguish masculine/feminine ("una casa",
+    // "doscientas casas") but have no neuter counting form; masculine is
+    // the citation form.
+    genders: ['masculine', 'feminine'],
+    defaultGender: 'masculine',
     renderGroup,
-    compose: (chunks: readonly WordChunk[]): string =>
+    compose: (chunks: readonly WordChunk[], gender?: GrammaticalGender): string =>
       chunks
         .map((chunk) => {
-          const words = chunk.value === 100 ? 'cien' : chunk.words
+          // "mil" is gender-transparent — agreement passes through it to the
+          // hundreds words ("doscientas mil casas") — so the thousands chunk
+          // is re-rendered in the requested gender. "millón" and above are
+          // masculine nouns and keep the chunk's ungendered rendering.
+          const baseWords =
+            chunk.scaleIndex === 1 && gender === 'feminine'
+              ? renderGroup(chunk.value, gender)
+              : chunk.words
+          const words = chunk.value === 100 ? 'cien' : baseWords
           if (!chunk.scaleWord) return words
           if (chunk.scaleIndex === 1) {
-            // "mil" never takes "uno"/"un" — 1000 is "mil", not "un mil".
-            return chunk.value === 1 ? chunk.scaleWord : `${words} ${chunk.scaleWord}`
+            // "mil" never takes "uno"/"un" — 1000 is "mil", not "un mil" —
+            // and a larger thousands chunk apocopates its trailing
+            // "uno"/"una"/"veintiuno"/"veintiuna" ("veintiún mil", not
+            // "veintiuno mil"; see `apocopate`'s note on feminine "mil").
+            return chunk.value === 1 ? chunk.scaleWord : `${apocopate(words)} ${chunk.scaleWord}`
           }
           // "uno"/"veintiuno" apocopate to "un"/"veintiún" before a masculine
           // scale noun ("un millón", "veintiún millones", "treinta y un millones").
-          const apocopated = words.endsWith('veintiuno')
-            ? words.replace(VEINTIUNO_SUFFIX_REGEX, 'veintiún')
-            : words.replace(UNO_SUFFIX_REGEX, 'un')
-          return `${apocopated} ${chunk.scaleWord}`
+          return `${apocopate(words)} ${chunk.scaleWord}`
         })
         .join(' '),
   },

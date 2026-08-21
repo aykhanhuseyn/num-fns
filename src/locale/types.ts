@@ -8,6 +8,22 @@
 export type PluralCategory = 'one' | 'few' | 'many' | 'other'
 
 /**
+ * Grammatical gender of the noun a cardinal number agrees with, for locales
+ * whose number words inflect (`todo.md` §1's "Grammatical gender" decision):
+ * Russian `один`/`одна`/`одно` and `два`/`две`, Spanish `uno`/`una` and
+ * `doscientos`/`doscientas`. Kept to the three genders the launch locales
+ * need; a later locale needing `'common'` (Scandinavian) extends this union.
+ *
+ * Which genders a locale actually distinguishes is declared per locale in
+ * `LocaleWords.genders` — `az`/`en` have no grammatical gender and omit it,
+ * `es` has no neuter cardinal forms, `ru` has all three. `numberToWords`
+ * validates a requested gender against that declaration and throws a
+ * `RangeError` rather than silently returning a form the language doesn't
+ * have.
+ */
+export type GrammaticalGender = 'masculine' | 'feminine' | 'neuter'
+
+/**
  * One base-1000 chunk of a number's cardinal reading, produced while
  * grouping right-to-left the same way `integerToWords` in `number/words.ts`
  * does today. `Locale.words.compose` receives an ordered array of these
@@ -92,6 +108,20 @@ export interface LocaleWords {
    */
   decimalConnector?: string
   /**
+   * Grammatical genders this locale's cardinal words actually distinguish
+   * (`ru` all three, `es` masculine/feminine). Omit for locales with no
+   * grammatical gender (`az`, `en`) — `numberToWords` then rejects any
+   * `gender` option with a `RangeError` instead of silently ignoring it.
+   */
+  genders?: readonly GrammaticalGender[]
+  /**
+   * Gender used when `numberToWords` is called without a `gender` option
+   * (`'masculine'` for `ru`/`es`, matching the citation form dictionaries
+   * and pre-gender-option output used). Only meaningful alongside
+   * {@link genders}; omit for genderless locales.
+   */
+  defaultGender?: GrammaticalGender
+  /**
    * Renders a single 0-999 group as cardinal words using this locale's own
    * `ones`/`teens`/`tens`/`hundreds` vocabulary and composition rules
    * (hyphenation, the `and` connector, irregular contractions like Spanish
@@ -99,8 +129,15 @@ export interface LocaleWords {
    * chunk-level irregularities that depend on context (Azerbaijani dropping
    * "bir" before "min", Spanish "cien" vs "ciento") are `compose`'s job, not
    * this one, since only `compose` knows a chunk's scale position.
+   *
+   * `gender` is the agreement gender for this group's inflecting words
+   * (Russian `одна`/`одно`, `две`; Spanish `una`, `-cientas`). It is only
+   * ever passed for the trailing units group and the decimal-fraction group
+   * — groups bound to a scale word agree with that scale noun instead,
+   * which is `compose`'s job (Russian `одна тысяча` vs `один миллион`).
+   * Locales without gender ignore the parameter entirely.
    */
-  renderGroup: (value: number) => string
+  renderGroup: (value: number, gender?: GrammaticalGender) => string
   /**
    * Joins ordered chunks (largest scale first) into the final string. This
    * is the seam where chunk-level irregularities live — dropping a leading
@@ -108,8 +145,16 @@ export interface LocaleWords {
    * (Russian "одна тысяча"), or contracting before a scale word (Spanish
    * "un millón"). A locale with no such irregularities can implement this
    * as `chunks.map(c => \`${c.words} ${c.scaleWord}\`.trim()).join(' ')`.
+   *
+   * `gender` is the same resolved agreement gender `renderGroup` received
+   * for the units chunk, passed so a locale whose thousands scale is
+   * gender-transparent can re-inflect that chunk (Spanish "mil" passes
+   * agreement through: `doscientas mil`, unlike the masculine noun
+   * "millón"). Locales that don't need it (az, en, ru — Russian's "тысяча"
+   * forces its own feminine agreement regardless of the requested gender)
+   * simply ignore the parameter.
    */
-  compose: (chunks: readonly WordChunk[]) => string
+  compose: (chunks: readonly WordChunk[], gender?: GrammaticalGender) => string
 }
 
 /** Suffix and full-word derivation for `toOrdinal` / `ordinalToWords`. */

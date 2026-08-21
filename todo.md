@@ -183,17 +183,60 @@ objects, `date-fns` style.
       (`0.000050008...`) a hair past the half-unit tolerance (`0.00005`).
       Reproduced deterministically outside the suite; not fixed here, tracked
       as a new open bug below since it's unrelated to scale naming.)
-- [ ] **Grammatical gender.** Russian `один`/`одна` and Spanish `un`/`una`
+- [x] **Grammatical gender.** Russian `один`/`одна` and Spanish `un`/`una`
       change with the noun being counted. Decide whether `numberToWords` takes a
       `gender` option or stays masculine-by-default.
+      (2026-08-21: **decided — `numberToWords` takes a `gender` option, with
+      the default owned by the locale.** `NumberWordsOptions.gender` accepts
+      `'masculine' | 'feminine' | 'neuter'` (`GrammaticalGender` in
+      `locale/types.ts`); each locale declares which genders its cardinal
+      words actually distinguish (`Locale.words.genders` — `ru` all three,
+      `es` masculine/feminine, `az`/`en` none) and its default
+      (`Locale.words.defaultGender`, `'masculine'` for `ru`/`es`), so
+      omitting the option keeps every pre-existing output byte-identical.
+      Per the package-wide throw-on-bad-input rule, a gender the locale
+      doesn't distinguish throws `RangeError` (`az`/`en` with any gender,
+      `es` with `neuter`) instead of being silently ignored.
+
+      Scope: the requested gender agrees with the noun being *counted*, so
+      it applies to the trailing units group and the decimal-fraction group
+      — `renderGroup` grew an optional `gender` parameter for this — while
+      scale-bound groups keep agreeing with their scale noun via `compose`
+      (`одна тысяча` regardless of requested gender; `миллион`/`millón` stay
+      masculine). `compose` also receives the gender so Spanish can pass
+      agreement through its gender-transparent `mil` (`doscientas mil`,
+      `doscientas treinta y un mil` — RAE keeps the apocope before `mil`
+      even in feminine agreement, so `veintiuna mil` is not produced). Words
+      affected: ru `один`->`одна`/`одно`, `два`->`две` (neuter shares `два`);
+      es `uno`->`una`, `veintiuno`->`veintiuna`, `-cientos`->`-cientas`
+      (`ciento`/`cien` invariable). Fixing the `mil` path also fixed a
+      pre-existing masculine bug: 21 000 was `veintiuno mil`, now
+      `veintiún mil` (part of §2's Spanish apocopation item).
+
+      Not covered, deliberately: `moneyToWords` doesn't thread gender yet —
+      the currency unit's own gender should drive it (`рубль` masculine but
+      `копейка` feminine, so ru minor amounts currently read `один копейка`
+      instead of `одна копейка`); that wants a
+      `LocaleCurrencyUnit.gender` field and is tracked as follow-up work in
+      §2's Russian item rather than guessed at here. Ordinal gender (`первая`,
+      `primera`) stays out of scope per §2's nominative-masculine v1 call.)
 
 ## 2. Per-locale linguistic work
 
 - [ ] **Russian** — plural categories for every scale word; `одна тысяча` not
       `один тысяча`; ordinal forms decline by case and gender (scope this down
       to nominative masculine for v1 and document the limitation).
+      (2026-08-21 addition, found while landing §1's gender option:
+      `moneyToWords` reads ru minor amounts as `один копейка` — `копейка` is
+      feminine. Needs a `LocaleCurrencyUnit.gender` field threaded through
+      `moneyToWords`'s `numberToWords` calls; the `gender` option itself
+      already exists.)
 - [ ] **Spanish** — `veintiuno`/`veintiún` contraction, `ciento` vs `cien`,
       `y` only between tens and ones (`treinta y uno`, but `ciento uno`).
+      (2026-08-21: the missing apocope before `mil` is fixed — 21 000 was
+      `veintiuno mil`, now `veintiún mil` — as part of §1's gender work; the
+      contraction before `millón`+ and the `cien`/`ciento`/`y` rules were
+      already in. What's left here is a final conformance sweep.)
 - [ ] **English** — hyphenation (`twenty-one`), the `and` convention
       (`one hundred and one` in en-GB, dropped in en-US), ordinal suffixes
       `st/nd/rd/th`.

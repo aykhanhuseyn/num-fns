@@ -1,6 +1,48 @@
 import { en } from '../locale/en'
-import type { Locale, PluralCategory, WordChunk } from '../locale/types'
+import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
 import type { NumberWordsOptions } from '../shared/types'
+
+/**
+ * Every value `GrammaticalGender` admits, for validating the `gender`
+ * option before consulting the locale — an unknown string fails with the
+ * full list of valid genders, not just the locale's subset.
+ */
+const GRAMMATICAL_GENDERS: readonly GrammaticalGender[] = ['masculine', 'feminine', 'neuter']
+
+/**
+ * Validates `options.gender` against `GrammaticalGender` and against the
+ * genders `locale` actually distinguishes, then resolves the gender to
+ * render with: the requested one, or `locale.words.defaultGender` when the
+ * option is omitted (`undefined` for genderless locales — their
+ * `renderGroup` ignores it anyway).
+ */
+function resolveGender(
+  gender: GrammaticalGender | undefined,
+  locale: Locale,
+): GrammaticalGender | undefined {
+  if (gender === undefined) return locale.words.defaultGender
+
+  if (!GRAMMATICAL_GENDERS.includes(gender)) {
+    throw new RangeError(
+      `numberToWords: gender must be one of ${GRAMMATICAL_GENDERS.map((g) => `"${g}"`).join(', ')}, received ${String(gender)}`,
+    )
+  }
+
+  const supported = locale.words.genders ?? []
+  if (supported.length === 0) {
+    throw new RangeError(
+      `numberToWords: locale "${locale.code}" has no grammatical gender; omit the gender option`,
+    )
+  }
+  if (!supported.includes(gender)) {
+    const supportedList = supported.map((g) => `"${g}"`).join(', ')
+    throw new RangeError(
+      `numberToWords: locale "${locale.code}" does not distinguish the "${gender}" gender (supported: ${supportedList})`,
+    )
+  }
+
+  return gender
+}
 
 /**
  * Words for digits 1-9. Index `0` is unused so digits can index directly.
@@ -80,10 +122,20 @@ export function resolveScaleWord(
  * `locale/types.ts` for the `en`/`ru`/`es` gap this leaves, tracked in
  * `todo.md` §2).
  *
+ * For locales whose number words inflect by grammatical gender (`ru`, `es`),
+ * `options.gender` selects the agreement forms for the noun being counted
+ * (see `NumberWordsOptions.gender` in `shared/types.ts` for exactly which
+ * groups it applies to); it defaults to `locale.words.defaultGender` so
+ * omitting it keeps the masculine citation form, and it throws a
+ * `RangeError` for a gender the locale doesn't distinguish (`az`/`en` have
+ * none, `es` has no neuter).
+ *
  * @example
  * numberToWords(1234); // "one thousand two hundred thirty-four" (en, the default)
  * numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
  * numberToWords(-5, { locale: ru }); // "минус пять"
+ * numberToWords(21, { locale: ru, gender: 'feminine' }); // "двадцать одна"
+ * numberToWords(200, { locale: es, gender: 'feminine' }); // "doscientas"
  */
 export function numberToWords(value: number, options: NumberWordsOptions = {}): string {
   if (!Number.isFinite(value)) {
@@ -91,6 +143,7 @@ export function numberToWords(value: number, options: NumberWordsOptions = {}): 
   }
 
   const { locale = en } = options
+  const gender = resolveGender(options.gender, locale)
   const maxSupportedInteger = 1000 ** locale.words.scales.length - 1
 
   const isNegative = value < 0 && value !== 0
@@ -109,9 +162,9 @@ export function numberToWords(value: number, options: NumberWordsOptions = {}): 
     integerPart += 1
   }
 
-  let words = integerToWords(integerPart, locale)
+  let words = integerToWords(integerPart, locale, gender)
   if (fractionDigits > 0) {
-    const fractionWords = locale.words.renderGroup(fractionDigits)
+    const fractionWords = locale.words.renderGroup(fractionDigits, gender)
     words = locale.words.decimalConnector
       ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
       : `${words} ${fractionWords}`
@@ -120,7 +173,11 @@ export function numberToWords(value: number, options: NumberWordsOptions = {}): 
   return isNegative ? `${locale.words.negative} ${words}` : words
 }
 
-function integerToWords(value: number, locale: Locale): string {
+function integerToWords(
+  value: number,
+  locale: Locale,
+  gender: GrammaticalGender | undefined,
+): string {
   if (value === 0) return locale.words.zero
 
   const groups: number[] = []
@@ -139,11 +196,15 @@ function integerToWords(value: number, locale: Locale): string {
     const scaleWord = resolveScaleWord(scaleEntry, locale.plural(groupValue))
     chunks.push({
       value: groupValue,
-      words: locale.words.renderGroup(groupValue),
+      // The requested gender agrees with the noun being *counted*, so it
+      // only applies to the trailing units group — a group bound to a scale
+      // word agrees with that scale noun instead, which is `compose`'s job
+      // (Russian's feminine "тысяча", Spanish's gender-transparent "mil").
+      words: locale.words.renderGroup(groupValue, i === 0 ? gender : undefined),
       scaleIndex: i,
       scaleWord,
     })
   }
 
-  return locale.words.compose(chunks)
+  return locale.words.compose(chunks, gender)
 }

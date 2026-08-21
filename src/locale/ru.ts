@@ -1,4 +1,4 @@
-import type { Locale, PluralCategory, WordChunk } from './types'
+import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from './types'
 
 /**
  * Full CLDR-style Russian plural rule for non-negative integers: `one` for
@@ -131,12 +131,25 @@ const HUNDREDS = [
 ]
 
 /**
- * Renders a single 0-999 group as Russian cardinal words in the regular
- * masculine form ("двести тридцать четыре" for 234). Gender agreement for a
+ * The two Russian cardinals that inflect by gender, keyed by the ones digit
+ * they replace: `один` -> `одна`/`одно`, `два` -> `две` (neuter shares the
+ * masculine `два` — "два окна"). Every other cardinal word is invariant.
+ */
+const GENDERED_ONES: Readonly<Partial<Record<number, Partial<Record<GrammaticalGender, string>>>>> =
+  {
+    1: { feminine: 'одна', neuter: 'одно' },
+    2: { feminine: 'две' },
+  }
+
+/**
+ * Renders a single 0-999 group as Russian cardinal words, in the masculine
+ * citation form unless `gender` selects the feminine/neuter agreement for a
+ * trailing "один"/"два" ("двадцать одна", "одно"). `numberToWords` only
+ * passes `gender` for the units group — agreement for the thousands group's
  * trailing "один"/"два" before the feminine "тысяча" is handled by
  * `compose`, not here, since only `compose` knows a chunk's scale position.
  */
-function renderGroup(value: number): string {
+function renderGroup(value: number, gender?: GrammaticalGender): string {
   const hundreds = Math.floor(value / 100)
   const remainder = value % 100
 
@@ -149,7 +162,10 @@ function renderGroup(value: number): string {
     const tens = Math.floor(remainder / 10)
     const ones = remainder % 10
     if (tens > 0) parts.push(TENS[tens] as string)
-    if (ones > 0) parts.push(ONES[ones] as string)
+    if (ones > 0) {
+      const genderedOne = gender ? GENDERED_ONES[ones]?.[gender] : undefined
+      parts.push(genderedOne ?? (ONES[ones] as string))
+    }
   }
 
   return parts.join(' ')
@@ -186,6 +202,10 @@ export const ru: Locale = {
       { one: 'триллион', few: 'триллиона', many: 'триллионов' },
     ],
     negative: 'минус',
+    // Russian distinguishes all three genders in "один"/"два" ("одна
+    // книга", "одно окно", "две книги"); masculine is the citation form.
+    genders: ['masculine', 'feminine', 'neuter'],
+    defaultGender: 'masculine',
     renderGroup,
     compose: (chunks: readonly WordChunk[]): string =>
       chunks

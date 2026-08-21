@@ -147,5 +147,97 @@ describe('numberToWords', () => {
     it('prefixes negative numbers with "menos"', () => {
       expect(numberToWords(-5, { locale: es })).toBe('menos cinco')
     })
+
+    it('apocopates a trailing "uno" before "mil" ("veintiún mil", not "veintiuno mil")', () => {
+      expect(numberToWords(21000, { locale: es })).toBe('veintiún mil')
+      expect(numberToWords(231000, { locale: es })).toBe('doscientos treinta y un mil')
+    })
+  })
+
+  describe('{ gender } (todo.md §1 "Grammatical gender" decision)', () => {
+    it('defaults to the locale’s masculine citation form, so omitting it changes nothing', () => {
+      for (const locale of [ru, es]) {
+        for (const value of [1, 2, 21, 200, 1001, 21000]) {
+          expect(numberToWords(value, { locale, gender: 'masculine' })).toBe(
+            numberToWords(value, { locale }),
+          )
+        }
+      }
+    })
+
+    it('spells Russian feminine forms ("одна"/"две") in the units group', () => {
+      const options = { locale: ru, gender: 'feminine' } as const
+      expect(numberToWords(1, options)).toBe('одна')
+      expect(numberToWords(2, options)).toBe('две')
+      expect(numberToWords(21, options)).toBe('двадцать одна')
+      expect(numberToWords(1001, options)).toBe('одна тысяча одна')
+      expect(numberToWords(2002, options)).toBe('две тысячи две')
+      expect(numberToWords(-21, options)).toBe('минус двадцать одна')
+    })
+
+    it('spells Russian neuter "одно" and keeps "два" (neuter shares the masculine form)', () => {
+      const options = { locale: ru, gender: 'neuter' } as const
+      expect(numberToWords(1, options)).toBe('одно')
+      expect(numberToWords(2, options)).toBe('два')
+      expect(numberToWords(21, options)).toBe('двадцать одно')
+      expect(numberToWords(1001, options)).toBe('одна тысяча одно')
+    })
+
+    it('keeps Russian scale-bound groups agreeing with the scale noun, not the requested gender', () => {
+      expect(numberToWords(21000, { locale: ru, gender: 'feminine' })).toBe('двадцать одна тысяча')
+      expect(numberToWords(21000, { locale: ru, gender: 'neuter' })).toBe('двадцать одна тысяча')
+      expect(numberToWords(1000000, { locale: ru, gender: 'feminine' })).toBe('один миллион')
+      expect(numberToWords(21000000, { locale: ru, gender: 'feminine' })).toBe(
+        'двадцать один миллион',
+      )
+    })
+
+    it('spells Spanish feminine forms ("una", "veintiuna", "-cientas") in the units group', () => {
+      const options = { locale: es, gender: 'feminine' } as const
+      expect(numberToWords(1, options)).toBe('una')
+      expect(numberToWords(21, options)).toBe('veintiuna')
+      expect(numberToWords(31, options)).toBe('treinta y una')
+      expect(numberToWords(200, options)).toBe('doscientas')
+      expect(numberToWords(101, options)).toBe('ciento una')
+      expect(numberToWords(100, options)).toBe('cien')
+      expect(numberToWords(-21, options)).toBe('menos veintiuna')
+    })
+
+    it('passes Spanish feminine agreement through the gender-transparent "mil" but not "millón"', () => {
+      const options = { locale: es, gender: 'feminine' } as const
+      expect(numberToWords(200000, options)).toBe('doscientas mil')
+      expect(numberToWords(200500, options)).toBe('doscientas mil quinientas')
+      // RAE keeps the apocope before "mil" even in feminine agreement.
+      expect(numberToWords(231000, options)).toBe('doscientas treinta y un mil')
+      expect(numberToWords(21000, options)).toBe('veintiún mil')
+      expect(numberToWords(1000, options)).toBe('mil')
+      expect(numberToWords(1000001, options)).toBe('un millón una')
+      expect(numberToWords(200000000, options)).toBe('doscientos millones')
+    })
+
+    it('applies the requested gender to the decimal-fraction group', () => {
+      expect(numberToWords(0.01, { locale: ru, gender: 'feminine' })).toBe('ноль одна')
+      expect(numberToWords(0.21, { locale: es, gender: 'feminine' })).toBe('cero veintiuna')
+    })
+
+    it('throws for a gender the locale has no words for', () => {
+      expect(() => numberToWords(1, { gender: 'feminine' })).toThrow(RangeError)
+      expect(() => numberToWords(1, { locale: en, gender: 'masculine' })).toThrow(
+        'locale "en" has no grammatical gender',
+      )
+      expect(() => numberToWords(1, { locale: az, gender: 'feminine' })).toThrow(RangeError)
+      expect(() => numberToWords(1, { locale: es, gender: 'neuter' })).toThrow(
+        'locale "es" does not distinguish the "neuter" gender (supported: "masculine", "feminine")',
+      )
+    })
+
+    it('throws for a value outside GrammaticalGender before consulting the locale', () => {
+      // @ts-expect-error — deliberately invalid gender to exercise the runtime guard
+      expect(() => numberToWords(1, { locale: ru, gender: 'common' })).toThrow(RangeError)
+      // @ts-expect-error — deliberately invalid gender to exercise the runtime guard
+      expect(() => numberToWords(1, { locale: en, gender: 42 })).toThrow(
+        'gender must be one of "masculine", "feminine", "neuter", received 42',
+      )
+    })
   })
 })

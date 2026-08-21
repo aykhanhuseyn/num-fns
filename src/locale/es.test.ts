@@ -56,10 +56,37 @@ describe('es.words', () => {
     expect(es.words.scales[3]).toEqual({ one: 'millardo', other: 'millardos' })
   })
 
+  it('declares masculine/feminine (Spanish has no neuter cardinals) with masculine as the default', () => {
+    expect(es.words.genders).toEqual(['masculine', 'feminine'])
+    expect(es.words.defaultGender).toBe('masculine')
+  })
+
   describe('renderGroup', () => {
     it('joins a tens word (30+) and a nonzero ones digit with "y"', () => {
       expect(es.words.renderGroup(234)).toBe('doscientos treinta y cuatro')
       expect(es.words.renderGroup(35)).toBe('treinta y cinco')
+    })
+
+    it('inflects "uno"/"veintiuno" and the "-cientos" hundreds for feminine', () => {
+      expect(es.words.renderGroup(1, 'feminine')).toBe('una')
+      expect(es.words.renderGroup(21, 'feminine')).toBe('veintiuna')
+      expect(es.words.renderGroup(31, 'feminine')).toBe('treinta y una')
+      expect(es.words.renderGroup(200, 'feminine')).toBe('doscientas')
+      expect(es.words.renderGroup(500, 'feminine')).toBe('quinientas')
+      expect(es.words.renderGroup(231, 'feminine')).toBe('doscientas treinta y una')
+    })
+
+    it('keeps the invariable words identical under feminine agreement', () => {
+      expect(es.words.renderGroup(100, 'feminine')).toBe('ciento')
+      expect(es.words.renderGroup(102, 'feminine')).toBe('ciento dos')
+      expect(es.words.renderGroup(22, 'feminine')).toBe('veintidós')
+      expect(es.words.renderGroup(15, 'feminine')).toBe('quince')
+    })
+
+    it('treats explicit masculine as the citation form', () => {
+      expect(es.words.renderGroup(1, 'masculine')).toBe('uno')
+      expect(es.words.renderGroup(21, 'masculine')).toBe('veintiuno')
+      expect(es.words.renderGroup(200, 'masculine')).toBe('doscientos')
     })
 
     it('contracts 21-29 into a single word instead of using "y"', () => {
@@ -95,6 +122,32 @@ describe('es.words', () => {
     it('drops "uno" entirely before "mil" ("mil", not "un mil")', () => {
       expect(es.words.compose([chunk(1, 'uno', 1, 'mil')])).toBe('mil')
       expect(es.words.compose([chunk(2, 'dos', 1, 'mil')])).toBe('dos mil')
+    })
+
+    it('apocopates a trailing "uno"/"veintiuno" before "mil" ("veintiún mil", not "veintiuno mil")', () => {
+      expect(es.words.compose([chunk(21, 'veintiuno', 1, 'mil')])).toBe('veintiún mil')
+      expect(es.words.compose([chunk(31, 'treinta y uno', 1, 'mil')])).toBe('treinta y un mil')
+      expect(es.words.compose([chunk(101, 'ciento uno', 1, 'mil')])).toBe('ciento un mil')
+    })
+
+    it('re-renders the thousands chunk for feminine agreement — "mil" is gender-transparent', () => {
+      expect(es.words.compose([chunk(200, 'doscientos', 1, 'mil')], 'feminine')).toBe(
+        'doscientas mil',
+      )
+      // RAE keeps the apocope before "mil" even in feminine agreement.
+      expect(es.words.compose([chunk(231, 'doscientos treinta y uno', 1, 'mil')], 'feminine')).toBe(
+        'doscientas treinta y un mil',
+      )
+      expect(es.words.compose([chunk(1, 'uno', 1, 'mil')], 'feminine')).toBe('mil')
+    })
+
+    it('keeps chunks before the masculine nouns "millón" and above unaffected by feminine agreement', () => {
+      expect(es.words.compose([chunk(200, 'doscientos', 2, 'millones')], 'feminine')).toBe(
+        'doscientos millones',
+      )
+      expect(es.words.compose([chunk(21, 'veintiuno', 2, 'millones')], 'feminine')).toBe(
+        'veintiún millones',
+      )
     })
 
     it('apocopates "uno"/"veintiuno" to "un"/"veintiún" before millón and above', () => {

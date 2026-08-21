@@ -54,11 +54,38 @@ describe('ru.words', () => {
     expect(ru.words.scales[2]).toEqual({ one: 'миллион', few: 'миллиона', many: 'миллионов' })
   })
 
+  it('declares all three grammatical genders with masculine as the default', () => {
+    expect(ru.words.genders).toEqual(['masculine', 'feminine', 'neuter'])
+    expect(ru.words.defaultGender).toBe('masculine')
+  })
+
   describe('renderGroup', () => {
     it('renders the regular masculine form, gender agreement is compose’s job', () => {
       expect(ru.words.renderGroup(234)).toBe('двести тридцать четыре')
       expect(ru.words.renderGroup(1)).toBe('один')
       expect(ru.words.renderGroup(21)).toBe('двадцать один')
+    })
+
+    it('inflects a trailing "один"/"два" by the requested gender', () => {
+      expect(ru.words.renderGroup(1, 'feminine')).toBe('одна')
+      expect(ru.words.renderGroup(1, 'neuter')).toBe('одно')
+      expect(ru.words.renderGroup(2, 'feminine')).toBe('две')
+      expect(ru.words.renderGroup(21, 'feminine')).toBe('двадцать одна')
+      expect(ru.words.renderGroup(32, 'feminine')).toBe('тридцать две')
+      expect(ru.words.renderGroup(21, 'neuter')).toBe('двадцать одно')
+      expect(ru.words.renderGroup(231, 'feminine')).toBe('двести тридцать одна')
+    })
+
+    it('treats explicit masculine as the citation form, and keeps neuter "два"', () => {
+      expect(ru.words.renderGroup(1, 'masculine')).toBe('один')
+      expect(ru.words.renderGroup(2, 'masculine')).toBe('два')
+      expect(ru.words.renderGroup(2, 'neuter')).toBe('два')
+      expect(ru.words.renderGroup(5, 'feminine')).toBe('пять')
+    })
+
+    it('leaves the irregular teens untouched by gender ("одиннадцать", not "*однанадцать")', () => {
+      expect(ru.words.renderGroup(11, 'feminine')).toBe('одиннадцать')
+      expect(ru.words.renderGroup(12, 'neuter')).toBe('двенадцать')
     })
 
     it('uses the irregular teens without touching the trailing digit', () => {
@@ -86,6 +113,13 @@ describe('ru.words', () => {
         'двадцать одна тысяча',
       )
       expect(ru.words.compose([chunk(32, 'тридцать два', 1, 'тысячи')])).toBe('тридцать две тысячи')
+    })
+
+    it('ignores the requested gender — scale-bound chunks agree with the scale noun itself', () => {
+      expect(ru.words.compose([chunk(21, 'двадцать один', 1, 'тысяча')], 'neuter')).toBe(
+        'двадцать одна тысяча',
+      )
+      expect(ru.words.compose([chunk(1, 'один', 2, 'миллион')], 'feminine')).toBe('один миллион')
     })
 
     it('keeps "один"/"два" masculine before million and above', () => {
