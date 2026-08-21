@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    // TypeScript 6 warns that `node10` resolution is going away and 7 removed
+    // it outright, which is exactly why this fixture runs on the pinned legacy
+    // compiler (`@typescript/typescript6`) — see `scripts/smoke.mjs`.
+    "ignoreDeprecations": "6.0",
+    "target": "ES2020",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": false,
+    "types": []
+  },
+  "include": ["consumer.ts"]
+}

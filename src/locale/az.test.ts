@@ -99,6 +99,13 @@ describe('az.ordinal', () => {
       )
     }
   })
+
+  it('throws when the cardinal reading has no vowel to harmonize against', () => {
+    // Vowel harmony has nothing to key off. Unreachable via `ordinalToWords`
+    // (every Azerbaijani number word contains a vowel), but `ordinal.words`
+    // accepts any string, so it fails loudly rather than guessing a suffix.
+    expect(() => az.ordinal.words(1, 'sfr')).toThrow(SyntaxError)
+  })
 })
 
 describe('az.notation', () => {

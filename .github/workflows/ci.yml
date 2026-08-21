@@ -38,14 +38,80 @@ jobs:
       - run: bun run check:unused
         continue-on-error: true
 
-      - run: bun test
+      # Thresholds live in bunfig.toml ([test].coverageThreshold) and fail the
+      # run, so this replaces a plain `bun test` rather than following one.
+      - run: bun run test:coverage
 
       - run: bun run build
 
       # Lints the published surface off the dist/ built above: attw packs a
-      # tarball and checks that types resolve for ESM and CJS consumers
-      # (node16 profile — the legacy node10 row is skipped), publint checks
-      # the package.json itself. Needs a prior `bun run build`.
+      # tarball and checks that types resolve for ESM, CJS, bundler *and*
+      # legacy node10 consumers (its default `strict` profile — nothing is
+      # ignored), publint checks the package.json itself. Needs a prior
+      # `bun run build`.
       - run: bun run check:pack
 
+      # attw/publint reason about the tarball statically; this installs it into
+      # throwaway ESM and CJS consumer projects and actually runs them, plus a
+      # `moduleResolution: nodenext` typecheck of the shipped declarations
+      # (`--types`, which needs a modern tsc and so only runs here, not in the
+      # version matrix below).
+      - run: bun run check:smoke
+
       - run: bun run size
+
+      # The tarball the smoke matrix installs. Packed once here so every matrix
+      # job tests the same bytes, and so the matrix needs neither bun nor a
+      # build — just a Node version and `npm install <tarball>`.
+      - name: Pack tarball for the version matrix
+        run: npm pack --ignore-scripts --pack-destination tarball
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-tarball
+          path: tarball/*.tgz
+          retention-days: 1
+          if-no-files-found: error
+
+  # Backs the `engines.node` claim in package.json with an actual run on every
+  # major it covers, and checks the two platforms the Linux job can't (path
+  # separators in `exports` resolution are the realistic Windows risk). Only
+  # the runtime fixtures run here — see the `--types` note above.
+  #
+  # `engines.node` was `>=14` until this matrix existed, which was an untested
+  # claim; it is `>=18` now (decided 2026-08-20) because 14 and 16 are long EOL
+  # and `ubuntu-latest` can no longer install them — backing the old claim
+  # would have meant pinning a deprecated `ubuntu-22.04` runner. The build
+  # still targets es2018 and uses no post-2018 runtime API, so it very likely
+  # keeps working on 14/16; the package just stops promising it.
+  smoke:
+    name: smoke (node ${{ matrix.node-version }}, ${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One old Node failing should still report the rest, not cancel them.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node-version: ['18', '20', '22', '24']
+        include:
+          - { os: macos-latest, node-version: '22' }
+          - { os: windows-latest, node-version: '22' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: package-tarball
+          path: tarball
+
+      # `scripts/smoke.mjs` is dependency-free and written to parse on the
+      # oldest major in this matrix, so it runs straight from the checkout with
+      # no install step.
+      - name: Run consumer fixtures against the packed tarball
+        shell: bash
+        run: node scripts/smoke.mjs --tarball "$(ls tarball/*.tgz)"

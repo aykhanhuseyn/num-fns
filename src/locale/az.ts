@@ -43,16 +43,37 @@ const VOWEL_TO_ORDINAL_SUFFIX: Record<string, string> = {
   ü: 'cü',
 }
 
-function lastVowel(word: string): string {
+/**
+ * The nine Azerbaijani vowels — the key set shared by
+ * {@link VOWEL_TO_ORDINAL_SUFFIX} and {@link VOWEL_TO_LOCATIVE_SUFFIX}, which
+ * differ in what they map each vowel *to* (four-way rounding harmony vs the
+ * locative's two-way backness harmony), never in which vowels they cover.
+ */
+const VOWELS: ReadonlySet<string> = new Set(['a', 'ı', 'e', 'ə', 'i', 'o', 'u', 'ö', 'ü'])
+
+/**
+ * Finds the vowel that governs harmony for a suffix appended to `word`, i.e.
+ * its last one. `context` names the caller in the thrown message, since both
+ * the ordinal and the locative builder go through here.
+ *
+ * One shared scan rather than one per suffix table, deliberately: the throw is
+ * only reachable through `az.ordinal.words`, which accepts an arbitrary string
+ * (`az.test.ts` covers it with `'sfr'`). The fraction path builds its input
+ * with `numberToWords`, and every Azerbaijani number word contains a vowel, so
+ * a second copy of this loop would be permanently unexecutable — dead weight
+ * under the package's 100%-per-file coverage gate, and one more place for the
+ * two vowel inventories to drift apart.
+ */
+function lastVowel(word: string, context: string): string {
   for (let i = word.length - 1; i >= 0; i--) {
     const char = word[i] as string
-    if (char in VOWEL_TO_ORDINAL_SUFFIX) return char
+    if (VOWELS.has(char)) return char
   }
-  throw new SyntaxError(`az.ordinal: no Azerbaijani vowel found in "${word}"`)
+  throw new SyntaxError(`${context}: no Azerbaijani vowel found in "${word}"`)
 }
 
 function isVowel(char: string): boolean {
-  return char in VOWEL_TO_ORDINAL_SUFFIX
+  return VOWELS.has(char)
 }
 
 /**
@@ -73,7 +94,7 @@ function azOrdinalSuffix(value: number): string {
 
   const words = numberToWords(value, { locale: az })
   const lastWord = words.split(' ').pop() as string
-  return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
+  return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord, 'az.ordinal')] as string
 }
 
 /**
@@ -90,7 +111,7 @@ function azOrdinalWords(cardinalWords: string): string {
   const words = cardinalWords.split(' ')
   const lastWord = words.pop() as string
   const lastChar = lastWord[lastWord.length - 1] as string
-  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord)] as string
+  const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord, 'az.ordinal')] as string
   const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
 
   return [...words, `${lastWord}${fullSuffix}`].join(' ')
@@ -139,14 +160,6 @@ const VOWEL_TO_LOCATIVE_SUFFIX: Record<string, string> = {
   ü: 'də',
 }
 
-function lastLocativeVowel(word: string): string {
-  for (let i = word.length - 1; i >= 0; i--) {
-    const char = word[i] as string
-    if (char in VOWEL_TO_LOCATIVE_SUFFIX) return char
-  }
-  throw new SyntaxError(`az.fractions: no Azerbaijani vowel found in "${word}"`)
-}
-
 /**
  * Azerbaijani fraction words: the denominator takes the locative case
  * ("üçdə" = "in three") and the numerator follows as a cardinal number —
@@ -155,7 +168,7 @@ function lastLocativeVowel(word: string): string {
 function azFractionWords(numerator: number, denominator: number): string {
   const denominatorWords = numberToWords(denominator, { locale: az })
   const denominatorLastWord = denominatorWords.split(' ').pop() as string
-  const suffix = VOWEL_TO_LOCATIVE_SUFFIX[lastLocativeVowel(denominatorLastWord)] as string
+  const suffix = VOWEL_TO_LOCATIVE_SUFFIX[lastVowel(denominatorLastWord, 'az.fractions')] as string
   return `${denominatorWords}${suffix} ${numberToWords(numerator, { locale: az })}`
 }
 

@@ -156,6 +156,17 @@ describe('ru.ordinal', () => {
     expect(ru.ordinal.words(1000, 'тысяча')).toBe('тысячный')
     expect(ru.ordinal.words(0, 'ноль')).toBe('нулевой')
   })
+
+  it('derives a best-effort -ый form for a trailing word outside the table', () => {
+    // Unreachable through `numberToWords(value, { locale: ru })` — every word
+    // it can produce is in the ordinal table — but `ordinal.words` takes an
+    // arbitrary string, so the fallback is public behavior. The results below
+    // are deliberately not idiomatic Russian: the fallback exists so an
+    // unknown word degrades to something inflected rather than throwing.
+    expect(ru.ordinal.words(0, 'нуль')).toBe('нулый')
+    expect(ru.ordinal.words(0, 'нечто')).toBe('нечтый')
+    expect(ru.ordinal.words(0, 'сто нечта')).toBe('сто нечтаый')
+  })
 })
 
 describe('ru.notation', () => {

@@ -21,6 +21,7 @@ bun install                # install dependencies
 bun test                   # run the full test suite (bun:test, colocated *.test.ts)
 bun test src/number/words.test.ts   # run a single test file
 bun test -t "numberToWords"         # run tests matching a name pattern
+bun run test:coverage      # the same suite with the coverage gate enforced (what CI runs)
 bun run typecheck          # tsc --noEmit, gate before publishing
 bun run lint               # biome lint . (biome.json)
 bun run lint:fix           # biome lint --write .
@@ -28,13 +29,14 @@ bun run format              # biome format --write .
 bun run format:check        # biome format .
 bun run check                # biome check . (lint + format in one pass)
 bun run check:pack           # attw + publint against a packed tarball (run after build)
+bun run check:smoke          # install the tarball into real ESM/CJS consumers and run them
 bun run build               # vite build -> dist/ (ESM + CJS + per-module .d.ts/.d.cts)
 bun run dev                 # vite build --watch
 ```
 
 Linting and formatting are handled by a single tool, Biome (`biome.json`), not ESLint/Prettier.
 
-`prepublishOnly` runs `check`, the tests, `build`, and finally `check:pack` — that's the full gate before `npm publish`. `check:pack` runs [`attw`](https://github.com/arethetypeswrong/arethetypeswrong.github.io) (`--profile node16`, so the legacy `node10` resolution row is skipped) and `publint --strict` against a packed tarball; it does **not** build, so it needs a `bun run build` ahead of it (both `ci.yml` and `release.yml` order it that way). `check` itself stays build-free and fast.
+`prepublishOnly` runs `check`, the tests, `build`, and finally `check:pack` — that's the full gate before `npm publish`. `check:smoke` is not in `prepublishOnly` (it packs a tarball, which `npm publish` is already in the middle of doing); `ci.yml` and `release.yml` both run it as an explicit step after `check:pack` instead. `check:pack` runs [`attw`](https://github.com/arethetypeswrong/arethetypeswrong.github.io) (`--profile strict`, so **every** resolution mode counts, including legacy `node10`) and `publint --strict` against a packed tarball; it does **not** build, so it needs a `bun run build` ahead of it (both `ci.yml` and `release.yml` order it that way). `check` itself stays build-free and fast.
 
 `bunfig.toml` sets `install.exact = true`, so `bun add`/`bun install` always pin exact versions in `package.json` (no `^`/`~` ranges) — keep that in mind when adding a new dependency.
 
@@ -70,10 +72,22 @@ All public functions validate input up front and throw (`RangeError`/`TypeError`
 
 It is invoked from the dts plugin's `afterBuild` hook in `vite.config.ts`, not as a separate step chained onto `build`, so `vite build --watch` (`bun run dev`) produces correct declarations too. Running the file directly (`bun scripts/fix-dist-types.ts`) is the manual escape hatch.
 
-Every `exports` entry therefore has per-condition `types` — `import` → `.d.ts`, `require` → `.d.cts` — and `bun run check:pack` (attw `--profile node16` + `publint --strict`) is the regression test. Legacy `node10` resolution is deliberately out of scope; it would need `typesVersions`.
+Every `exports` entry therefore has per-condition `types` — `import` → `.d.ts`, `require` → `.d.cts` — and `bun run check:pack` (attw `--profile strict` + `publint --strict`) is the regression test.
+
+Legacy `node10` resolution **is** supported, as of 2026-08-21. It cannot read `exports` at all, so the five subpaths (`./locale` and `./locale/{az,en,ru,es}`) resolve through `typesVersions` in `package.json` instead — that field exists for no other reason, and it must be kept in sync with `exports` and `vite.config.ts`'s entry list whenever a subpath is added. With it in place attw passes under its default `strict` profile with nothing ignored; the `--profile node16` flag that used to skip the `node10` row is gone. `scripts/smoke/types-node10/` is the regression test: a consumer with `moduleResolution: node10` that imports every subpath and typechecks. Removing `typesVersions` makes it fail with `TS2307 Cannot find module 'num-fns/locale/az'` — verified, not assumed.
+
+That fixture runs on `@typescript/typescript6`'s `tsc6` binary rather than the pinned `typescript` (7.x), because TypeScript 7 **removed** `moduleResolution: node10` (`error TS5108`) and 6 only accepts it behind `"ignoreDeprecations": "6.0"`. So `typesVersions` serves consumers still on TypeScript 5.x/6.x with legacy resolution; anyone on 7 has no legacy mode left to be broken by.
 
 The export map declares `.`, `./locale`, `./locale/{az,en,ru,es}` and `./package.json`, one per Vite entry in `vite.config.ts` — adding a subpath means adding both, in both files.
 
 ### Testing conventions
 
 Tests are colocated as `*.test.ts` next to the module they cover and use `bun:test` (`describe`/`it`/`expect`) — no separate `tests/` directory, no Vitest/Jest. Every module has a matching test file. When adding a new exported function, the existing test files show the expected pattern: cover the documented default behavior, at least one option override, and the thrown-error cases.
+
+Three additions to that baseline, all added 2026-08-20:
+
+- **Property tests** live in `*.property.test.ts` beside the example-based file (`number/format.property.test.ts` next to `number/format.test.ts`, and so on) and use [`fast-check`](https://fast-check.dev). They cover every format/parse pair across all four locales — the point is the invariant (parsing a formatted number returns the number) rather than specific strings, since all three separator conventions (`,`/`.`, ` `/`,`, `.`/`,`) run through the same code. The lossy formatters (`toByteSize`, `toShortNotation`) assert a *bounded* round trip, not an exact one. Shared arbitraries are in `src/shared/arbitraries.test.ts` — named `.test.ts` deliberately, so the Vite build and `vite-plugin-dts` both skip it via the existing `src/**/*.test.ts` exclude; it builds decimals out of integer parts rather than using `fc.double`, so generated values always have a plain-digit `String()` form (a precondition of every round trip here, since `formatNumber` groups digit characters).
+- **The coverage gate** is `bunfig.toml`'s `[test].coverageThreshold`, set to **100% per file** and enforced by `bun run test:coverage`. Read that file's comment before touching it: bun 1.3.13 silently ignores the documented per-metric table form, so the threshold is the scalar form, which applies per file; and per-file thresholds only see files a test actually loads, which is why `src/index.test.ts` and `src/locale/index.test.ts` import every module through the barrels. A line that looks impossible to cover means the guard is in the wrong place — `locale/az.ts` had two copies of the same vowel scan and only one was reachable, so they were merged into `lastVowel(word, context)` rather than the gate being loosened.
+- **`src/index.test.ts` pins the public export surface** as an explicit sorted list (57 entries today). Adding an `export *` to `src/index.ts` without updating that list fails the suite on purpose — everything in it becomes semver-locked at 1.0, including the Azerbaijani word-list internals that leak out of `number/words.ts` and are slated for removal first (`todo.md` §3).
+
+The consumer-side smoke fixtures under `scripts/smoke/` are *not* part of this suite: they are separate throwaway projects that install the packed tarball (see `scripts/smoke.mjs`), and `tsconfig.json`/`knip.json` both exclude them for that reason.

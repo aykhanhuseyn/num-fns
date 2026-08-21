@@ -320,6 +320,22 @@ format/parse question resolves:
       `shared/types.ts`/`shared/constants.ts`. `src/number/`, `src/stats/`,
       and `src/utils/` still validate inline; migrate opportunistically
       rather than in one large sweep.)
+- [ ] **Reject ambiguous separator configurations.** `parseNumber` (and
+      therefore `parseMoney`/`parsePercentage`, which delegate to it) accepts
+      `thousandsSeparator === decimalSeparator` and then strips both, silently
+      returning a wrong number: `parseNumber('0.001', { thousandsSeparator:
+      '.', decimalSeparator: '.' })` is `1`. Found 2026-08-20 by the §5
+      property tests, which now exclude the case with an `fc.pre` and a comment
+      pointing here. Every other public function throws on input it cannot
+      honor (`RangeError`/`TypeError`/`SyntaxError`), so the consistent fix is
+      a `RangeError` from both `formatNumber` and `parseNumber` when the two
+      separators are equal — decide before 1.0, since it turns silently-wrong
+      output into a throw.
+      Related, lower-stakes: `parseLongNotation` cannot read
+      `toLongNotation`'s own output when `groupSeparator: ''`, because the
+      scale word ends up glued to the next digit group ("1 million234
+      thousand"). Either reject an empty `groupSeparator` at format time or
+      document it as unsupported.
 - [ ] BigInt input path for `numberToWords` / `toLongNotation`.
 - [ ] Roman numerals above 3999 (vinculum notation) — currently out of scope.
       Note roman numerals are locale-independent and stay outside the locale system.
@@ -412,15 +428,77 @@ New domain from the vision doc.
 
 - [ ] Shared conformance suite run against every locale (see §2).
 - [ ] Edge-case coverage per function: `NaN`, `Infinity`, `-0`, min/max bounds.
-- [ ] Round-trip property tests (`fast-check`) for every format/parse pair.
+- [x] Round-trip property tests (`fast-check`) for every format/parse pair.
+      (2026-08-20: `fast-check@4.9.0` (exact-pinned devDep) plus six
+      `*.property.test.ts` files colocated beside the modules they cover —
+      `number/format`, `money/format`, `percentage/format`, `number/byte-size`,
+      `number/notation` (short *and* long) and `utils/base`, plus
+      `number/roman` which is small enough to enumerate its whole 1–3999
+      domain exhaustively instead of sampling. Each format/parse pair is
+      checked against all four locales, i.e. all three separator conventions
+      (`,`/`.`, ` `/`,`, `.`/`,`). The lossy formatters (`toByteSize`,
+      `toShortNotation`) get a *bounded* round trip — relative error ≤ half a
+      unit of the last kept digit — since exactness is not what they promise.
+      Shared arbitraries live in `src/shared/arbitraries.test.ts` (named
+      `.test.ts` so the build and the dts plugin both skip it); it generates
+      decimals from integer parts rather than `fc.double`, so values always
+      have a plain-digit `String()` form.
+      **Two findings, both recorded rather than silently fixed:**
+      (a) `parseNumber` with `thousandsSeparator === decimalSeparator` (e.g.
+      both `'.'`) strips both and returns a silently wrong number — `0.001`
+      parses as `1` — instead of throwing the way the rest of the package
+      does on ambiguous input. See the §4 item added for it.
+      (b) `parseLongNotation` cannot read `toLongNotation`'s own output when
+      `groupSeparator: ''` ("1 million234 thousand"); the property excludes it
+      and documents why.)
 - [ ] Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
       locales — catches separator mistakes no human reviewer will spot.
 - [ ] Native-speaker review of the `ru` and `es` word lists before publishing.
       Machine-generated number words are wrong in embarrassing, specific ways.
-- [ ] `bun test --coverage` in CI with an enforced threshold — "high test
+- [x] `bun test --coverage` in CI with an enforced threshold — "high test
       coverage" is an explicit success criterion in the project vision, so this
       needs a real number and a CI gate, not just running tests.
-- [ ] Smoke-test built `dist/index.cjs` on Node 14/16 to back the compatibility claim.
+      (2026-08-20: `bunfig.toml` `[test].coverageThreshold = 0.98` plus a
+      `test:coverage` script, which `ci.yml` runs *instead of* `bun test`.
+      Two non-obvious things, both load-bearing:
+      (a) the documented per-metric table form
+      (`coverageThreshold = { line = …, function = … }`) is **silently ignored**
+      by bun 1.3.13 — verified by setting it to 1.0 and watching the run pass —
+      so only the scalar form works, and it is applied **per file**, not
+      globally;
+      (b) per-file thresholds only cover files a test actually loads, so a new
+      module with no test would be *absent* from the report rather than failing
+      it. `src/index.test.ts` and `src/locale/index.test.ts` (which also pin the
+      57-export public surface and the four-locale barrel) import every module
+      and close that hole.
+      The gate is **100% per file**. It started at 98% because
+      `locale/az.ts` had two copies of the same "find the last vowel or throw"
+      scan — one for ordinal harmony, one for the locative suffix — and only
+      the ordinal one was reachable (`az.ordinal.words` takes an arbitrary
+      string; `azFractionWords` builds its input with `numberToWords`, which
+      never emits a vowel-less word). Merging them into a single
+      `lastVowel(word, context)` on a shared `VOWELS` set (2026-08-21) made the
+      throw reachable, removed the duplicated vowel inventory, and let the gate
+      go to 100% — the right way round: an uncoverable line is a signal about
+      the code, not a reason to lower the number.
+      Closing the reachable gaps needed four new tests (`toLongNotation`'s
+      non-finite and over-magnitude throws, `ru.ordinal.words`'s derived-form
+      fallback, `az.ordinal.words`'s no-vowel throw). Gate verified negatively
+      by hiding a test file and watching the run fail.)
+- [x] Smoke-test built `dist/index.cjs` on real Node versions to back the
+      compatibility claim. (2026-08-20: `scripts/smoke.mjs` + four fixtures
+      under `scripts/smoke/` — an ESM consumer, a CJS consumer, and a
+      `moduleResolution: nodenext` typecheck of each. It runs `npm pack`,
+      installs the tarball into throwaway consumer projects and executes them,
+      so it is the only check that sees the package the way `npm install` hands
+      it over: real `node_modules/num-fns`, real `exports` resolution, real
+      Node. `bun run check:smoke` locally (and in `ci.yml`/`release.yml`);
+      `--tarball <path>` reuses a prebuilt tarball, which is how the CI version
+      matrix runs it. The runner is dependency-free plain ESM so it needs no
+      install step in the matrix jobs. Verified negatively by deleting
+      `dist/index.d.cts` and watching `types-cjs` fail. Node 14/16 are *not*
+      covered — see the §7 matrix item for why the `engines` claim moved to
+      `>=18` instead.)
 - [x] Bundle-size assertion per locale — the selling point is that importing
       one locale doesn't pull in four. (2026-08-10: covered by the same
       `size-limit` config as §7's CI item — see that entry for details. The
@@ -642,9 +720,20 @@ New domain from the vision doc.
       npm (≥9.5) on `PATH`. Still requires the `NPM_TOKEN` repo secret,
       not yet added. Untested end-to-end — worth watching the first real
       "Version Packages" PR closely before trusting it unattended.)
-- [ ] CI matrix across Node 14/16/18/20/22 (current CI only runs on whatever
-      Bun's default Node compat target is — doesn't yet verify the
-      `engines.node: >=14` claim in `package.json`).
+- [x] CI matrix across Node versions. (2026-08-20: `ci.yml` gained a `smoke`
+      job — `needs: build`, matrix `18`/`20`/`22`/`24` on `ubuntu-latest` plus
+      `22` on `macos-latest` and `windows-latest`, `fail-fast: false`. The
+      `build` job packs one tarball and uploads it as an artifact, so every
+      matrix job installs identical bytes and needs neither Bun nor a build.
+      Runs the runtime fixtures from §5's smoke script; the `--types` pass
+      stays in the `build` job since it needs a modern `tsc`.
+      **`engines.node` went `>=14` -> `>=18`** as part of this: 14 and 16 are
+      long EOL and `ubuntu-latest` can no longer install them, so backing the
+      old claim would have meant pinning a deprecated `ubuntu-22.04` runner.
+      The build still targets es2018 and uses no post-2018 runtime API, so it
+      very likely keeps working on 14/16 — the package just stops promising
+      what CI cannot check. Windows is in the matrix because path separators in
+      `exports` resolution are the realistic platform-specific failure.)
 - [x] `size-limit` check in CI. (2026-08-10: `size-limit` +
       `@size-limit/preset-small-lib` (esbuild + brotli, matching the
       preset's own "libraries < 10 kB" scope this package fits). Config

@@ -30,6 +30,7 @@ rules described below. Personal, uncommitted hook overrides go in
 bun test                              # run the full test suite
 bun test src/number/words.test.ts     # run a single test file
 bun test -t "numberToWords"           # run tests matching a name pattern
+bun run test:coverage                 # the suite plus the coverage gate (what CI runs)
 bun run typecheck                     # tsc --noEmit, gate before publishing
 bun run lint                          # biome lint .
 bun run lint:fix                      # biome lint --write .
@@ -44,6 +45,7 @@ bun run build                         # vite build -> dist/ (ESM + CJS + .d.ts/.
 bun run check:attw                    # attw, verifies types resolve for ESM + CJS consumers
 bun run check:publint                 # publint --strict, lints package.json for publishing
 bun run check:pack                    # check:attw + check:publint, against a packed tarball
+bun run check:smoke                   # installs the tarball into real consumer projects and runs them
 ```
 
 Before opening a PR, run `bun run check && bun test` — this is the same gate
@@ -52,10 +54,32 @@ hook runs against staged files.
 
 If you touched anything that affects the published package — `vite.config.ts`,
 `scripts/fix-dist-types.ts`, or the `exports`/`files`/`types` fields in
-`package.json` — also run `bun run build && bun run check:pack`. That packs a
-real tarball and runs `attw` and `publint` against it, so it is slower than the
-other checks and needs a full dev install. CI, `release.yml`, and
-`prepublishOnly` all run it after a build.
+`package.json` — also run `bun run build && bun run check:pack && bun run
+check:smoke`. `check:pack` packs a real tarball and runs `attw` and `publint`
+against it; `check:smoke` installs that tarball into throwaway consumer
+projects under `scripts/smoke/` and actually executes them: an ESM run, a CJS
+run, a `moduleResolution: nodenext` typecheck of each, and a legacy
+`moduleResolution: node10` typecheck that exercises the `typesVersions` map
+(the only thing that makes the `./locale/*` subpaths resolvable for consumers
+whose TypeScript cannot read `exports`). Both are slower than the other checks
+and need a full dev install.
+
+Adding a package subpath means touching **four** places, not two: `exports` and
+`typesVersions` in `package.json`, `build.lib.entry` in `vite.config.ts`, and
+the fixtures under `scripts/smoke/` that import it. CI and `release.yml`
+run both after a build (`prepublishOnly` runs `check:pack` only — `check:smoke`
+packs a tarball, which `npm publish` is already doing at that point).
+
+CI also runs the smoke fixtures against every Node major the package supports
+(`engines.node: >=18`) plus macOS and Windows, from a single tarball packed in
+the main job. If you are adding a check that needs a specific Node version,
+that `smoke` matrix in `ci.yml` is where it goes.
+
+Coverage is gated: `bun run test:coverage` enforces a per-file threshold from
+`bunfig.toml`, and CI runs it in place of `bun test`. A new module with no test
+file will fail it — but read the comment in `bunfig.toml` first if you are
+changing the threshold itself, because bun's per-metric config form does not
+work and the scalar one behaves differently than the docs suggest.
 
 Linting and formatting are both handled by [Biome](https://biomejs.dev)
 (`biome.json`) — there is no separate ESLint or Prettier config.

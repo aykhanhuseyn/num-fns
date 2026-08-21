@@ -79,6 +79,11 @@ jobs:
       # flight. Needs the build above.
       - run: bun run check:pack
 
+      # Installs the tarball into real ESM/CJS consumer projects and runs them.
+      # Same reasoning as check:pack above — a packaging break should stop the
+      # release here, not half-way through `npm publish`.
+      - run: bun run check:smoke
+
       - name: Create release PR or publish to npm
         uses: changesets/action@v1
         with:

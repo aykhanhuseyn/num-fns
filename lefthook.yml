@@ -16,7 +16,19 @@ pre-commit:
       run: bun run check:type
     circular:
       glob: '*.{ts,tsx}'
-      run: bun run check:circular
+      # Do not simplify this to a bare `bun run check:circular`: it hangs the
+      # hook forever at ~100% CPU. dpdm starts an `ora` spinner unconditionally
+      # (not gated by `--progress`), lefthook hands each command a pty whose
+      # window size it never sets, and ora's line-clearing math reads
+      # `stream.columns ?? 80` — a fallback that catches null/undefined but not
+      # `0`. So `Math.ceil(width / 0)` is Infinity, and ora emits cursor-up +
+      # clear-line escapes without end. Capturing the output makes both streams
+      # pipes, so no spinner starts; it is replayed only when the check fails.
+      run: |
+        if ! out=$(bun run check:circular 2>&1); then
+          printf '%s\n' "$out"
+          exit 1
+        fi
     unused:
       glob: '*.{ts,tsx}'
       run: bun run check:unused

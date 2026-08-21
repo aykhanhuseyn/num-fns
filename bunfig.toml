@@ -1,3 +1,31 @@
 # Always save exact versions to package.json (no ^ or ~ ranges) for `bun add`/`bun install`.
 [install]
 exact = true
+
+[test]
+# Coverage is opt-in (`bun run test:coverage`, which CI runs in place of a
+# plain `bun test`) so the local watch loop stays fast.
+#
+# `coverageThreshold` is deliberately the scalar form, which bun applies
+# **per file** — every file in the report must be fully covered. The
+# documented per-metric table form (`{ line = …, function = … }`) is silently
+# ignored by bun 1.3.13: verified by setting it to 1.0 and watching the run
+# still pass. Don't "improve" this into the table form without re-checking that.
+#
+# 100%, and it is meant to stay there. If a new line looks impossible to cover,
+# the guard is in the wrong place — the fix is to make it reachable or share it
+# with a caller that can reach it, not to lower this number. That is exactly
+# what happened to `locale/az.ts`'s vowel scan: the ordinal and locative
+# builders had a copy each, and the fraction one could not fire (its input
+# comes from `numberToWords`, which never produces a vowel-less word), so the
+# two were merged into one `lastVowel(word, context)` that `az.ordinal.words`
+# does reach.
+#
+# The per-file rule only covers files a test actually loads, so `src/index.ts`
+# and `src/locale/index.ts` have barrel tests (`index.test.ts`) that import
+# every module: without them a brand-new file with no test would simply be
+# absent from the report instead of failing it.
+coverageSkipTestFiles = true
+coverageThreshold = 1.0
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"

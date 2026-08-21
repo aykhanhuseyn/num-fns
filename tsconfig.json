@@ -17,5 +17,10 @@
     "declaration": false,
     "noEmit": true
   },
-  "include": ["src", "scripts"]
+  "include": ["src", "scripts"],
+  // The smoke fixtures under `scripts/smoke/` are consumer projects, not part
+  // of this one: they import `num-fns` from their own `node_modules` (see
+  // `scripts/smoke.mjs`) and carry their own tsconfig, so typechecking them
+  // from here would fail on an unresolvable module.
+  "exclude": ["scripts/smoke"]
 }

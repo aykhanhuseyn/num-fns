@@ -113,6 +113,21 @@ describe('toLongNotation', () => {
   it('throws for non-integers', () => {
     expect(() => toLongNotation(1.5)).toThrow(TypeError)
   })
+
+  it('throws for non-finite values', () => {
+    expect(() => toLongNotation(Number.POSITIVE_INFINITY)).toThrow(RangeError)
+    expect(() => toLongNotation(Number.NEGATIVE_INFINITY)).toThrow(RangeError)
+    expect(() => toLongNotation(Number.NaN)).toThrow(RangeError)
+  })
+
+  it('spells up to the largest magnitude the locale has a scale word for', () => {
+    // `en` stops at "trillion", so 1000 ** 5 - 1 is the ceiling; one more
+    // would need a scale word that does not exist in `en.words.scales`.
+    expect(toLongNotation(999_999_999_999_999)).toBe(
+      '999 trillion 999 billion 999 million 999 thousand 999',
+    )
+    expect(() => toLongNotation(1e15)).toThrow(RangeError)
+  })
 })
 
 describe('parseLongNotation', () => {
