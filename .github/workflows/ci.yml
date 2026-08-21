@@ -64,7 +64,11 @@ jobs:
       # job tests the same bytes, and so the matrix needs neither bun nor a
       # build — just a Node version and `npm install <tarball>`.
       - name: Pack tarball for the version matrix
-        run: npm pack --ignore-scripts --pack-destination tarball
+        # npm pack does not create --pack-destination itself — without the
+        # mkdir it dies with ENOENT opening tarball/num-fns-<version>.tgz.
+        run: |
+          mkdir -p tarball
+          npm pack --ignore-scripts --pack-destination tarball
 
       - uses: actions/upload-artifact@v4
         with:

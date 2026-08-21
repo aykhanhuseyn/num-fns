@@ -19,6 +19,13 @@ name: Release
 #
 # OIDC requires npm >= 11.5.1 and Node >= 22.14.0, and only works on
 # GitHub-hosted runners. Provenance attestations are generated automatically.
+#
+# Dist-tag note: while every version ever published is a prerelease of the
+# current pre tag (changesets' "only-pre" state), `changeset publish`
+# deliberately publishes to `latest` rather than the pre tag ("because there
+# has not been a regular release of it yet"). That matches where `latest`
+# already points and self-corrects at the first stable release — do not
+# "fix" it by forcing --tag alpha here.
 on:
   push:
     branches: [main]
@@ -38,10 +45,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # No `registry-url` here, deliberately: setting it makes setup-node
+      # write an .npmrc with `_authToken=${NODE_AUTH_TOKEN}` and export a
+      # placeholder NODE_AUTH_TOKEN (XXXXX-...). npm then authenticates with
+      # that dummy token instead of doing the OIDC trusted-publishing
+      # exchange, and the registry masks the unauthorized PUT as a 404
+      # (seen on the first real publish attempt, 2026-08-21). With no token
+      # configured, npm >= 11.5.1 on a GitHub-hosted runner detects
+      # `id-token: write` and mints its own credentials.
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          registry-url: https://registry.npmjs.org
 
       # Node 24 ships npm 11.x, but pin the floor explicitly: OIDC trusted
       # publishing is only supported from npm 11.5.1 onward.
