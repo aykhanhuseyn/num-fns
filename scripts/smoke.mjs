@@ -53,7 +53,17 @@ const TYPE_FIXTURES = [
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 function run(command, commandArgs, cwd) {
-  return execFileSync(command, commandArgs, { cwd, encoding: 'utf8', stdio: 'pipe' })
+  return execFileSync(command, commandArgs, {
+    cwd,
+    encoding: 'utf8',
+    stdio: 'pipe',
+    // Node >= 18.20/20.12/22 refuses to spawn `.cmd`/`.bat` shims without a
+    // shell (the CVE-2024-27980 hardening throws EINVAL), so the Windows
+    // matrix job needs this. None of our arguments contain spaces or shell
+    // metacharacters — tarball paths are npm-generated names under the repo
+    // checkout — so shell interpolation is safe here.
+    shell: process.platform === 'win32',
+  })
 }
 
 /**

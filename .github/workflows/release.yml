@@ -108,3 +108,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      # npm's OIDC trusted-publishing exchange logs its failure reason only
+      # at verbose/silly level, which lands in the debug log file rather than
+      # the console — an exchange rejection surfaces as a bare ENEEDAUTH/404.
+      # Dump the relevant lines so a failed publish is diagnosable from the
+      # run page. Remove once the first OIDC publish has gone through.
+      - name: Dump npm OIDC diagnostics on failure
+        if: failure()
+        run: |
+          grep -rhiE 'oidc|token exchange|workflow_ref|audience' /home/runner/.npm/_logs/ | tail -n 40 || true
+          echo '--- last debug log tail ---'
+          tail -n 40 /home/runner/.npm/_logs/*-debug-0.log || true
