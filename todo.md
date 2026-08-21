@@ -161,9 +161,28 @@ objects, `date-fns` style.
       stays self-contained (predictable, works on ancient runtimes, no ICU
       dependency). The genuinely novel surface — words, ordinals, notation,
       roman — has no `Intl` equivalent either way.
-- [ ] **Scale naming.** Short scale (billion = 10⁹) vs long scale (milliard).
-      `az` and `ru` use milliard; `en` uses billion; `es` uses *millardo* but
-      commonly *mil millones*. This must be a per-locale property, not a global.
+- [x] **Scale naming.** Decided: a per-locale property of
+      `Locale.words.scales`/`Locale.notation.scales`, never a global
+      short/long switch — this was already the shape the §1 locale refactor
+      built, just never closed out or covered by a test that ties all four
+      locales to the decision text. `en` uses the short-scale
+      `billion`/`trillion` pair at 1e9/1e12; `az`/`ru` keep the same
+      short-scale group-of-three progression but name 1e9
+      `milyard`/`миллиард` (the long-scale-derived word); `es` diverges
+      furthest, naming 1e9 `millardo` (not the more colloquial *mil
+      millones*) **and** naming 1e12 `billón` — the traditional long-scale
+      word for 10¹², distinct from English's 1e9 `billion`. (2026-08-21:
+      closed out with a dedicated conformance suite in `locale/index.test.ts`
+      — asserts `numberToWords`/`toLongNotation` output and
+      `words.scales`/`notation.scales` vocabulary agreement for all four
+      locales at 1e9 and 1e12. 480/480 tests green, 100% coverage unchanged.
+      Incidentally surfaced a pre-existing, unrelated flake: `bun run
+      test:coverage`'s `formatNumber` `halfUp`-rounding property test
+      occasionally fails on extreme values like `[-268435456.47635, 4,
+      'halfUp']` — floating-point error pushes the round-trip diff
+      (`0.000050008...`) a hair past the half-unit tolerance (`0.00005`).
+      Reproduced deterministically outside the suite; not fixed here, tracked
+      as a new open bug below since it's unrelated to scale naming.)
 - [ ] **Grammatical gender.** Russian `один`/`одна` and Spanish `un`/`una`
       change with the noun being counted. Decide whether `numberToWords` takes a
       `gender` option or stays masculine-by-default.
@@ -443,14 +462,26 @@ New domain from the vision doc.
       `.test.ts` so the build and the dts plugin both skip it); it generates
       decimals from integer parts rather than `fc.double`, so values always
       have a plain-digit `String()` form.
-      **Two findings, both recorded rather than silently fixed:**
+      **Three findings, all recorded rather than silently fixed:**
       (a) `parseNumber` with `thousandsSeparator === decimalSeparator` (e.g.
       both `'.'`) strips both and returns a silently wrong number — `0.001`
       parses as `1` — instead of throwing the way the rest of the package
       does on ambiguous input. See the §4 item added for it.
       (b) `parseLongNotation` cannot read `toLongNotation`'s own output when
       `groupSeparator: ''` ("1 million234 thousand"); the property excludes it
-      and documents why.)
+      and documents why.
+      (c) Found 2026-08-21, while verifying the Scale naming decision (§1):
+      `formatNumber`'s `'halfUp'`-rounding property test is flaky — it fails
+      roughly 1 run in 5-10 with a counterexample like
+      `[-268435456.47635, 4, 'halfUp']`. Reproduced deterministically outside
+      `fast-check`: `formatNumber(-268435456.47635, { decimals: 4, roundingMode:
+      'halfUp' })` round-trips to a value `0.000050008...` away from the
+      input, a hair past the `0.00005` half-unit tolerance the property
+      asserts — floating-point representation error at this magnitude, not a
+      logic bug in the rounding itself. Not fixed here (out of scope for scale
+      naming); needs its own pass, likely either a slightly looser tolerance
+      for large-magnitude values or a decimal-safe rounding path (ties into
+      the `arithmetic`/`round` decision in §1).)
 - [ ] Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
       locales — catches separator mistakes no human reviewer will spot.
 - [ ] Native-speaker review of the `ru` and `es` word lists before publishing.
