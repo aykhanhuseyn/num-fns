@@ -6,6 +6,7 @@ import assert from 'node:assert'
 import { formatMoney, formatNumber, mean, numberToWords, parseNumber, toRoman } from 'num-fns'
 import { en, ru } from 'num-fns/locale'
 import { az } from 'num-fns/locale/az'
+import { enGB } from 'num-fns/locale/en-gb'
 
 assert.strictEqual(formatNumber(1234567.891), '1,234,567.891')
 assert.strictEqual(formatNumber(1234567.891, { locale: az }), '1 234 567,891')
@@ -13,6 +14,10 @@ assert.strictEqual(parseNumber('1,234,567.891'), 1234567.891)
 assert.strictEqual(numberToWords(1234), 'one thousand two hundred thirty-four')
 assert.strictEqual(numberToWords(1234, { locale: az }), 'min iki yüz otuz dörd')
 assert.strictEqual(numberToWords(1234, { locale: ru }), 'одна тысяча двести тридцать четыре')
+assert.strictEqual(
+  numberToWords(1234, { locale: enGB }),
+  'one thousand two hundred and thirty-four',
+)
 assert.strictEqual(formatMoney(1234.5), '$ 1,234.50')
 assert.strictEqual(toRoman(2026), 'MMXXVI')
 assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
@@ -22,6 +27,7 @@ assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 // can genuinely produce one without the other.
 assert.strictEqual(en.code, 'en')
 assert.strictEqual(az.code, 'az')
+assert.strictEqual(enGB.code, 'en-GB')
 
 // Validation errors have to survive the bundling step as real error types.
 assert.throws(() => toRoman(0), RangeError)

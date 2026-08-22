@@ -6,13 +6,15 @@ import { formatMoney, formatNumber, type NumberFormatOptions, numberToWords } fr
 import type { Locale } from 'num-fns/locale'
 import { en } from 'num-fns/locale'
 import { az } from 'num-fns/locale/az'
+import { enGB } from 'num-fns/locale/en-gb'
 
 const options: NumberFormatOptions = { locale: az, decimals: 2 }
-const locales: Locale[] = [az, en]
+const locales: Locale[] = [az, en, enGB]
 
 export const formatted: string = formatNumber(1234.5, options)
 export const money: string = formatMoney(1234.5, { locale: locales[0] })
 export const words: string = numberToWords(1234, { locale: en })
+export const wordsEnGB: string = numberToWords(1234, { locale: enGB })
 
 // @ts-expect-error — `locale` takes a Locale object, never a language tag
 // string. This was a real regression risk when the old `'az' | 'en'` string

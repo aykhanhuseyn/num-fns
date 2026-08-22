@@ -1,5 +1,6 @@
 export * from './az'
 export * from './en'
+export * from './en-gb'
 export * from './es'
 export * from './ru'
 export * from './types'

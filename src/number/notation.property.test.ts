@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
+import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
 import { ru } from '../locale/ru'
 import type { Locale } from '../locale/types'
@@ -10,6 +11,7 @@ import { parseLongNotation, parseShortNotation, toLongNotation, toShortNotation 
 const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
   ['az', az],
   ['en', en],
+  ['en-GB', enGB],
   ['ru', ru],
   ['es', es],
 ]

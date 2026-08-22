@@ -1,4 +1,4 @@
-import { az, en, es, ru } from '../../src/locale/index'
+import { az, en, enGB, es, ru } from '../../src/locale/index'
 import type { Locale } from '../../src/locale/types'
 
 export interface LocaleInfo {
@@ -22,6 +22,14 @@ export interface LocaleInfo {
 export const localeInfo: LocaleInfo[] = [
   { code: 'az', name: 'Azerbaijani', locale: az, fractionWordsSupported: true },
   { code: 'en', name: 'English', locale: en, fractionWordsSupported: true },
+  // `code` here is deliberately the JS export identifier `enGB`, not the
+  // locale's own `Locale.code` ('en-GB') — `engine.ts`'s `toLiteral` writes
+  // this value verbatim as the `locale:` identifier in the displayed call
+  // snippet (`{ locale: enGB }`, matching `import { enGB } from
+  // 'num-fns/locale'`), and 'en-GB' isn't valid there. Every other launch
+  // locale's export identifier and `Locale.code` happen to be the same
+  // string, which is what let this field double for both purposes until now.
+  { code: 'enGB', name: 'English (UK)', locale: enGB, fractionWordsSupported: true },
   { code: 'ru', name: 'Russian', locale: ru, fractionWordsSupported: false },
   { code: 'es', name: 'Spanish', locale: es, fractionWordsSupported: false },
 ]

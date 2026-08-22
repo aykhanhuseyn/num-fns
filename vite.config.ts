@@ -36,6 +36,7 @@ export default defineConfig({
         'locale/index': resolve(import.meta.dirname, 'src/locale/index.ts'),
         'locale/az': resolve(import.meta.dirname, 'src/locale/az.ts'),
         'locale/en': resolve(import.meta.dirname, 'src/locale/en.ts'),
+        'locale/en-gb': resolve(import.meta.dirname, 'src/locale/en-gb.ts'),
         'locale/ru': resolve(import.meta.dirname, 'src/locale/ru.ts'),
         'locale/es': resolve(import.meta.dirname, 'src/locale/es.ts'),
       },

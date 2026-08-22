@@ -47,6 +47,16 @@
         "default": "./dist/locale/en.cjs"
       }
     },
+    "./locale/en-gb": {
+      "import": {
+        "types": "./dist/locale/en-gb.d.ts",
+        "default": "./dist/locale/en-gb.js"
+      },
+      "require": {
+        "types": "./dist/locale/en-gb.d.cts",
+        "default": "./dist/locale/en-gb.cjs"
+      }
+    },
     "./locale/ru": {
       "import": {
         "types": "./dist/locale/ru.d.ts",
@@ -79,6 +89,9 @@
       ],
       "locale/en": [
         "./dist/locale/en.d.ts"
+      ],
+      "locale/en-gb": [
+        "./dist/locale/en-gb.d.ts"
       ],
       "locale/ru": [
         "./dist/locale/ru.d.ts"
@@ -156,6 +169,7 @@
     "typescript",
     "az",
     "en",
+    "en-GB",
     "ru",
     "es"
   ],
@@ -188,7 +202,7 @@
       "limit": "6 KB"
     },
     {
-      "name": "locale (barrel — all four launch locales)",
+      "name": "locale (barrel — all five launch locales)",
       "path": "dist/locale/index.js",
       "limit": "5 KB"
     },
@@ -201,6 +215,11 @@
       "name": "locale/en (single locale, subpath import)",
       "path": "dist/locale/en.js",
       "limit": "1.1 KB"
+    },
+    {
+      "name": "locale/en-gb (single locale, subpath import)",
+      "path": "dist/locale/en-gb.js",
+      "limit": "2.3 KB"
     },
     {
       "name": "locale/ru (single locale, subpath import)",

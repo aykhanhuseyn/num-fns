@@ -5,6 +5,7 @@
     "src/locale/index.ts",
     "src/locale/az.ts",
     "src/locale/en.ts",
+    "src/locale/en-gb.ts",
     "src/locale/ru.ts",
     "src/locale/es.ts",
     "scripts/*.ts"

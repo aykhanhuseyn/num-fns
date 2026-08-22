@@ -6,6 +6,7 @@ const assert = require('node:assert')
 const { formatMoney, formatNumber, mean, numberToWords, parseNumber, toRoman } = require('num-fns')
 const { az } = require('num-fns/locale/az')
 const { en, ru } = require('num-fns/locale')
+const { enGB } = require('num-fns/locale/en-gb')
 
 assert.strictEqual(formatNumber(1234567.891), '1,234,567.891')
 assert.strictEqual(formatNumber(1234567.891, { locale: az }), '1 234 567,891')
@@ -13,12 +14,17 @@ assert.strictEqual(parseNumber('1,234,567.891'), 1234567.891)
 assert.strictEqual(numberToWords(1234), 'one thousand two hundred thirty-four')
 assert.strictEqual(numberToWords(1234, { locale: az }), 'min iki yüz otuz dörd')
 assert.strictEqual(numberToWords(1234, { locale: ru }), 'одна тысяча двести тридцать четыре')
+assert.strictEqual(
+  numberToWords(1234, { locale: enGB }),
+  'one thousand two hundred and thirty-four',
+)
 assert.strictEqual(formatMoney(1234.5), '$ 1,234.50')
 assert.strictEqual(toRoman(2026), 'MMXXVI')
 assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 
 assert.strictEqual(en.code, 'en')
 assert.strictEqual(az.code, 'az')
+assert.strictEqual(enGB.code, 'en-GB')
 
 // `module.exports` must be a plain namespace object, not an ESM-interop
 // wrapper: a stray `default` key here means a CJS consumer would have to write

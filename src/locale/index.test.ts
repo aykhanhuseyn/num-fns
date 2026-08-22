@@ -3,6 +3,7 @@ import { toLongNotation } from '../number/notation'
 import { numberToWords, resolveScaleWord } from '../number/words'
 import { az } from './az'
 import { en } from './en'
+import { enGB } from './en-gb'
 import { es } from './es'
 import * as locales from './index'
 import { ru } from './ru'
@@ -13,17 +14,32 @@ import { ru } from './ru'
  * root's function list is. Adding a locale means adding it here, plus a
  * `./locale/<code>` entry in both `package.json`'s `exports` and
  * `vite.config.ts`'s `build.lib.entry`.
+ *
+ * These are export *names* (`Object.keys` of the barrel's namespace import),
+ * not `Locale.code` values — `enGB` is the identifier (hyphens aren't valid
+ * in one), while its `code` is the BCP 47 tag `'en-GB'`. That mismatch is
+ * exactly why the "code matches export name" check below needs an explicit
+ * exception for it.
  */
-const LAUNCH_LOCALES = ['az', 'en', 'es', 'ru'] as const
+const LAUNCH_LOCALES = ['az', 'en', 'enGB', 'es', 'ru'] as const
+
+/**
+ * Every launch locale's export name equals its `Locale.code` — except
+ * `enGB`, whose code (`'en-GB'`) isn't a valid JS identifier. Added
+ * 2026-08-22 alongside the `enGB` locale; a locale whose code diverges from
+ * its export name for the same reason should add itself here rather than
+ * weakening the check for everyone else.
+ */
+const CODE_OVERRIDES: Readonly<Record<string, string>> = { enGB: 'en-GB' }
 
 describe('locale barrel', () => {
   it('exports exactly the launch locales', () => {
-    expect(Object.keys(locales).sort()).toEqual([...LAUNCH_LOCALES])
+    expect(Object.keys(locales).sort()).toEqual([...LAUNCH_LOCALES].sort())
   })
 
-  it('gives every locale a code matching its export name and a display name', () => {
+  it('gives every locale a code matching its export name (or its declared override) and a display name', () => {
     for (const [name, locale] of Object.entries(locales)) {
-      expect(locale.code).toBe(name)
+      expect(locale.code).toBe(CODE_OVERRIDES[name] ?? name)
       // `Locale.name` is optional in the interface; every launch locale sets it.
       expect(typeof locale.name).toBe('string')
       expect(locale.name).not.toBe('')
@@ -50,6 +66,13 @@ describe('scale naming (todo.md §1 decision: per-locale, not global)', () => {
     expect(en.words.scales[4]).toBe('trillion')
     expect(numberToWords(1e9, { locale: en })).toBe('one billion')
     expect(numberToWords(1e12, { locale: en })).toBe('one trillion')
+  })
+
+  it('enGB matches en\'s short-scale billion/trillion pair at 1e9/1e12 (only the "and" convention differs between the two)', () => {
+    expect(enGB.words.scales[3]).toBe('billion')
+    expect(enGB.words.scales[4]).toBe('trillion')
+    expect(numberToWords(1e9, { locale: enGB })).toBe('one billion')
+    expect(numberToWords(1e12, { locale: enGB })).toBe('one trillion')
   })
 
   it('az names 1e9 "milyard" (long-scale-derived) but keeps the short-scale progression at 1e12 ("trilyon")', () => {

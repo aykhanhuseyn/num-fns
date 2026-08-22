@@ -107,6 +107,8 @@ describe('en.ordinal', () => {
     expect(en.ordinal.suffix(23)).toBe('rd')
     expect(en.ordinal.suffix(101)).toBe('st')
     expect(en.ordinal.suffix(111)).toBe('th')
+    expect(en.ordinal.suffix(112)).toBe('th')
+    expect(en.ordinal.suffix(113)).toBe('th')
   })
 
   it('throws for negative or non-integer values', () => {
@@ -159,5 +161,9 @@ describe('en.currency', () => {
     expect(en.currency.minor.word).toBe('cent')
     expect(en.currency.minor.plurals?.one).toBe('cent')
     expect(en.currency.minor.plurals?.other).toBe('cents')
+    // en has no grammatical gender (`en.words.genders` is unset), so its
+    // currency units must not declare one either.
+    expect(en.currency.major.gender).toBeUndefined()
+    expect(en.currency.minor.gender).toBeUndefined()
   })
 })
