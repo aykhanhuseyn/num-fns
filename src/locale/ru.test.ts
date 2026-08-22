@@ -61,6 +61,13 @@ describe('ru.words', () => {
     expect(ru.words.defaultGender).toBe('masculine')
   })
 
+  it('names the decimal comma with "запятая", the standard spoken reading (`todo.md` §2)', () => {
+    expect(ru.words.decimalConnector).toBe('запятая')
+    expect(numberToWords(12.34, { locale: ru })).toBe('двенадцать запятая тридцать четыре')
+    expect(numberToWords(0.5, { locale: ru })).toBe('ноль запятая пятьдесят')
+    expect(numberToWords(-3.7, { locale: ru })).toBe('минус три запятая семьдесят')
+  })
+
   describe('renderGroup', () => {
     it('renders the regular masculine form, gender agreement is compose’s job', () => {
       expect(ru.words.renderGroup(234)).toBe('двести тридцать четыре')
@@ -280,13 +287,47 @@ describe('ordinalToWords(value, { locale: ru })', () => {
     expect(ordinalToWords(100, { locale: ru })).toBe('сотый')
   })
 
-  it('known limitation: a scale-bound reading is not contracted into the correct Russian compound ordinal', () => {
-    // Correct Russian is a single compound word ("тысячный", "двухтысячный");
-    // v1 only ordinalizes the trailing scale word and leaves the leading
-    // count as a separate cardinal word — see the doc comment above
-    // ORDINAL_WORDS in ru.ts for why this is pinned rather than fixed here.
-    expect(ordinalToWords(1000, { locale: ru })).toBe('одна тысячный')
-    expect(ordinalToWords(2000, { locale: ru })).toBe('две тысячный')
+  // Fixed 2026-08-22 (`todo.md` §2): a scale-bound cardinal reading now
+  // fuses into the correct Russian compound ordinal ("тысячный",
+  // "двухтысячный") instead of leaving the leading count as a separate
+  // cardinal word before an ordinalized scale word ("одна тысячный", "две
+  // тысячный" — the previously pinned, linguistically wrong output).
+  it('fuses a round-scale cardinal reading into a single compound ordinal', () => {
+    expect(ordinalToWords(1000, { locale: ru })).toBe('тысячный')
+    expect(ordinalToWords(2000, { locale: ru })).toBe('двухтысячный')
+    expect(ordinalToWords(3000, { locale: ru })).toBe('трёхтысячный')
+    expect(ordinalToWords(5000, { locale: ru })).toBe('пятитысячный')
+    expect(ordinalToWords(11000, { locale: ru })).toBe('одиннадцатитысячный')
+    expect(ordinalToWords(12000, { locale: ru })).toBe('двенадцатитысячный')
+    expect(ordinalToWords(21000, { locale: ru })).toBe('двадцатиоднотысячный')
+    expect(ordinalToWords(25000, { locale: ru })).toBe('двадцатипятитысячный')
+    expect(ordinalToWords(100000, { locale: ru })).toBe('стотысячный')
+    expect(ordinalToWords(250000, { locale: ru })).toBe('двухсотпятидесятитысячный')
+    expect(ordinalToWords(1e6, { locale: ru })).toBe('миллионный')
+    expect(ordinalToWords(2e6, { locale: ru })).toBe('двухмиллионный')
+    expect(ordinalToWords(1e9, { locale: ru })).toBe('миллиардный')
+    expect(ordinalToWords(3e9, { locale: ru })).toBe('трёхмиллиардный')
+    expect(ordinalToWords(1e12, { locale: ru })).toBe('триллионный')
+    expect(ordinalToWords(2500000, { locale: ru })).toBe('два миллиона пятисоттысячный')
+  })
+
+  it('leaves a non-round-scale reading unfused — the fix only touches trailing scale words', () => {
+    expect(ordinalToWords(2001, { locale: ru })).toBe('две тысячи первый')
+    expect(ordinalToWords(21, { locale: ru })).toBe('двадцать первый')
+  })
+
+  it('does not fuse for a placeholder NaN value (cardinalToOrdinalWords convenience path)', () => {
+    // `fuseRoundScaleOrdinal` requires a real integer `value`; `NaN` falls
+    // straight through to the ORDINAL_WORDS lookup on the trailing word.
+    expect(ru.ordinal.words(Number.NaN, 'тысяча')).toBe('тысячный')
+    expect(ru.ordinal.words(Number.NaN, 'две тысячи')).toBe('две тысячный')
+  })
+
+  it('falls back to the plain last-word transform beyond this locale’s scale vocabulary', () => {
+    // 10^15 sits one scale group past "триллион" — `fuseRoundScaleOrdinal`
+    // recognizes the reading ends in a scale-bound chunk but has no ordinal
+    // stem for it, so it defers to the ordinary trailing-word transform.
+    expect(ru.ordinal.words(1e15, 'квадриллион')).toBe('квадриллионый')
   })
 })
 
