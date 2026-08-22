@@ -68,8 +68,8 @@ describe('numberToWords', () => {
       )
     })
 
-    it('has no decimal-reading convention yet, so decimals join with a plain space', () => {
-      expect(numberToWords(12.34, { locale: en })).toBe('twelve thirty-four')
+    it('joins decimals with "point"', () => {
+      expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
     })
   })
 
@@ -152,6 +152,12 @@ describe('numberToWords', () => {
       expect(numberToWords(21000, { locale: es })).toBe('veintiún mil')
       expect(numberToWords(231000, { locale: es })).toBe('doscientos treinta y un mil')
     })
+
+    it('joins decimal parts with "coma", RAE\'s standard decimal reading (todo.md §2)', () => {
+      expect(numberToWords(12.34, { locale: es })).toBe('doce coma treinta y cuatro')
+      expect(numberToWords(0.5, { locale: es })).toBe('cero coma cincuenta')
+      expect(numberToWords(-3.5, { locale: es })).toBe('menos tres coma cincuenta')
+    })
   })
 
   describe('{ gender } (todo.md §1 "Grammatical gender" decision)', () => {
@@ -216,8 +222,12 @@ describe('numberToWords', () => {
     })
 
     it('applies the requested gender to the decimal-fraction group', () => {
-      expect(numberToWords(0.01, { locale: ru, gender: 'feminine' })).toBe('ноль одна')
-      expect(numberToWords(0.21, { locale: es, gender: 'feminine' })).toBe('cero veintiuna')
+      // ru sets `decimalConnector: 'запятая'`, es sets `decimalConnector:
+      // 'coma'` (`todo.md` §2), so both join with their named connector
+      // rather than a plain space — the fraction group's gender agreement
+      // is unaffected by the connector.
+      expect(numberToWords(0.01, { locale: ru, gender: 'feminine' })).toBe('ноль запятая одна')
+      expect(numberToWords(0.21, { locale: es, gender: 'feminine' })).toBe('cero coma veintiuna')
     })
 
     it('throws for a gender the locale has no words for', () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { numberToWords } from '../number/words'
 import { en } from './en'
 import type { WordChunk } from './types'
 
@@ -165,5 +166,25 @@ describe('en.currency', () => {
     // currency units must not declare one either.
     expect(en.currency.major.gender).toBeUndefined()
     expect(en.currency.minor.gender).toBeUndefined()
+  })
+})
+
+describe('en.words.decimalConnector', () => {
+  it('is "point", joining integer and fractional parts', () => {
+    expect(en.words.decimalConnector).toBe('point')
+  })
+})
+
+describe('numberToWords decimal readings with en', () => {
+  it('joins integer and fractional parts with "point"', () => {
+    expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
+  })
+
+  it('reads 0.5 as "zero point fifty" (the fractional digits)', () => {
+    expect(numberToWords(0.5, { locale: en })).toBe('zero point fifty')
+  })
+
+  it('prefixes negative decimals with "negative"', () => {
+    expect(numberToWords(-1.23, { locale: en })).toBe('negative one point twenty-three')
   })
 })

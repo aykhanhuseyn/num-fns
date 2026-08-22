@@ -177,6 +177,8 @@ export const enGB: Locale = {
     hundreds: 'hundred',
     scales: ['', 'thousand', 'million', 'billion', 'trillion'],
     negative: 'negative',
+    // Decimal connector joining integer and fractional parts (12.34 -> "twelve point thirty-four").
+    decimalConnector: 'point',
     renderGroup,
     compose,
   },

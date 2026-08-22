@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
+import { es } from '../locale/es'
 import {
   cardinalToOrdinalWords,
   getOrdinalSuffix,
@@ -119,6 +120,18 @@ describe('ordinalToWords', () => {
     it('throws for negative or non-integer values', () => {
       expect(() => ordinalToWords(-1, { locale: az })).toThrow(RangeError)
       expect(() => ordinalToWords(1.5, { locale: az })).toThrow(RangeError)
+    })
+  })
+
+  describe('{ locale: es }', () => {
+    it('fuses a round multiple of a scale word end-to-end (todo.md §2)', () => {
+      expect(ordinalToWords(2000, { locale: es })).toBe('dosmilésimo')
+      expect(ordinalToWords(100000, { locale: es })).toBe('cienmilésimo')
+      expect(ordinalToWords(1000000, { locale: es })).toBe('millonésimo')
+    })
+
+    it('ordinalizes every token when the number does not end in a scale word', () => {
+      expect(ordinalToWords(2001, { locale: es })).toBe('segundo milésimo primero')
     })
   })
 })

@@ -184,6 +184,26 @@ describe('numberToWords({ locale: enGB }) — the "and" cases', () => {
   })
 })
 
+describe('enGB.words.decimalConnector', () => {
+  it('is "point", joining integer and fractional parts', () => {
+    expect(enGB.words.decimalConnector).toBe('point')
+  })
+})
+
+describe('numberToWords decimal readings with enGB', () => {
+  it('joins integer and fractional parts with "point"', () => {
+    expect(numberToWords(12.34, { locale: enGB })).toBe('twelve point thirty-four')
+  })
+
+  it('reads 0.5 as "zero point fifty" (the fractional digits)', () => {
+    expect(numberToWords(0.5, { locale: enGB })).toBe('zero point fifty')
+  })
+
+  it('prefixes negative decimals with "negative"', () => {
+    expect(numberToWords(-1.23, { locale: enGB })).toBe('negative one point twenty-three')
+  })
+})
+
 /**
  * Byte-difference checks against `en`: the same input should produce
  * identical output when "and" never applies (no hundreds digit anywhere in
