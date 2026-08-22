@@ -13,12 +13,16 @@ function resolveUnitWord(unit: LocaleCurrencyUnit, category: PluralCategory): st
  * major currency unit word and the (rounded) fractional part with a minor
  * unit word, per `options.locale` (defaults to `en`: dollars/cents). Unit
  * words are resolved for the amount's plural category via `locale.plural`
- * when the locale inflects them (Russian "рубль"/"рубля"/"рублей").
+ * when the locale inflects them (Russian "рубль"/"рубля"/"рублей"). When the
+ * unit declares a `gender` (`LocaleCurrencyUnit.gender`), the amount itself
+ * is spelled agreeing with it, so Russian minor units come out correct:
+ * `1.01` -> `"один рубль одна копейка"`, not `"...один копейка"`.
  *
  * @example
  * moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
  * moneyToWords(1, { locale: en }); // "one dollar"
  * moneyToWords(1234.5, { locale: az }); // "min iki yüz otuz dörd manat əlli qəpik"
+ * moneyToWords(1.01, { locale: ru }); // "один рубль одна копейка"
  */
 export function moneyToWords(value: number, options: MoneyWordsOptions = {}): string {
   if (!Number.isFinite(value)) {
@@ -39,9 +43,11 @@ export function moneyToWords(value: number, options: MoneyWordsOptions = {}): st
   const majorUnitWord = majorUnit ?? resolveUnitWord(locale.currency.major, locale.plural(major))
   const minorUnitWord = minorUnit ?? resolveUnitWord(locale.currency.minor, locale.plural(minor))
 
-  const majorWords = `${numberToWords(major, { locale })} ${majorUnitWord}`
+  const majorWords = `${numberToWords(major, { locale, gender: locale.currency.major.gender })} ${majorUnitWord}`
   const minorWords =
-    minor > 0 || includeZeroMinor ? ` ${numberToWords(minor, { locale })} ${minorUnitWord}` : ''
+    minor > 0 || includeZeroMinor
+      ? ` ${numberToWords(minor, { locale, gender: locale.currency.minor.gender })} ${minorUnitWord}`
+      : ''
   const words = `${majorWords}${minorWords}`
 
   return isNegative ? `${locale.words.negative} ${words}` : words

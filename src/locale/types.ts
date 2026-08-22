@@ -203,6 +203,18 @@ export interface LocaleCurrencyUnit {
    * unit word (Russian `рубль`/`рубля`/`рублей`). Omit for invariant words.
    */
   plurals?: Partial<Record<PluralCategory, string>>
+  /**
+   * Grammatical gender the amount word spelled by `moneyToWords` must agree
+   * with when naming this unit, e.g. Russian minor unit `копейка` is
+   * feminine, so `1.01` reads `"один рубль одна копейка"`, not `"...один
+   * копейка"`. Major and minor units can (and for `ru` do) differ — `рубль`
+   * is masculine while `копейка` is feminine. Passed to `numberToWords` only
+   * when set, so a locale that declares no `words.genders` (`az`, `en`) must
+   * leave this omitted — `numberToWords` throws a `RangeError` for a gender
+   * it doesn't distinguish. Omit for a locale/unit that hasn't set one; the
+   * amount is then spelled with `locale.words.defaultGender` as before.
+   */
+  gender?: GrammaticalGender
 }
 
 /** Default currency for `formatMoney` / `parseMoney` / `moneyToWords`. */

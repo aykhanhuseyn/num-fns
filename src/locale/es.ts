@@ -323,7 +323,15 @@ export const es: Locale = {
     code: 'EUR',
     symbol: '€',
     symbolPosition: 'after',
-    major: { word: 'euro', plurals: { one: 'euro', other: 'euros' } },
-    minor: { word: 'céntimo', plurals: { one: 'céntimo', other: 'céntimos' } },
+    // Both "euro" and "céntimo" are masculine, matching `words.defaultGender` —
+    // set explicitly so it's self-documenting; output is unchanged from the
+    // pre-gender-field behavior since masculine is what the default already
+    // produced.
+    major: { word: 'euro', plurals: { one: 'euro', other: 'euros' }, gender: 'masculine' },
+    minor: {
+      word: 'céntimo',
+      plurals: { one: 'céntimo', other: 'céntimos' },
+      gender: 'masculine',
+    },
   },
 }

@@ -19,10 +19,24 @@ function ruPlural(n: number): PluralCategory {
 /**
  * Ordinal word for the last token of a Russian cardinal reading, nominative
  * masculine singular only (`todo.md` §2 scopes case/gender declension out of
- * v1 — "третьего", "третьей", etc. aren't covered). Covers every ones/teens/
- * tens/hundreds/scale word `numberToWords`-style composition can produce as
- * a trailing word; {@link deriveOrdinalWord} is a best-effort fallback for
- * anything else.
+ * v1 — "третьего", "третьей", "третьим", etc. aren't covered; every value
+ * this module returns is the nominative masculine singular form, e.g.
+ * "первый"/"двадцать первый", never a declined or gendered variant). Covers
+ * every ones/teens/tens/hundreds/scale word `numberToWords`-style composition
+ * can produce as a trailing word; {@link deriveOrdinalWord} is a best-effort
+ * fallback for anything else.
+ *
+ * Known v1 gap, separate from the case/gender scoping above: when the
+ * cardinal reading's trailing group is bound to a scale word (a round
+ * thousand/million/etc., e.g. `numberToWords(2000, { locale: ru })` ->
+ * "две тысячи"), only the scale word itself gets ordinalized ("тысячный")
+ * and the leading count word is left untouched — the result is "две
+ * тысячный", not the grammatically correct Russian compound ordinal
+ * "двухтысячный". Forming that compound (contracting "два"/"пять"/"сто"/etc.
+ * into a combining prefix — "двух-", "пяти-", "сто-" — fused to the scale
+ * ordinal) is additional Russian morphology this lookup table doesn't
+ * attempt. `ru.test.ts`'s "known limitation" ordinal test pins the current
+ * (linguistically imperfect) output rather than hiding it.
  */
 const ORDINAL_WORDS: Readonly<Record<string, string>> = {
   ноль: 'нулевой',
@@ -254,7 +268,20 @@ export const ru: Locale = {
     code: 'RUB',
     symbol: '₽',
     symbolPosition: 'after',
-    major: { word: 'рубль', plurals: { one: 'рубль', few: 'рубля', many: 'рублей' } },
-    minor: { word: 'копейка', plurals: { one: 'копейка', few: 'копейки', many: 'копеек' } },
+    // "рубль" is masculine ("один рубль"), matching `words.defaultGender`;
+    // set explicitly so it's self-documenting rather than an accident of the
+    // default. "копейка" is feminine ("одна копейка", "две копейки") — the
+    // gender that actually changes output here, since without it the
+    // amount defaults to masculine ("один копейка", wrong).
+    major: {
+      word: 'рубль',
+      plurals: { one: 'рубль', few: 'рубля', many: 'рублей' },
+      gender: 'masculine',
+    },
+    minor: {
+      word: 'копейка',
+      plurals: { one: 'копейка', few: 'копейки', many: 'копеек' },
+      gender: 'feminine',
+    },
   },
 }
