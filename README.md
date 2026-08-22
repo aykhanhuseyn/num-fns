@@ -16,12 +16,13 @@ projects alike.
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
 > **Status: pre-release.** Not yet published to npm — see [`todo.md`](./todo.md)
-> for what's left. The locale system is implemented: `az`, `en`, `ru`, and `es`
-> are all wired into `numberToWords`, ordinals, notation, and money/percentage
-> formatting. **The default locale is `en`** if you don't pass one — `az` was
-> the implicit default before 2026-08-18 and now requires `{ locale: az }`
-> explicitly. `fractionToWords` currently only has real vocabulary for `az`
-> and `en`; see its JSDoc for why `ru`/`es` throw instead of guessing.
+> for what's left. The locale system is implemented: `az`, `en`, `en-GB`,
+> `ru`, and `es` are all wired into `numberToWords`, ordinals, notation, and
+> money/percentage formatting. **The default locale is `en`** if you don't
+> pass one — `az` was the implicit default before 2026-08-18 and now requires
+> `{ locale: az }` explicitly. `fractionToWords` currently only has real
+> vocabulary for `az`, `en`, and `en-GB`; see its JSDoc for why `ru`/`es` throw
+> instead of guessing.
 
 ## Install
 
@@ -120,19 +121,40 @@ statistics, arithmetic, and base-conversion utilities.
 | --- | --- | --- | --- |
 | Azerbaijani | `az` | Implemented | Implemented |
 | English | `en` | Implemented (default) | Implemented |
+| English (UK) | `en-GB` (`import { enGB } from 'num-fns/locale/en-gb'`) | Implemented | Implemented |
 | Russian | `ru` | Implemented | Throws — see below |
 | Spanish | `es` | Implemented | Throws — see below |
 
-`fractionToWords` only has real fraction-noun vocabulary for `az` and `en`.
-Russian and Spanish fraction nouns aren't simple derivations of their ordinal
-words (Russian needs feminine forms like "треть"/"четверть"; Spanish's
-"tercio" diverges from its ordinal "tercero"), so rather than guess and risk
-being wrong in specific, embarrassing ways, `fractionToWords` throws a
-`RangeError` for those two locales until real vocabulary is added — see the
+`en-GB` shares every word and rule `en` (US) defines, differing only in
+reading `and` before the final low part of a number — `"one hundred and
+one"`, `"one thousand and one"` — where `en` says `"one hundred one"`.
+
+`fractionToWords` only has real fraction-noun vocabulary for `az`, `en`, and
+`en-GB`. Russian and Spanish fraction nouns aren't simple derivations of
+their ordinal words (Russian needs feminine forms like "треть"/"четверть";
+Spanish's "tercio" diverges from its ordinal "tercero"), so rather than guess
+and risk being wrong in specific, embarrassing ways, `fractionToWords` throws
+a `RangeError` for those two locales until real vocabulary is added — see the
 function's JSDoc.
 
-Adding a locale means implementing one object against a shared conformance test
-suite. Contributions welcome — a locale-authoring guide is on the roadmap.
+**Known limitations:**
+
+- `ru` ordinals (`ordinalToWords`/`toOrdinal`) are nominative masculine
+  singular only — no case or gender declension (`первая`, `первого`, etc.)
+  in v1.
+- Compound ordinals at a round multiple of a scale word aren't idiomatic yet
+  in `ru` or `es`: `ordinalToWords(2000, { locale: ru })` gives `"две
+  тысячный"` instead of `"двухтысячный"`, and the Spanish equivalent gives
+  `"segundo milésimo"` instead of `"dosmilésimo"` — both documented in their
+  locale files rather than silently wrong.
+- `es` ordinalizes *every* token of a compound number (`"treinta y uno"` →
+  `"trigésimo primero"`), unlike `en`/`ru`, which only transform the last
+  token — a deliberate divergence, not a bug.
+
+Adding a locale means implementing one object against the `Locale` interface
+and the shared conformance suite (`src/locale/conformance.test.ts`) every
+locale must pass unmodified — see [`CONTRIBUTING.md`](./CONTRIBUTING.md#how-to-add-a-new-locale)
+for the full locale-authoring guide. Contributions welcome.
 
 ## Development
 

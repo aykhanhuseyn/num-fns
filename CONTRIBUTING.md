@@ -125,40 +125,152 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
 
 ## How to add a new locale
 
-Locale support is mid-refactor (see `todo.md` §1) — `az`, `en`, `ru`, and
-`es` locale objects already exist under `src/locale/`, implementing the
-`Locale` interface in `src/locale/types.ts`, but not every public function
-consumes a `locale` option yet.
+Five locales exist today under `src/locale/` — `az`, `en`, `en-GB` (exported
+as `enGB`), `ru`, and `es` — each implementing the `Locale` interface in
+`src/locale/types.ts` and threaded through every locale-dependent public
+function. Adding a sixth is mechanical if you follow the steps below in
+order; the two things that actually validate correctness are the shared
+conformance suite (step 8) and, ultimately, a native speaker (step 7).
 
-To add a new locale:
+1. **Copy the closest existing locale.** Don't start from a blank file — copy
+   whichever existing locale is grammatically closest to the one you're
+   adding and rename it. `src/locale/en-gb.ts` is the newest worked example
+   of a locale built from scratch against the full interface (rather than
+   ported from `az`'s pre-refactor hardcoded logic), including the
+   `fractions` hook and a documented locale-specific composition
+   irregularity — read it alongside `src/locale/types.ts` before writing
+   your own.
 
-1. Read `src/locale/types.ts` for the shape you need to fill in: `code`,
-   `formatDefaults`, `words` (+ `compose` hook), `plural`, `ordinal`,
-   `notation`, `currency`.
-2. Use `src/locale/az.ts` as the reference implementation and `src/locale/en.ts`,
-   `ru.ts`, or `es.ts` for examples of locales built from scratch against the
-   interface (rather than ported from pre-existing hardcoded logic).
-3. Add a colocated `<code>.test.ts` following the structure of the existing
-   locale test files — hand-build the `WordChunk`s you expect for a range of
-   representative numbers (zero, single digits, teens, round scales like
-   1,000 and 1,000,000, and at least one number that exercises an irregular
-   rule specific to your locale's grammar).
-4. Re-export the locale from `src/locale/index.ts` and add a per-locale
-   subpath (`./locale/<code>`) to both the `exports` map in `package.json`
-   and the `lib.entry` object in `vite.config.ts` — keep the two in sync, and
-   confirm the new subpath resolves after a build (`bun run build`) with a
-   real `import`/`require` of the built output, not just by inspecting the
-   file tree.
-5. Document any locale-specific grammatical quirks in a doc comment on the
-   locale file, the way `src/locale/es.ts` documents its ordinal-of-every-token
-   deviation. Number words are wrong in embarrassing, specific ways when
-   machine-generated — a native-speaker review before publishing is strongly
-   preferred, especially for grammatical gender, plural categories, and
-   ordinal forms.
+2. **Implement the `Locale` interface** (`src/locale/types.ts`). Read that
+   file's doc comments field group by field group before writing any words
+   down; the short version:
+   - **`code`/`name`** — the BCP 47 tag (e.g. `'en-GB'`) and a display name.
+     If the tag isn't a valid JS identifier, your barrel export name will
+     diverge from `code` — see step 6's `CODE_OVERRIDES` note.
+   - **`formatDefaults`** — the thousands/decimal separator pair
+     `formatNumber` defaults to for this locale.
+   - **`words`** — the cardinal engine's vocabulary plus the two hooks that
+     own all locale-specific irregularity: `renderGroup` (renders one 0-999
+     chunk — hyphenation, an `and` connector, contractions like Spanish
+     "veintiuno") and `compose` (joins chunks with scale words — dropping a
+     leading "one" before a scale word, gender agreement, apocopation).
+     `genders`/`defaultGender` are only set for a locale whose cardinals
+     inflect by grammatical gender — omit both for a genderless locale, and
+     `numberToWords` will reject any `gender` option with `RangeError`
+     rather than silently ignoring it. `decimalConnector` is the
+     integer/fraction joiner (az's `'tam'`) — distinct from `and`, which is
+     purely the intra-group tens+ones connector — and should stay unset
+     until you've settled your locale's real decimal-reading convention,
+     since leaving it unset falls back to a plain space, not a claim of
+     linguistic correctness.
+   - **`plural`** — the CLDR-ish plural-category selector (`'one' | 'few' |
+     'many' | 'other'`) used to pick the right scale/currency word form.
+     Most locales can return `'other'` unconditionally; only implement the
+     real split if your locale's scale or currency words actually inflect by
+     count (Russian does; Spanish, English, and Azerbaijani don't).
+   - **`ordinal`** — `suffix` (the short numeral suffix, `'5th'`/`'5-ci'`)
+     and `words` (the full ordinal word, transforming the cardinal reading
+     `numberToWords` produced). Grammatical case/gender declension on
+     ordinals is out of scope for v1 — follow `ru.ts`'s and `es.ts`'s
+     documented nominative-masculine-only precedent rather than trying to
+     solve it yourself.
+   - **`notation`** — the short/long scale abbreviations `toShortNotation`/
+     `toLongNotation` use, plus whether a space separates the number from
+     the short form. Keep `notation.scales` and `words.scales` vocabulary in
+     sync at every magnitude — the conformance suite checks the two arrays'
+     lengths align, and `locale/index.test.ts`'s scale-naming block checks
+     the actual words agree.
+   - **`currency`** — the default code/symbol/position plus `major`/`minor`
+     units. Each unit's `gender` field (added alongside `en-GB`) is what
+     `moneyToWords` spells the amount with, and only makes sense for a unit
+     word that's actually gendered — it must be a member of `words.genders`,
+     and a genderless locale (`az`/`en`) must leave it unset on both units.
+     `ru.ts`'s minor unit ("копейка", feminine) next to its masculine major
+     unit ("рубль") is the reference example for why this field exists:
+     without it, `moneyToWords` spells every amount with
+     `words.defaultGender` and gets the minor unit wrong.
+   - **`fractions`** (optional) — `half` plus a `words(numerator,
+     denominator)` composer for `fractionToWords`. Only implement this once
+     you have real fraction-noun vocabulary, not a guess derived from your
+     ordinal words — see `number/fraction.ts`'s doc comment for why `ru`/`es`
+     throw instead of guessing, and leave the hook unset (so
+     `fractionToWords` throws `RangeError` for your locale) if you're in the
+     same position.
 
-A shared conformance test suite that every new locale must pass against is
-planned (`todo.md` §2) but doesn't exist yet — until it lands, match the
-depth of testing in the existing locale test files.
+3. **Never import your locale from a module `number/words.ts` can reach.**
+   `number/words.ts` imports `en` as `numberToWords`'s structural default, so
+   `en.ts` itself can never import back from `number/` — that's why `en`'s
+   fraction composer lives directly in `number/fraction.ts`, special-cased,
+   rather than as an `en.fractions` hook. Any locale that isn't the
+   structural default is free to import from `number/` (`en-GB`'s
+   `fractions.words` does exactly this, calling `numberToWords`/
+   `ordinalToWords`); `bun run check:circular` (part of `bun run check`) is
+   what catches a mistake here.
+
+4. Keep all of your locale's linguistic data — vocabulary tables, irregular-
+   word maps, composition logic — in the locale file itself, not in a shared
+   module. `number/words.ts`'s `ONES`/`TENS`/`SCALE_WORDS` constants are
+   legacy Azerbaijani-only exports kept there for `az.ts` and
+   `number/digits.ts`'s backwards compatibility, not a pattern to extend —
+   see that file's doc comment.
+
+5. **Add a colocated `<code>.test.ts`** following the structure of the
+   existing locale test files — pin real vocabulary and hand-build the
+   `WordChunk`s or expected strings for a range of representative numbers
+   (zero, single digits, teens, round scales like 1,000 and 1,000,000, at
+   least one number that exercises an irregular rule specific to your
+   locale's grammar, and every gender your locale declares, if any).
+
+6. **Wire the new locale into everything that lists locales by hand** — the
+   compiler and the coverage gate won't remind you about most of these.
+   Four places are specifically about the package *subpath*:
+   - `package.json` — a `./locale/<code>` entry in `exports` **and** in
+     `typesVersions` (the latter is what makes the subpath resolve for
+     consumers on legacy `moduleResolution: node10`; skipping it passes
+     every other check but fails `check:pack`'s `attw --profile strict` —
+     which is exactly the point of that flag).
+   - `vite.config.ts` — a matching entry in `build.lib.entry`.
+   - `scripts/smoke/` — add the new locale/subpath to each fixture that
+     enumerates locales (`esm`, `cjs`, `types-esm`, `types-cjs`,
+     `types-node10`) so `check:smoke` exercises it end to end, through a
+     real install of a packed tarball.
+
+   Four more places are about the *locale itself*:
+   - `src/locale/index.ts` — re-export it from the barrel.
+   - `src/locale/index.test.ts` — add it to `LAUNCH_LOCALES`, and to
+     `CODE_OVERRIDES` if your export name (a valid JS identifier) differs
+     from `Locale.code` (a BCP 47 tag, which can contain a hyphen) — `enGB`
+     mapping to `'en-GB'` is the existing example.
+   - `package.json` — a `size-limit` entry for the new subpath's bundle.
+   - `site/src/locales.ts` — add it to `localeInfo` so the docs/playground
+     picks it up.
+
+7. **Document locale-specific grammatical quirks in a doc comment** on the
+   locale file, the way `es.ts` documents its ordinal-of-every-token
+   deviation and `ru.test.ts` pins the compound-ordinal round-scale gap
+   (`ru.ordinal.words(2000, ...)` giving `"две тысячный"` rather than the
+   idiomatic `"двухтысячный"`). Number words are wrong in embarrassing,
+   specific ways when machine-generated — a native-speaker review before
+   publishing is strongly preferred, especially for grammatical gender,
+   plural categories, and ordinal forms.
+
+8. **Run the shared conformance suite** —
+   `bun test src/locale/conformance.test.ts` — **and make sure it passes
+   unmodified.** This file is table-driven over every locale the barrel
+   exports, so your new locale is picked up automatically with no edits to
+   the suite itself; it asserts the structural shape `Locale` promises
+   (separator/scale-array/gender/currency invariants) and generic behavioral
+   invariants through the public API (`numberToWords`, ordinals,
+   format/parse and short/long-notation round trips, `moneyToWords`, gender
+   validation, `fractionToWords`) for every locale, without pinning any
+   locale's specific vocabulary — that pinning is what your `<code>.test.ts`
+   from step 5 is for. If this suite fails against your new locale, that's a
+   real bug in your `Locale` implementation to fix, not a suite to loosen.
+
+9. Run `bun run test:coverage` — the coverage gate is 100% per file, so your
+   new locale file needs no untested branch — and confirm the new subpath
+   resolves after a build (`bun run build`) with a real `import`/`require`
+   of the built output, not just by inspecting the file tree.
 
 ## Coding conventions
 

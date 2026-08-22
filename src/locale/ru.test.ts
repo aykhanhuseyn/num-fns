@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'bun:test'
+import { ordinalToWords } from '../number/suffix'
+import { numberToWords } from '../number/words'
 import { ru } from './ru'
 import type { WordChunk } from './types'
 
@@ -203,6 +205,91 @@ describe('ru.ordinal', () => {
   })
 })
 
+describe('numberToWords(value, { locale: ru }) — full plural-category conformance', () => {
+  // Each block below walks the ..1 / ..2-4 / ..5-0,11-14 boundary that
+  // `ruPlural` implements, through the real numberToWords pipeline (not
+  // hand-built chunks) so the plural-category selection, renderGroup, and
+  // compose's "одна"/"две" agreement are all exercised together.
+  it('agrees тысяча/тысячи/тысяч across the boundary, including a teen count', () => {
+    expect(numberToWords(1000, { locale: ru })).toBe('одна тысяча')
+    expect(numberToWords(2000, { locale: ru })).toBe('две тысячи')
+    expect(numberToWords(5000, { locale: ru })).toBe('пять тысяч')
+    expect(numberToWords(11000, { locale: ru })).toBe('одиннадцать тысяч')
+    expect(numberToWords(21000, { locale: ru })).toBe('двадцать одна тысяча')
+    expect(numberToWords(22000, { locale: ru })).toBe('двадцать две тысячи')
+    expect(numberToWords(25000, { locale: ru })).toBe('двадцать пять тысяч')
+    expect(numberToWords(111000, { locale: ru })).toBe('сто одиннадцать тысяч')
+  })
+
+  it('agrees миллион/миллиона/миллионов across the same boundary', () => {
+    expect(numberToWords(1e6, { locale: ru })).toBe('один миллион')
+    expect(numberToWords(2e6, { locale: ru })).toBe('два миллиона')
+    expect(numberToWords(5e6, { locale: ru })).toBe('пять миллионов')
+    expect(numberToWords(11e6, { locale: ru })).toBe('одиннадцать миллионов')
+    expect(numberToWords(21e6, { locale: ru })).toBe('двадцать один миллион')
+  })
+
+  it('agrees миллиард/миллиарда/миллиардов across the same boundary', () => {
+    expect(numberToWords(1e9, { locale: ru })).toBe('один миллиард')
+    expect(numberToWords(2e9, { locale: ru })).toBe('два миллиарда')
+    expect(numberToWords(5e9, { locale: ru })).toBe('пять миллиардов')
+  })
+
+  it('agrees триллион/триллиона/триллионов across the same boundary', () => {
+    expect(numberToWords(1e12, { locale: ru })).toBe('один триллион')
+    expect(numberToWords(2e12, { locale: ru })).toBe('два триллиона')
+    expect(numberToWords(5e12, { locale: ru })).toBe('пять триллионов')
+  })
+
+  it('resolves each group’s plural category independently in a mixed-magnitude number', () => {
+    expect(numberToWords(1234567, { locale: ru })).toBe(
+      'один миллион двести тридцать четыре тысячи пятьсот шестьдесят семь',
+    )
+  })
+})
+
+describe('numberToWords(value, { locale: ru }) — irregular teens/tens/hundreds sanity', () => {
+  it('spells 11-14 as the irregular teens, not a compound', () => {
+    expect(numberToWords(11, { locale: ru })).toBe('одиннадцать')
+    expect(numberToWords(12, { locale: ru })).toBe('двенадцать')
+    expect(numberToWords(13, { locale: ru })).toBe('тринадцать')
+    expect(numberToWords(14, { locale: ru })).toBe('четырнадцать')
+  })
+
+  it('spells 40 and 90 as the irregular tens words', () => {
+    expect(numberToWords(40, { locale: ru })).toBe('сорок')
+    expect(numberToWords(90, { locale: ru })).toBe('девяносто')
+  })
+
+  it('spells the round hundreds as single irregular words', () => {
+    expect(numberToWords(100, { locale: ru })).toBe('сто')
+    expect(numberToWords(200, { locale: ru })).toBe('двести')
+    expect(numberToWords(300, { locale: ru })).toBe('триста')
+    expect(numberToWords(500, { locale: ru })).toBe('пятьсот')
+  })
+})
+
+describe('ordinalToWords(value, { locale: ru })', () => {
+  it('pins the v1-scoped nominative masculine singular forms', () => {
+    expect(ordinalToWords(1, { locale: ru })).toBe('первый')
+    expect(ordinalToWords(2, { locale: ru })).toBe('второй')
+    expect(ordinalToWords(3, { locale: ru })).toBe('третий')
+    expect(ordinalToWords(8, { locale: ru })).toBe('восьмой')
+    expect(ordinalToWords(21, { locale: ru })).toBe('двадцать первый')
+    expect(ordinalToWords(40, { locale: ru })).toBe('сороковой')
+    expect(ordinalToWords(100, { locale: ru })).toBe('сотый')
+  })
+
+  it('known limitation: a scale-bound reading is not contracted into the correct Russian compound ordinal', () => {
+    // Correct Russian is a single compound word ("тысячный", "двухтысячный");
+    // v1 only ordinalizes the trailing scale word and leaves the leading
+    // count as a separate cardinal word — see the doc comment above
+    // ORDINAL_WORDS in ru.ts for why this is pinned rather than fixed here.
+    expect(ordinalToWords(1000, { locale: ru })).toBe('одна тысячный')
+    expect(ordinalToWords(2000, { locale: ru })).toBe('две тысячный')
+  })
+})
+
 describe('ru.notation', () => {
   it('uses тыс/млн/млрд/трлн abbreviations largest first', () => {
     const byThreshold = new Map(ru.notation.scales.map((s) => [s.threshold, s.short]))
@@ -230,5 +317,12 @@ describe('ru.currency', () => {
     expect(ru.currency.symbolPosition).toBe('after')
     expect(ru.currency.major.plurals).toEqual({ one: 'рубль', few: 'рубля', many: 'рублей' })
     expect(ru.currency.minor.plurals).toEqual({ one: 'копейка', few: 'копейки', many: 'копеек' })
+  })
+
+  it('gives the major unit masculine gender and the minor unit feminine gender', () => {
+    // "рубль" agrees masculine ("один рубль"); "копейка" agrees feminine
+    // ("одна копейка", "две копейки") — the mismatch this field exists to fix.
+    expect(ru.currency.major.gender).toBe('masculine')
+    expect(ru.currency.minor.gender).toBe('feminine')
   })
 })

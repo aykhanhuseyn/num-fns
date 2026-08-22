@@ -223,28 +223,98 @@ objects, `date-fns` style.
 
 ## 2. Per-locale linguistic work
 
-- [ ] **Russian** — plural categories for every scale word; `одна тысяча` not
+- [x] **Russian** — plural categories for every scale word; `одна тысяча` not
       `один тысяча`; ordinal forms decline by case and gender (scope this down
       to nominative masculine for v1 and document the limitation).
       (2026-08-21 addition, found while landing §1's gender option:
       `moneyToWords` reads ru minor amounts as `один копейка` — `копейка` is
       feminine. Needs a `LocaleCurrencyUnit.gender` field threaded through
       `moneyToWords`'s `numberToWords` calls; the `gender` option itself
-      already exists.)
-- [ ] **Spanish** — `veintiuno`/`veintiún` contraction, `ciento` vs `cien`,
+      already exists. 2026-08-22: **done** — `LocaleCurrencyUnit.gender`
+      landed (`locale/types.ts`), threaded through `moneyToWords`, and `ru`'s
+      minor unit set to `'feminine'`; `1.01` now reads `"один рубль одна
+      копейка"`, not `"...один копейка"`. Full plural-category conformance
+      (`тысяча`/`тысячи`/`тысяч` and the equivalent million/billion/trillion
+      forms) verified end-to-end and pinned in `ru.test.ts`. The
+      nominative-masculine-only ordinal scope is now a documented decision,
+      not just an implicit gap — see the new open item below for the one
+      concrete case it leaves incorrect, compound round-scale ordinals.)
+- [x] **Spanish** — `veintiuno`/`veintiún` contraction, `ciento` vs `cien`,
       `y` only between tens and ones (`treinta y uno`, but `ciento uno`).
       (2026-08-21: the missing apocope before `mil` is fixed — 21 000 was
       `veintiuno mil`, now `veintiún mil` — as part of §1's gender work; the
       contraction before `millón`+ and the `cien`/`ciento`/`y` rules were
-      already in. What's left here is a final conformance sweep.)
-- [ ] **English** — hyphenation (`twenty-one`), the `and` convention
+      already in. What's left here is a final conformance sweep. 2026-08-22:
+      **swept — clean.** Every rule above checked out correct and is now
+      pinned in `es.test.ts`; both currency units set `gender: 'masculine'`
+      explicitly (output unchanged, just self-documenting now). Two
+      pre-existing, deliberate deviations documented rather than "fixed":
+      `es` ordinalizes every token of a compound ordinal, not just the last
+      (unlike `en`/`ru`); and round multiples of a scale word ordinalize to
+      `"segundo milésimo"` rather than the idiomatic `"dosmilésimo"` — see
+      the new open item below, shared with `ru`.)
+- [x] **English** — hyphenation (`twenty-one`), the `and` convention
       (`one hundred and one` in en-GB, dropped in en-US), ordinal suffixes
       `st/nd/rd/th`.
-- [ ] **Azerbaijani** — already implemented; keep the vowel-harmony suffix
+      (2026-08-22: en-US hyphenation/suffixes were already done; the en-GB
+      `and` convention landed as the package's fifth launch locale,
+      `locale/en-gb.ts` (barrel export `enGB`, `Locale.code` `'en-GB'`,
+      subpath `num-fns/locale/en-gb`) — self-contained rather than importing
+      from `en.ts`, so `dist/locale/en-gb.js` stays independently
+      tree-shakeable and `en.ts`'s file-local word tables don't have to be
+      exported into the public `./locale` barrel. Identical to `en` in every
+      other respect: vocabulary, ordinals, short-scale `billion`/`trillion`,
+      separators, currency. Implements the `fractions` hook directly (`en`
+      itself structurally can't — see `locale/types.ts`'s doc comment), so
+      `fractionToWords` now has real vocabulary for three locales instead of
+      two.)
+- [x] **Azerbaijani** — already implemented; keep the vowel-harmony suffix
       derivation in `suffix.ts` and make sure the locale refactor doesn't sever
       it from the word list it depends on.
-- [ ] Locale-authoring guide in `CONTRIBUTING.md` plus a shared conformance test
+      (2026-08-22: verified intact — the harmony derivations still consume
+      `numberToWords(..., { locale: az })` live through the real call path,
+      not a stale hardcoded list, confirmed by tests added to exercise that
+      path end to end; `az.fractions` covered too.)
+- [x] Locale-authoring guide in `CONTRIBUTING.md` plus a shared conformance test
       suite every new locale must pass, so adding a fifth locale is mechanical.
+      (2026-08-22: both landed. `src/locale/conformance.test.ts` is
+      table-driven over every locale the barrel exports (a sixth locale is
+      picked up automatically) — structural checks (separator shape,
+      `words.scales`/`notation.scales` length alignment, gender declarations,
+      currency completeness) plus behavioral checks through the public API
+      (`numberToWords`, ordinals, format/parse and short/long-notation round
+      trips, `moneyToWords`, gender-option validation, `fractionToWords`) for
+      every locale, with no locale-specific vocabulary pinned — that stays in
+      each locale's own `*.test.ts`, per design. `CONTRIBUTING.md`'s "How to
+      add a new locale" section was rewritten into a full step-by-step guide
+      covering the `Locale` interface field group by field group, the four
+      subpath-wiring places (`package.json` `exports`/`typesVersions`,
+      `vite.config.ts`, `scripts/smoke/`) plus the four locale-wiring places
+      (`locale/index.ts`, `locale/index.test.ts`, the `size-limit` entry,
+      `site/src/locales.ts`), and names the conformance suite passing
+      unmodified as a required gate. Uses the fifth locale (`en-GB`, landed
+      this same pass) as the worked example throughout. See §5 for the
+      conformance suite's own checked-off entry and test totals.)
+- [ ] Compound ordinals at a round multiple of a scale word aren't idiomatic
+      in `ru` or `es` (surfaced 2026-08-22 doing the sweeps above):
+      `ordinalToWords(2000, { locale: ru })` gives `"две тысячный"`, not
+      `"двухтысячный"`; `ordinalToWords(2000, { locale: es })` gives
+      `"segundo milésimo"`, not `"dosmilésimo"`. Both need combining-prefix
+      morphology — a genuinely different word, not a transform of the
+      existing cardinal-then-ordinal pipeline — so this is deliberately
+      deferred rather than guessed at; pinned as a documented gap (not
+      silently wrong output) in `ru.test.ts` and `es.ts`'s doc comment
+      respectively.
+- [ ] `en`/`ru`/`es` don't have a real `decimalConnector` yet, so
+      `numberToWords` falls back to a plain space between the integer and
+      fractional reading (`"twelve thirty-four"`, not e.g. `"twelve point
+      three four"` or Spanish `"doce con treinta y cuatro"`/`"doce coma
+      treinta y cuatro"`). `az`'s `'tam'` is the only locale that has settled
+      this; the other three each need their own decision (`con` vs `coma` for
+      `es`, `point` for `en`, `запятая` for `ru`) before the field can be set
+      — already called out as a placeholder, not a correctness claim, in
+      `locale/types.ts`'s `decimalConnector` doc comment; tracked here now as
+      open linguistic work rather than left as a comment only.
 
 ## 3. Project structure — reconcile the vision doc with the actual repo
 
@@ -488,7 +558,14 @@ New domain from the vision doc.
 
 ## 5. Testing & quality
 
-- [ ] Shared conformance suite run against every locale (see §2).
+- [x] Shared conformance suite run against every locale (see §2).
+      (2026-08-22: `src/locale/conformance.test.ts` — see §2's locale guide/
+      conformance item for what it covers. 820/820 tests green (up from
+      565/46 files), 100% coverage per file unchanged — the new file is
+      itself a `*.test.ts`, excluded from the gate by the same rule every
+      other test file is. Exposed no real bugs: every invariant passed
+      against `az`, `en`, `en-GB`, `ru`, and `es` unmodified, on the first
+      run.)
 - [ ] Edge-case coverage per function: `NaN`, `Infinity`, `-0`, min/max bounds.
 - [x] Round-trip property tests (`fast-check`) for every format/parse pair.
       (2026-08-20: `fast-check@4.9.0` (exact-pinned devDep) plus six

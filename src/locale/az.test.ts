@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { formatMoney } from '../money/format'
 import { formatNumber } from '../number/format'
+import { fractionToWords } from '../number/fraction'
 import { toLongNotation, toShortNotation } from '../number/notation'
 import { getOrdinalSuffix, ordinalToWords } from '../number/suffix'
 import { numberToWords } from '../number/words'
@@ -139,6 +140,32 @@ describe('az.currency', () => {
     expect(az.currency.symbolPosition).toBe('after')
     expect(az.currency.major.word).toBe('manat')
     expect(az.currency.minor.word).toBe('qəpik')
+    // az has no grammatical gender (`az.words.genders` is unset), so its
+    // currency units must not declare one either.
+    expect(az.currency.major.gender).toBeUndefined()
+    expect(az.currency.minor.gender).toBeUndefined()
     expect(formatMoney(10, { locale: az })).toBe(`10,00 ${az.currency.symbol}`)
+  })
+})
+
+describe('az.fractions', () => {
+  it('exposes "yarım" as the idiomatic half, matching fractionToWords', () => {
+    expect(az.fractions?.half).toBe('yarım')
+    expect(fractionToWords(1, 2, { locale: az })).toBe('yarım')
+  })
+
+  it("derives two-way back/front locative harmony from the denominator's own cardinal reading (via numberToWords), matching fractionToWords", () => {
+    // number/fraction.test.ts already pins üçdə/dörddə/onda/yüzdə/yarım; these
+    // two denominators aren't covered there: "altı" (back vowel ı -> "-da")
+    // and the bare scale word "min" (front vowel i -> "-də"), confirming the
+    // harmony reads off whatever numberToWords(denominator, { locale: az })
+    // actually produces rather than a separate, potentially stale, word list.
+    for (const [numerator, denominator, expected] of [
+      [1, 6, 'altıda bir'],
+      [1, 1000, 'mində bir'],
+    ] as const) {
+      expect(az.fractions?.words(numerator, denominator)).toBe(expected)
+      expect(fractionToWords(numerator, denominator, { locale: az })).toBe(expected)
+    }
   })
 })

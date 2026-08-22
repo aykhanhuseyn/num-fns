@@ -54,6 +54,11 @@ describe('es.words', () => {
     expect(es.words.scales[1]).toBe('mil')
     expect(es.words.scales[2]).toEqual({ one: 'millón', other: 'millones' })
     expect(es.words.scales[3]).toEqual({ one: 'millardo', other: 'millardos' })
+    expect(es.words.scales[4]).toEqual({ one: 'billón', other: 'billones' })
+  })
+
+  it('has no decimalConnector, so numberToWords joins decimal parts with a plain space (todo.md §2 gap, shared with en/ru)', () => {
+    expect(es.words.decimalConnector).toBeUndefined()
   })
 
   it('declares masculine/feminine (Spanish has no neuter cardinals) with masculine as the default', () => {
@@ -93,17 +98,31 @@ describe('es.words', () => {
       expect(es.words.renderGroup(21)).toBe('veintiuno')
       expect(es.words.renderGroup(22)).toBe('veintidós')
       expect(es.words.renderGroup(23)).toBe('veintitrés')
+      expect(es.words.renderGroup(26)).toBe('veintiséis')
       expect(es.words.renderGroup(29)).toBe('veintinueve')
     })
 
     it('always renders the regular "ciento" hundreds form — "cien" is compose’s job', () => {
       expect(es.words.renderGroup(100)).toBe('ciento')
       expect(es.words.renderGroup(101)).toBe('ciento uno')
+      expect(es.words.renderGroup(110)).toBe('ciento diez')
+      expect(es.words.renderGroup(199)).toBe('ciento noventa y nueve')
     })
 
-    it('uses the irregular teens', () => {
+    it('uses the irregular teens, including the accented fused forms', () => {
       expect(es.words.renderGroup(11)).toBe('once')
+      expect(es.words.renderGroup(16)).toBe('dieciséis')
       expect(es.words.renderGroup(19)).toBe('diecinueve')
+    })
+
+    it('gives the irregular hundreds forms for 500/700/900, not the regular "-cientos" pattern', () => {
+      expect(es.words.renderGroup(500)).toBe('quinientos')
+      expect(es.words.renderGroup(700)).toBe('setecientos')
+      expect(es.words.renderGroup(900)).toBe('novecientos')
+    })
+
+    it('never inserts "y" between a hundreds word and the remainder ("quinientos veintiuno", no "y")', () => {
+      expect(es.words.renderGroup(521)).toBe('quinientos veintiuno')
     })
   })
 
@@ -117,6 +136,7 @@ describe('es.words', () => {
     it('special-cases standalone 100 to "cien", not "ciento"', () => {
       expect(es.words.compose([chunk(100, 'ciento', 0, '')])).toBe('cien')
       expect(es.words.compose([chunk(100, 'ciento', 1, 'mil')])).toBe('cien mil')
+      expect(es.words.compose([chunk(100, 'ciento', 2, 'millones')])).toBe('cien millones')
     })
 
     it('drops "uno" entirely before "mil" ("mil", not "un mil")', () => {
@@ -148,6 +168,14 @@ describe('es.words', () => {
       expect(es.words.compose([chunk(21, 'veintiuno', 2, 'millones')], 'feminine')).toBe(
         'veintiún millones',
       )
+      // Same for "millardo" and "billón" — only scaleIndex 1 ("mil") is
+      // gender-transparent; every other scale noun is masculine and unaffected.
+      expect(es.words.compose([chunk(200, 'doscientos', 3, 'millardos')], 'feminine')).toBe(
+        'doscientos millardos',
+      )
+      expect(es.words.compose([chunk(21, 'veintiuno', 4, 'billones')], 'feminine')).toBe(
+        'veintiún billones',
+      )
     })
 
     it('apocopates "uno"/"veintiuno" to "un"/"veintiún" before millón and above', () => {
@@ -161,6 +189,11 @@ describe('es.words', () => {
     it('joins multiple chunks largest-scale-first', () => {
       const chunks = [chunk(1, 'uno', 1, 'mil'), chunk(234, 'doscientos treinta y cuatro', 0, '')]
       expect(es.words.compose(chunks)).toBe('mil doscientos treinta y cuatro')
+    })
+
+    it('never inserts "y" between chunks, only a space ("mil uno", not "mil y uno")', () => {
+      const chunks = [chunk(1, 'uno', 1, 'mil'), chunk(1, 'uno', 0, '')]
+      expect(es.words.compose(chunks)).toBe('mil uno')
     })
   })
 })
@@ -195,6 +228,11 @@ describe('es.ordinal', () => {
     expect(es.ordinal.words(100, 'cien')).toBe('centésimo')
     expect(es.ordinal.words(135, 'ciento treinta y cinco')).toBe('centésimo trigésimo quinto')
   })
+
+  it('uses the RAE citation forms "undécimo"/"duodécimo" for 11th/12th, not "decimoprimero"/"decimosegundo"', () => {
+    expect(es.ordinal.words(11, 'once')).toBe('undécimo')
+    expect(es.ordinal.words(12, 'doce')).toBe('duodécimo')
+  })
 })
 
 describe('es.notation', () => {
@@ -225,5 +263,10 @@ describe('es.currency', () => {
     expect(es.currency.symbolPosition).toBe('after')
     expect(es.currency.major.plurals).toEqual({ one: 'euro', other: 'euros' })
     expect(es.currency.minor.plurals).toEqual({ one: 'céntimo', other: 'céntimos' })
+  })
+
+  it('gives both units masculine gender', () => {
+    expect(es.currency.major.gender).toBe('masculine')
+    expect(es.currency.minor.gender).toBe('masculine')
   })
 })
