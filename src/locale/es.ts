@@ -6,10 +6,15 @@ import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from './typ
  * v1 scope `ru.ts` documents for Russian case/gender). Unlike English or
  * Russian, Spanish ordinalizes *every* recognized token of a compound
  * number, not just the last one ("treinta y uno" -> "trigésimo primero",
- * not "treinta y primero") — see {@link ordinal.words} below. Round
- * multiples of a scale word (e.g. "dos mil" -> idiomatic "dosmilésimo") are
- * a known gap: this table ordinalizes each token independently, so it
- * produces "segundo milésimo" instead — documented rather than silently wrong.
+ * not "treinta y primero") — see {@link ordinal.words} below.
+ *
+ * Round multiples of a scale word ("dos mil" -> idiomatic "dosmilésimo")
+ * are the one case this per-token table does *not* handle by itself — fed
+ * "dos" and "mil" independently it would produce "segundo milésimo". That
+ * case is intercepted before this table is ever consulted, by
+ * {@link fusedScaleOrdinal} (`todo.md` §2); this table still supplies the
+ * scale-word stems that fusion fuses onto (`mil` -> `milésimo`, etc.) and
+ * still handles every number that doesn't end in a scale word.
  */
 const ORDINAL_WORDS: Readonly<Record<string, string>> = {
   cero: 'cero',
@@ -167,6 +172,22 @@ const HUNDREDS_FEMININE = [
 ]
 
 /**
+ * Scale words indexed by group-of-three-digits position, read from the
+ * right — index `0` is the units group (no word), `1` is `mil`, and so on.
+ * Hoisted to a standalone constant (rather than an inline array literal on
+ * `es.words.scales`) so {@link scaleChunks} can reuse it without going
+ * through `es` itself, which isn't assigned yet while its own object
+ * literal is being built.
+ */
+const SCALES: ReadonlyArray<string | Partial<Record<PluralCategory, string>>> = [
+  '',
+  'mil',
+  { one: 'millón', other: 'millones' },
+  { one: 'millardo', other: 'millardos' },
+  { one: 'billón', other: 'billones' },
+]
+
+/**
  * Renders a single 0-999 group as Spanish cardinal words: the regular
  * "ciento" hundreds form (100 alone is special-cased to "cien" by
  * `compose`, which is the only place that knows a chunk's overall value),
@@ -215,8 +236,138 @@ function renderRemainder(remainder: number, feminine: boolean): string {
 }
 
 /**
+ * Joins ordered chunks (largest scale first) into a cardinal reading. The
+ * two composition irregularities documented on {@link es}'s own doc
+ * comment live here: the "cien"/"ciento" split and "uno"/"veintiuno"
+ * apocopation. Extracted to a standalone named function (rather than an
+ * inline arrow assigned to `es.words.compose`) so {@link fusedScaleOrdinal}
+ * can call it directly on a subset of chunks — referencing `es.words.compose`
+ * from inside `es`'s own object literal isn't possible, since `es` isn't
+ * assigned yet while that literal is being built.
+ */
+function compose(chunks: readonly WordChunk[], gender?: GrammaticalGender): string {
+  return chunks
+    .map((chunk) => {
+      // "mil" is gender-transparent — agreement passes through it to the
+      // hundreds words ("doscientas mil casas") — so the thousands chunk
+      // is re-rendered in the requested gender. "millón" and above are
+      // masculine nouns and keep the chunk's ungendered rendering.
+      const baseWords =
+        chunk.scaleIndex === 1 && gender === 'feminine'
+          ? renderGroup(chunk.value, gender)
+          : chunk.words
+      const words = chunk.value === 100 ? 'cien' : baseWords
+      if (!chunk.scaleWord) return words
+      if (chunk.scaleIndex === 1) {
+        // "mil" never takes "uno"/"un" — 1000 is "mil", not "un mil" —
+        // and a larger thousands chunk apocopates its trailing
+        // "uno"/"una"/"veintiuno"/"veintiuna" ("veintiún mil", not
+        // "veintiuno mil"; see `apocopate`'s note on feminine "mil").
+        return chunk.value === 1 ? chunk.scaleWord : `${apocopate(words)} ${chunk.scaleWord}`
+      }
+      // "uno"/"veintiuno" apocopate to "un"/"veintiún" before a masculine
+      // scale noun ("un millón", "veintiún millones", "treinta y un millones").
+      return `${apocopate(words)} ${chunk.scaleWord}`
+    })
+    .join(' ')
+}
+
+/**
+ * Builds the base-1000 `WordChunk`s for a positive integer — the same
+ * right-to-left grouping `number/words.ts`'s `integerToWords` performs,
+ * duplicated here rather than imported because `locale/es.ts` can't import
+ * from `number/words.ts` without a circular dependency (`number/words.ts`
+ * is the one that imports every locale, `en` included — see that module's
+ * doc comment and `Locale.fractions`'s in `types.ts` for the same
+ * constraint elsewhere). Used only by {@link fusedScaleOrdinal}, to recover
+ * which scale chunk a round-multiple-of-1000 ordinal needs to fuse.
+ */
+function scaleChunks(value: number): WordChunk[] {
+  const groups: number[] = []
+  let remaining = value
+  while (remaining > 0) {
+    groups.push(remaining % 1000)
+    remaining = Math.floor(remaining / 1000)
+  }
+
+  const chunks: WordChunk[] = []
+  for (let i = groups.length - 1; i >= 0; i--) {
+    const groupValue = groups[i] as number
+    if (!groupValue) continue
+
+    const scaleEntry = SCALES[i] ?? ''
+    const category: PluralCategory = Math.abs(groupValue) === 1 ? 'one' : 'other'
+    const scaleWord =
+      typeof scaleEntry === 'string' ? scaleEntry : (scaleEntry[category] ?? scaleEntry.other ?? '')
+    chunks.push({ value: groupValue, words: renderGroup(groupValue), scaleIndex: i, scaleWord })
+  }
+  return chunks
+}
+
+/**
+ * Matches the " y " compound connector a multiplier needs when it isn't a
+ * contracted 21-29 form ("treinta y uno", not "veintiuno") — see
+ * {@link fusedScaleOrdinal}.
+ */
+const Y_CONNECTOR_REGEX = / y /
+/**
+ * Matches "veintiún" so {@link fusedScaleOrdinal} can drop its written
+ * accent once fused onto a following ordinal stem: the stress moves to the
+ * stem's own accented syllable ("veintiunmilésimo", not "veintiúnmilésimo").
+ * No other apocopated form ("un") carries a written accent to begin with.
+ */
+const VEINTIUN_ACCENT_REGEX = /veintiún/
+
+/**
+ * Fuses the RAE-idiomatic ordinal for a positive multiple of 1000 — "dos
+ * mil" (2000) fuses to "dosmilésimo", not the per-token "segundo milésimo"
+ * {@link ORDINAL_WORDS} would otherwise produce by ordinalizing "dos" and
+ * "mil" independently (`todo.md` §2). Only the number's *final* scale chunk
+ * fuses: its multiplier cardinal — the same "cien" special-case and
+ * "uno"/"veintiuno" apocopation `compose` applies before a scale word, with
+ * "veintiún"'s accent dropped since it's no longer word-final — attaches
+ * directly to that scale's ordinal stem (`ORDINAL_WORDS['mil']` ===
+ * `'milésimo'`, etc.), and a multiplier of exactly 1 is omitted entirely
+ * ("un millón" -> "millonésimo", not "unmillonésimo"). Any chunks above the
+ * fused one stay in ordinary cardinal form via {@link compose} ("2 003 000"
+ * -> "dos millones tresmilésimo").
+ *
+ * Returns `null` — falling back to {@link ORDINAL_WORDS}'s per-token
+ * algorithm — for `0`, for a value not divisible by 1000, and for a
+ * multiplier that itself needs the " y " connector ("treinta y uno" before
+ * "mil", 31 000): RAE's one-word fusion is attested for simple multipliers
+ * (units, teens, the contracted 21-29 forms, decades, hundreds, and their
+ * concatenation — "doscientoscincuentamilésimo" for 250 000) but there's no
+ * attested single-word fusion for a tens-and-ones compound that needs "y",
+ * so those numbers are left to the pre-existing per-token behavior rather
+ * than inventing an unattested spelling.
+ */
+function fusedScaleOrdinal(value: number): string | null {
+  if (value <= 0 || value % 1000 !== 0) return null
+
+  const chunks = scaleChunks(value)
+  const lastChunk = chunks[chunks.length - 1]
+  if (!lastChunk || lastChunk.scaleIndex === 0) return null
+
+  const stem = ORDINAL_WORDS[lastChunk.scaleWord]
+  if (!stem) return null
+
+  const multiplierWords = lastChunk.value === 100 ? 'cien' : renderGroup(lastChunk.value)
+  const apocopated = apocopate(multiplierWords)
+  if (Y_CONNECTOR_REGEX.test(apocopated)) return null
+
+  const fusedMultiplier =
+    lastChunk.value === 1
+      ? ''
+      : apocopated.replace(VEINTIUN_ACCENT_REGEX, 'veintiun').replace(WHITESPACE_REGEX, '')
+  const precedingChunks = chunks.slice(0, -1)
+  const prefix = precedingChunks.length > 0 ? `${compose(precedingChunks)} ` : ''
+  return `${prefix}${fusedMultiplier}${stem}`
+}
+
+/**
  * Spanish locale (`todo.md` §1/§2). Two composition irregularities live in
- * `words.compose`: the "cien"/"ciento" split (100 alone is "cien", but
+ * `compose` (above): the "cien"/"ciento" split (100 alone is "cien", but
  * "ciento" before more digits or a scale word, e.g. "cien mil" vs "ciento
  * uno") and "uno"/"veintiuno" apocopating to "un"/"veintiún" before a
  * masculine scale noun ("un millón", "veintiún millones") — except "mil",
@@ -225,6 +376,10 @@ function renderRemainder(remainder: number, feminine: boolean): string {
  * rather than the more colloquial "mil millones", per the leaning noted in
  * `todo.md` §1's scale-naming decision — the traditional Spanish "billón"
  * (`1e12`, long scale) is kept distinct from English "billion" (`1e9`).
+ * `words.decimalConnector` is `'coma'`, RAE's standard decimal reading
+ * ("doce coma treinta y cuatro" for `12.34`) — closing the `todo.md` §2 gap
+ * this locale previously left unset (a plain-space join, shared at the time
+ * with `en`/`ru`).
  */
 export const es: Locale = {
   code: 'es',
@@ -239,50 +394,23 @@ export const es: Locale = {
     teens: TEENS,
     tens: TENS,
     hundreds: HUNDREDS,
-    scales: [
-      '',
-      'mil',
-      { one: 'millón', other: 'millones' },
-      { one: 'millardo', other: 'millardos' },
-      { one: 'billón', other: 'billones' },
-    ],
+    scales: SCALES,
     negative: 'menos',
     // Only used between a tens word and a nonzero ones digit within a single
     // 0-999 group ("treinta y cinco"), never between scale groups — consumed
     // by `renderGroup`, not `compose` (see `Locale.words.and`'s doc comment
     // in `types.ts`).
     and: 'y',
+    // RAE's standard reading of the decimal point ("doce coma treinta y
+    // cuatro" for 12.34) — see the module doc comment's `todo.md` §2 note.
+    decimalConnector: 'coma',
     // Spanish cardinals distinguish masculine/feminine ("una casa",
     // "doscientas casas") but have no neuter counting form; masculine is
     // the citation form.
     genders: ['masculine', 'feminine'],
     defaultGender: 'masculine',
     renderGroup,
-    compose: (chunks: readonly WordChunk[], gender?: GrammaticalGender): string =>
-      chunks
-        .map((chunk) => {
-          // "mil" is gender-transparent — agreement passes through it to the
-          // hundreds words ("doscientas mil casas") — so the thousands chunk
-          // is re-rendered in the requested gender. "millón" and above are
-          // masculine nouns and keep the chunk's ungendered rendering.
-          const baseWords =
-            chunk.scaleIndex === 1 && gender === 'feminine'
-              ? renderGroup(chunk.value, gender)
-              : chunk.words
-          const words = chunk.value === 100 ? 'cien' : baseWords
-          if (!chunk.scaleWord) return words
-          if (chunk.scaleIndex === 1) {
-            // "mil" never takes "uno"/"un" — 1000 is "mil", not "un mil" —
-            // and a larger thousands chunk apocopates its trailing
-            // "uno"/"una"/"veintiuno"/"veintiuna" ("veintiún mil", not
-            // "veintiuno mil"; see `apocopate`'s note on feminine "mil").
-            return chunk.value === 1 ? chunk.scaleWord : `${apocopate(words)} ${chunk.scaleWord}`
-          }
-          // "uno"/"veintiuno" apocopate to "un"/"veintiún" before a masculine
-          // scale noun ("un millón", "veintiún millones", "treinta y un millones").
-          return `${apocopate(words)} ${chunk.scaleWord}`
-        })
-        .join(' '),
+    compose,
   },
   // Only "millón"/"millardo"/"billón" inflect by count; "mil" never does.
   plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
@@ -298,17 +426,24 @@ export const es: Locale = {
       }
       return 'º'
     },
-    // Spanish ordinalizes every recognized token of a compound number, not just
-    // the last one, and drops the "y" connector ("treinta y uno" (31) ->
-    // "trigésimo primero", not "trigésimo y primero"). See the module doc
-    // comment for the round-multiple-of-a-scale-word gap this leaves.
-    words: (_value: number, cardinalWords: string): string =>
-      cardinalWords
+    // A round multiple of a scale word ("dos mil", "veintiún millones")
+    // fuses into one word via `fusedScaleOrdinal` ("dosmilésimo",
+    // "veintiunmillonésimo") instead of reaching the per-token fallback
+    // below. Every other number ordinalizes *every* recognized token of its
+    // compound cardinal reading, not just the last one, and drops the "y"
+    // connector ("treinta y uno" (31) -> "trigésimo primero", not
+    // "trigésimo y primero").
+    words: (value: number, cardinalWords: string): string => {
+      const fused = fusedScaleOrdinal(value)
+      if (fused !== null) return fused
+
+      return cardinalWords
         .toLowerCase()
         .split(WHITESPACE_REGEX)
         .filter((token) => token !== 'y')
         .map((token) => ORDINAL_WORDS[token] ?? token)
-        .join(' '),
+        .join(' ')
+    },
   },
   notation: {
     scales: [

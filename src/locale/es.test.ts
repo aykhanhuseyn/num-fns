@@ -57,8 +57,8 @@ describe('es.words', () => {
     expect(es.words.scales[4]).toEqual({ one: 'billón', other: 'billones' })
   })
 
-  it('has no decimalConnector, so numberToWords joins decimal parts with a plain space (todo.md §2 gap, shared with en/ru)', () => {
-    expect(es.words.decimalConnector).toBeUndefined()
+  it('uses "coma" as the decimalConnector, RAE\'s standard decimal reading (todo.md §2)', () => {
+    expect(es.words.decimalConnector).toBe('coma')
   })
 
   it('declares masculine/feminine (Spanish has no neuter cardinals) with masculine as the default', () => {
@@ -232,6 +232,43 @@ describe('es.ordinal', () => {
   it('uses the RAE citation forms "undécimo"/"duodécimo" for 11th/12th, not "decimoprimero"/"decimosegundo"', () => {
     expect(es.ordinal.words(11, 'once')).toBe('undécimo')
     expect(es.ordinal.words(12, 'doce')).toBe('duodécimo')
+  })
+
+  describe('words fuses a round multiple of a scale word into one word (todo.md §2)', () => {
+    it('fuses "milésimo" for multiples of 1000, omitting a multiplier of exactly 1', () => {
+      expect(es.ordinal.words(1000, 'mil')).toBe('milésimo')
+      expect(es.ordinal.words(2000, 'dos mil')).toBe('dosmilésimo')
+      expect(es.ordinal.words(3000, 'tres mil')).toBe('tresmilésimo')
+      expect(es.ordinal.words(10000, 'diez mil')).toBe('diezmilésimo')
+      expect(es.ordinal.words(100000, 'cien mil')).toBe('cienmilésimo')
+      expect(es.ordinal.words(200000, 'doscientos mil')).toBe('doscientosmilésimo')
+      expect(es.ordinal.words(500000, 'quinientos mil')).toBe('quinientosmilésimo')
+    })
+
+    it('fuses "millonésimo"/"millardésimo"/"billonésimo" the same way for their scales', () => {
+      expect(es.ordinal.words(2e6, 'dos millones')).toBe('dosmillonésimo')
+      expect(es.ordinal.words(1e9, 'un millardo')).toBe('millardésimo')
+      expect(es.ordinal.words(2e12, 'dos billones')).toBe('dosbillonésimo')
+    })
+
+    it('fuses a multi-word multiplier (single apocopated word, or hundreds+tens concatenated)', () => {
+      expect(es.ordinal.words(21000, 'veintiún mil')).toBe('veintiunmilésimo')
+      expect(es.ordinal.words(250000, 'doscientos cincuenta mil')).toBe(
+        'doscientoscincuentamilésimo',
+      )
+    })
+
+    it('keeps a larger preceding chunk in cardinal form, fusing only the final scale chunk', () => {
+      expect(es.ordinal.words(2003000, 'dos millones tres mil')).toBe('dos millones tresmilésimo')
+    })
+
+    it('falls back to per-token ordinalization when the multiplier needs the "y" connector (unattested single-word fusion)', () => {
+      expect(es.ordinal.words(31000, 'treinta y un mil')).toBe('trigésimo un milésimo')
+    })
+
+    it('leaves a number that does not end in a scale word to the existing every-token behavior', () => {
+      expect(es.ordinal.words(2001, 'dos mil uno')).toBe('segundo milésimo primero')
+    })
   })
 })
 
