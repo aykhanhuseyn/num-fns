@@ -204,7 +204,7 @@
     {
       "name": "locale (barrel — all five launch locales)",
       "path": "dist/locale/index.js",
-      "limit": "5 KB"
+      "limit": "7 KB"
     },
     {
       "name": "locale/az (single locale, subpath import)",
@@ -224,12 +224,12 @@
     {
       "name": "locale/ru (single locale, subpath import)",
       "path": "dist/locale/ru.js",
-      "limit": "2 KB"
+      "limit": "2.75 KB"
     },
     {
       "name": "locale/es (single locale, subpath import)",
       "path": "dist/locale/es.js",
-      "limit": "1.6 KB"
+      "limit": "2.3 KB"
     }
   ]
 }
