@@ -295,26 +295,47 @@ objects, `date-fns` style.
       unmodified as a required gate. Uses the fifth locale (`en-GB`, landed
       this same pass) as the worked example throughout. See §5 for the
       conformance suite's own checked-off entry and test totals.)
-- [ ] Compound ordinals at a round multiple of a scale word aren't idiomatic
+- [x] Compound ordinals at a round multiple of a scale word aren't idiomatic
       in `ru` or `es` (surfaced 2026-08-22 doing the sweeps above):
       `ordinalToWords(2000, { locale: ru })` gives `"две тысячный"`, not
       `"двухтысячный"`; `ordinalToWords(2000, { locale: es })` gives
       `"segundo milésimo"`, not `"dosmilésimo"`. Both need combining-prefix
       morphology — a genuinely different word, not a transform of the
-      existing cardinal-then-ordinal pipeline — so this is deliberately
-      deferred rather than guessed at; pinned as a documented gap (not
-      silently wrong output) in `ru.test.ts` and `es.ts`'s doc comment
-      respectively.
-- [ ] `en`/`ru`/`es` don't have a real `decimalConnector` yet, so
+      existing cardinal-then-ordinal pipeline.
+      (2026-08-22, later the same day: **fixed in both locales.** When the
+      cardinal reading ends in a scale word, the final chunk is fused —
+      multiplier in combining form + scale ordinal stem — and preceding
+      chunks stay cardinal; numbers not ending in a scale word are
+      untouched (`2001` → `"две тысячи первый"` as before). `ru`:
+      `тысячный`/`двухтысячный`/`двадцатиоднотысячный`/`стотысячный`
+      (note: `100` combines as invariant `сто-`, not `ста-`)/
+      `двухсотпятидесятитысячный`/`миллионный`/`два миллиона
+      пятисоттысячный`, via a small combining-form table mirroring the
+      vocabulary tables. `es`: `milésimo`/`dosmilésimo`/`diezmilésimo`/
+      `cienmilésimo`/`quinientosmilésimo`/`veintiunmilésimo` (accent drops
+      when fused)/`millonésimo`/`millardésimo`/`dosbillonésimo`;
+      multipliers whose cardinal needs the `" y "` connector
+      (`treinta y uno`) have no attested one-word RAE fusion, so those
+      keep the per-token fallback (`31000` → `"trigésimo un milésimo"`,
+      documented in `es.ts`). Both known-limitation pins replaced with
+      correct expectations; changesets `ru-linguistics`/`es-linguistics`.)
+- [x] `en`/`ru`/`es` don't have a real `decimalConnector` yet, so
       `numberToWords` falls back to a plain space between the integer and
       fractional reading (`"twelve thirty-four"`, not e.g. `"twelve point
       three four"` or Spanish `"doce con treinta y cuatro"`/`"doce coma
       treinta y cuatro"`). `az`'s `'tam'` is the only locale that has settled
-      this; the other three each need their own decision (`con` vs `coma` for
-      `es`, `point` for `en`, `запятая` for `ru`) before the field can be set
-      — already called out as a placeholder, not a correctness claim, in
-      `locale/types.ts`'s `decimalConnector` doc comment; tracked here now as
-      open linguistic work rather than left as a comment only.
+      this; the other three each need their own decision before the field
+      can be set.
+      (2026-08-22, later the same day: **decided and set for all four.**
+      `en`/`enGB` `'point'` (`12.34` → `"twelve point thirty-four"`),
+      `ru` `'запятая'` (`"двенадцать запятая тридцать четыре"`), `es`
+      `'coma'` — RAE's standard reading, chosen over Latin-American
+      `'con'` (`"doce coma treinta y cuatro"`). All follow `az`'s
+      pre-existing convention of reading the fractional part as a plain
+      number (`0.5` → `"...пятьдесят"`/`"...fifty"`, same as `az`'s
+      `"sıfır tam əlli"`) — changing that reading would be a separate
+      decision. Changesets `en-decimal-connector`/`ru-linguistics`/
+      `es-linguistics`.)
 
 ## 3. Project structure — reconcile the vision doc with the actual repo
 

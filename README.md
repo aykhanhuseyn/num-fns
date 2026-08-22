@@ -142,11 +142,6 @@ function's JSDoc.
 - `ru` ordinals (`ordinalToWords`/`toOrdinal`) are nominative masculine
   singular only — no case or gender declension (`первая`, `первого`, etc.)
   in v1.
-- Compound ordinals at a round multiple of a scale word aren't idiomatic yet
-  in `ru` or `es`: `ordinalToWords(2000, { locale: ru })` gives `"две
-  тысячный"` instead of `"двухтысячный"`, and the Spanish equivalent gives
-  `"segundo milésimo"` instead of `"dosmilésimo"` — both documented in their
-  locale files rather than silently wrong.
 - `es` ordinalizes *every* token of a compound number (`"treinta y uno"` →
   `"trigésimo primero"`), unlike `en`/`ru`, which only transform the last
   token — a deliberate divergence, not a bug.
