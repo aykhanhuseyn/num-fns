@@ -15,8 +15,10 @@ projects alike.
 
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
-> **Status: pre-release.** Not yet published to npm — see [`todo.md`](./todo.md)
-> for what's left. The locale system is implemented: `az`, `en`, `en-GB`,
+> **Status: 0.2.0**, the first stable release — the alpha line ends here
+> (npm's `latest` previously pointed at `0.2.0-alpha.0`). Still `0.x`, so the
+> API can change in a minor bump until 1.0; see [`todo.md`](./todo.md) for
+> what's queued before then. The locale system is implemented: `az`, `en`, `en-GB`,
 > `ru`, and `es` are all wired into `numberToWords`, ordinals, notation, and
 > money/percentage formatting. **The default locale is `en`** if you don't
 > pass one — `az` was the implicit default before 2026-08-18 and now requires

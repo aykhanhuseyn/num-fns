@@ -1009,10 +1009,30 @@ New domain from the vision doc.
       build` (size-limit needs the built `dist/` output, not source).
       Verified with a real `bunx size-limit` run against a fresh build, not
       just by reading the config.)
-- [ ] First publish to npm — still unpublished at `0.1.0`; name is confirmed
-      available (see §0) but not reserved. The first `changeset version` run
-      will bump this off `0.1.0`, so this item and the version number should
-      be revisited together.
+- [x] First publish to npm. (2026-08-21: `0.2.0-alpha.0` published by hand
+      from the laptop, which reserved the name; npm's `latest` and `alpha`
+      dist-tags both pointed at it. `0.2.0-alpha.1` was versioned but never
+      reached the registry — the OIDC trusted-publisher config at
+      npmjs.com/package/num-fns/access still has to be fixed before
+      `release.yml` can publish on its own.)
+- [ ] **Publish `0.2.0`, the first stable version.** Changesets pre mode was
+      exited on 2026-08-25 and all 15 accumulated changesets were consumed
+      into `0.2.0` (`package.json` + `CHANGELOG.md` are already versioned and
+      committed on `main`). Two things stand between that commit and the
+      registry:
+      1. `main` has never been pushed. Pushing it runs `ci.yml` and then
+         `release.yml`, which — with no changeset files left — goes straight
+         to `bun run release` (`build` + `changeset publish`) rather than
+         opening a version PR.
+      2. **The npm trusted publisher must be configured first**, or that
+         publish fails the way `0.2.0-alpha.1` did (the registry masks the
+         unauthorized PUT as a 404). At
+         https://www.npmjs.com/package/num-fns/access set provider = GitHub
+         Actions, org/user = `aykhanhuseyn`, repository = `num-fns`, workflow
+         filename = `release.yml`. There is no `NPM_TOKEN` fallback by design.
+      Publishing `0.2.0` moves npm's `latest` off `0.2.0-alpha.0`; the stale
+      `alpha` dist-tag can be dropped with `npm dist-tag rm num-fns alpha`
+      once it lands.
 
 ## 8. Documentation
 
