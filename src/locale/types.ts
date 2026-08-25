@@ -74,8 +74,8 @@ export interface LocaleWords {
   /**
    * Scale words for each group-of-three-digits position, read from the
    * right: index `0` is the units group (always `''`), index `1` is
-   * thousands, index `2` millions, and so on — mirroring `SCALE_WORDS` in
-   * `number/words.ts`. Plain strings are used as-is; locales that inflect
+   * thousands, index `2` millions, and so on. Plain strings are used as-is;
+   * locales that inflect
    * the scale word by plural category (Russian) provide a category map
    * instead and `plural(n)` picks the form.
    */
@@ -188,7 +188,7 @@ export interface LocaleNotationScale {
 
 /** Short/long scale notation for `toShortNotation` / `toLongNotation`. */
 export interface LocaleNotation {
-  /** Notation scales, largest magnitude first — mirrors `SHORT_SCALES_AZ`/`SHORT_SCALES_EN` in `number/notation.ts`. */
+  /** Notation scales, largest magnitude first. Each locale declares its own table (see `locale/en.ts`, `locale/az.ts`). */
   scales: readonly LocaleNotationScale[]
   /** Whether a space separates the scaled number from the short abbreviation (az `'2,5 mln'` vs en `'2.5M'`). */
   spaceBeforeShort: boolean
@@ -257,7 +257,7 @@ export interface Locale {
   code: string
   /** Human-readable name for docs and error messages, e.g. `'Azerbaijani'`. */
   name?: string
-  /** Number formatting separators this locale defaults to (see `shared/constants.ts`). */
+  /** Number formatting separators this locale defaults to, e.g. `en`'s `','`/`'.'` against `az`'s `' '`/`','`. */
   formatDefaults: {
     /** Separator inserted between groups of three integer digits. */
     thousandsSeparator: string

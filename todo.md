@@ -436,21 +436,53 @@ was still open, which is why none of them had to wait on it:
       locale" scaffolder is still manual — `CONTRIBUTING.md`'s 9-step locale
       guide is the process, and automating it is tracked in §6.)
 
-Still open in this section — an API-surface question the layout decisions above
-do not resolve:
+The API-surface question the layout decisions above did not resolve:
 
-- [ ] **`az` word-list internals leak out of `number/words.ts`.** `ONES`,
-      `TENS`, `SCALE_WORDS`, `ZERO_WORD`, `NEGATIVE_WORD`, `DECIMAL_WORD` and
-      `HUNDRED_WORD` are Azerbaijani vocabulary exported from a locale-generic
-      module, so they land in `src/index.test.ts`'s pinned public surface and
-      would be semver-locked at 1.0. They stayed put through the locale
-      refactor because `number/digits.ts`'s legacy consumers and
-      `locale/az.ts` both reuse them (see `CLAUDE.md`'s `number/words.ts`
-      entry). Fix before 1.0: move them into `locale/az.ts` or a non-exported
-      module beside it, have `digits.ts` read its vocabulary off the `Locale`
-      object like every other consumer does, and drop the seven names from the
-      pinned list. This is the item `CLAUDE.md`'s export-surface note points
-      at as "slated for removal first".
+- [x] **`az` word-list internals leak out of `number/words.ts`.** **Done
+      2026-08-25.** The leak was wider than this item first described. Beyond
+      the seven word constants it named (`ONES`, `TENS`, `SCALE_WORDS`,
+      `ZERO_WORD`, `NEGATIVE_WORD`, `DECIMAL_WORD`, `HUNDRED_WORD`), the same
+      pattern held for `SHORT_SCALES_AZ` in `number/notation.ts` and for all
+      three of `shared/constants.ts` — `AZN_SYMBOL` plus
+      `DEFAULT_THOUSANDS_SEPARATOR`/`DEFAULT_DECIMAL_SEPARATOR`, whose
+      `DEFAULT_` prefix hid that their values (`' '` and `','`) are
+      Azerbaijani conventions rather than the `en` fallbacks (`','`/`'.'`)
+      every function actually uses. That is the full set of eleven
+      `SCREAMING_CASE` names `src/index.test.ts`'s comment already flagged.
+      All eleven are module-private in `locale/az.ts` now, grouped under one
+      doc comment at the top of the file, exactly how `en`, `en-gb`, `ru` and
+      `es` have always kept theirs — consumers read them as `az.words.*`,
+      `az.notation.scales`, `az.formatDefaults.*` and `az.currency.symbol`.
+      `src/shared/constants.ts` was deleted and its `export *` line dropped
+      from `src/index.ts`.
+
+      Two notes for the next reader. First, this item's stated blocker —
+      "`number/digits.ts`'s legacy consumers" — was already stale when it was
+      written: `digits.ts` reads `locale.words.zero`/`ones`/`negative` off the
+      `Locale` object and imports nothing from `number/words.ts`, so
+      `locale/az.ts` was the sole consumer of all eleven and the move needed no
+      call-site changes at all. Second, `az.notation.scales` is now a plain
+      literal like every other locale's rather than a `map` over
+      `SHORT_SCALES_AZ` reversed against `SCALE_WORDS` by index; the drift that
+      derivation guarded against is still caught, by `az.test.ts`'s assertion
+      that every entry round-trips through `toLongNotation` (which reads
+      `words.scales`).
+
+      Verified: 855 tests green, 100% per-file coverage, `check:type`,
+      `check:circular`, `biome`, `knip`, `attw --profile strict`, `publint
+      --strict`, `check:smoke` and `size-limit` all pass. No output changed —
+      the win is the pinned public surface dropping 57 → 46 names, all of
+      which are now functions, and the root bundle losing the dead Azerbaijani
+      vocabulary it had been carrying (size-limit `index` 5.35 → 5.1 kB).
+
+- [ ] **`resolveScaleWord` is the last internal the flat barrel leaks.**
+      Unlike the eleven above it is locale-generic, not Azerbaijani —
+      `number/notation.ts` imports it from `number/words.ts` for
+      `toLongNotation` — so it cannot simply move into a locale file. Making
+      it private means `src/index.ts` switching from `export *` to explicit
+      named re-exports for `./number/words`, which is a structural change to
+      the barrel and worth doing as its own diff. Decide before 1.0, since
+      leaving it exported semver-locks it.
 
 ## 4. Core features
 

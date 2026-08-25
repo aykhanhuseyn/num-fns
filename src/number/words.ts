@@ -45,46 +45,6 @@ function resolveGender(
 }
 
 /**
- * Words for digits 1-9. Index `0` is unused so digits can index directly.
- * Kept here (rather than moved fully into `locale/az.ts`) because
- * `number/digits.ts` and `locale/az.ts` both still reuse it — see those
- * modules' doc comments.
- */
-export const ONES = ['', 'bir', 'iki', 'üç', 'dörd', 'beş', 'altı', 'yeddi', 'səkkiz', 'doqquz']
-/** Words for the tens digit: 10, 20, ..., 90. Index `0` is unused. Reused by `locale/az.ts`. */
-export const TENS = [
-  '',
-  'on',
-  'iyirmi',
-  'otuz',
-  'qırx',
-  'əlli',
-  'altmış',
-  'yetmiş',
-  'səksən',
-  'doxsan',
-]
-
-/**
- * Scale words indexed by group-of-three-digits position, read from the
- * right: index 0 is the units group (no word), index 1 is thousands, etc.
- * Reused by `locale/az.ts` as `az.words.scales`.
- */
-export const SCALE_WORDS = ['', 'min', 'milyon', 'milyard', 'trilyon']
-
-/** Word for `0`. Reused by `locale/az.ts`. */
-export const ZERO_WORD = 'sıfır'
-
-/** Word prefixed to the spelled-out form of a negative number. Reused by `locale/az.ts`. */
-export const NEGATIVE_WORD = 'mənfi'
-
-/** Connector joining the integer and fractional part when spelling decimals. Reused by `locale/az.ts` as `decimalConnector`. */
-export const DECIMAL_WORD = 'tam'
-
-/** Hundreds-digit multiplier noun, reused for every digit 1-9. Reused by `locale/az.ts`. */
-export const HUNDRED_WORD = 'yüz'
-
-/**
  * Resolves a `Locale.words.scales` entry (a plain string, or a
  * plural-category map for locales like Russian that inflect scale words by
  * count) to the concrete word for `category`. Falls back to `'other'`, then

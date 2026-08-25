@@ -43,7 +43,7 @@ describe('az.words', () => {
     expect(az.words.hundreds).toBe('yüz')
   })
 
-  it('mirrors SCALE_WORDS for the scale list', () => {
+  it('lists a scale word per group-of-three position, units first', () => {
     expect(az.words.scales).toEqual(['', 'min', 'milyon', 'milyard', 'trilyon'])
   })
 
@@ -122,7 +122,7 @@ describe('az.notation', () => {
     }
   })
 
-  it('pairs each threshold with the SCALE_WORDS long form toLongNotation uses', () => {
+  it('pairs each threshold with the words.scales long form toLongNotation uses', () => {
     for (const { threshold, long } of az.notation.scales) {
       expect(toLongNotation(threshold, { locale: az })).toBe(`1 ${long}`)
     }

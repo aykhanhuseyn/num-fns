@@ -7,23 +7,20 @@ import * as numFns from './index'
  * adding or removing one should be a deliberate diff in this file rather than
  * a side effect of adding an `export *` to `index.ts`.
  *
- * The eleven SCREAMING_CASE constants and `resolveScaleWord` are Azerbaijani
- * word-list internals that leak out of `number/words.ts` (`todo.md` §3) — they
- * are listed because they *are* currently exported, not because they should
- * stay. Removing them before 1.0 is a planned breaking change.
+ * Every entry is a function as of 2026-08-25. The eleven SCREAMING_CASE
+ * constants that used to sit here were Azerbaijani vocabulary leaking out of
+ * `number/words.ts`, `number/notation.ts` and `shared/constants.ts`; they are
+ * module-private in `locale/az.ts` now and reachable as `az.words.*` /
+ * `az.notation.*` / `az.formatDefaults.*` / `az.currency.symbol`
+ * (`todo.md` §3).
+ *
+ * `resolveScaleWord` is the one remaining non-obvious entry. Unlike those
+ * constants it is locale-generic, not Azerbaijani — `number/notation.ts`
+ * imports it from `number/words.ts`, and the flat `export *` barrel carries
+ * it out to the root. Making it internal needs `index.ts` to switch from
+ * `export *` to explicit named re-exports, which is a separate change.
  */
 const PUBLIC_EXPORTS = [
-  'AZN_SYMBOL',
-  'DECIMAL_WORD',
-  'DEFAULT_DECIMAL_SEPARATOR',
-  'DEFAULT_THOUSANDS_SEPARATOR',
-  'HUNDRED_WORD',
-  'NEGATIVE_WORD',
-  'ONES',
-  'SCALE_WORDS',
-  'SHORT_SCALES_AZ',
-  'TENS',
-  'ZERO_WORD',
   'amortizationSchedule',
   'cardinalToOrdinalWords',
   'clamp',
@@ -72,33 +69,16 @@ const PUBLIC_EXPORTS = [
   'withSuffix',
 ] as const
 
-/** The subset of {@link PUBLIC_EXPORTS} that is data rather than a function. */
-const NON_FUNCTION_EXPORTS = new Set([
-  'AZN_SYMBOL',
-  'DECIMAL_WORD',
-  'DEFAULT_DECIMAL_SEPARATOR',
-  'DEFAULT_THOUSANDS_SEPARATOR',
-  'HUNDRED_WORD',
-  'NEGATIVE_WORD',
-  'ONES',
-  'SCALE_WORDS',
-  'SHORT_SCALES_AZ',
-  'TENS',
-  'ZERO_WORD',
-])
-
 describe('package root', () => {
   it('exports exactly the pinned public surface', () => {
     expect(Object.keys(numFns).sort()).toEqual([...PUBLIC_EXPORTS])
   })
 
-  it('exports every named function as a callable, and nothing as undefined', () => {
+  it('exports every named entry as a callable, and nothing as undefined', () => {
     for (const name of PUBLIC_EXPORTS) {
       const value = (numFns as Record<string, unknown>)[name]
       expect(value).toBeDefined()
-      if (!NON_FUNCTION_EXPORTS.has(name)) {
-        expect(typeof value).toBe('function')
-      }
+      expect(typeof value).toBe('function')
     }
   })
 

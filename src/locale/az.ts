@@ -1,20 +1,55 @@
-import { SHORT_SCALES_AZ } from '../number/notation'
-import {
-  DECIMAL_WORD,
-  HUNDRED_WORD,
-  NEGATIVE_WORD,
-  numberToWords,
-  ONES,
-  SCALE_WORDS,
-  TENS,
-  ZERO_WORD,
-} from '../number/words'
-import {
-  AZN_SYMBOL,
-  DEFAULT_DECIMAL_SEPARATOR,
-  DEFAULT_THOUSANDS_SEPARATOR,
-} from '../shared/constants'
+import { numberToWords } from '../number/words'
 import type { Locale, WordChunk } from './types'
+
+/**
+ * Azerbaijani number vocabulary. Module-private, like every other locale's
+ * (`en`, `en-gb`, `es`, `ru` all keep their word lists local): these are
+ * `az`'s data, reachable by consumers as `az.words.*`, not as free-standing
+ * package exports.
+ *
+ * They lived in `number/words.ts`, `number/notation.ts` and
+ * `shared/constants.ts` until 2026-08-25 — a leftover from the days when
+ * those modules hardcoded Azerbaijani, before the `todo.md` §1 locale
+ * refactor made them locale-generic. That left eleven `SCREAMING_CASE`
+ * names in the package's pinned public surface which no consumer had a
+ * reason to import and which would have been semver-locked at 1.0
+ * (`todo.md` §3). Nothing outside this file reads them any more —
+ * `number/digits.ts`, the last non-`az` consumer, reads `locale.words.zero`
+ * / `ones` / `negative` off the `Locale` object like every other module.
+ */
+
+/** Words for digits 1-9. Index `0` is unused so digits can index directly. */
+const ONES = ['', 'bir', 'iki', 'üç', 'dörd', 'beş', 'altı', 'yeddi', 'səkkiz', 'doqquz']
+
+/** Words for the tens digit: 10, 20, ..., 90. Index `0` is unused. */
+const TENS = ['', 'on', 'iyirmi', 'otuz', 'qırx', 'əlli', 'altmış', 'yetmiş', 'səksən', 'doxsan']
+
+/**
+ * Scale words indexed by group-of-three-digits position, read from the
+ * right: index 0 is the units group (no word), index 1 is thousands, etc.
+ */
+const SCALE_WORDS = ['', 'min', 'milyon', 'milyard', 'trilyon']
+
+/** Word for `0`. */
+const ZERO_WORD = 'sıfır'
+
+/** Word prefixed to the spelled-out form of a negative number. */
+const NEGATIVE_WORD = 'mənfi'
+
+/** Connector joining the integer and fractional part when spelling decimals. */
+const DECIMAL_WORD = 'tam'
+
+/** Hundreds-digit multiplier noun, reused for every digit 1-9. */
+const HUNDRED_WORD = 'yüz'
+
+/** Separator between groups of three digits, e.g. `1 234 567`. */
+const THOUSANDS_SEPARATOR = ' '
+
+/** Separator between the integer and fractional part, e.g. `1234,56`. */
+const DECIMAL_SEPARATOR = ','
+
+/** Currency symbol for the Azerbaijani manat. */
+const MANAT_SYMBOL = '₼'
 
 /**
  * Maps the last vowel of an Azerbaijani number word to the correct ordinal
@@ -175,8 +210,9 @@ function azFractionWords(numerator: number, denominator: number): string {
 /**
  * Azerbaijani locale — the reference implementation the locale refactor
  * (`todo.md` §1) is built against. Every field is ported unchanged from the
- * hardcoded constants in `number/words.ts`, `number/notation.ts` and
- * `shared/constants.ts` rather than re-derived, and `numberToWords`,
+ * constants that `number/words.ts`, `number/notation.ts` and
+ * `shared/constants.ts` used to hardcode (they live at the top of this file
+ * now, see their doc comment) rather than re-derived, and `numberToWords`,
  * `toOrdinal`/`ordinalToWords`, `toShortNotation`/`toLongNotation`, and
  * `formatMoney`/`moneyToWords` are all verified (`az.test.ts`) to produce
  * byte-identical output to the pre-refactor hardcoded functions when called
@@ -186,8 +222,8 @@ export const az: Locale = {
   code: 'az',
   name: 'Azerbaijani',
   formatDefaults: {
-    thousandsSeparator: DEFAULT_THOUSANDS_SEPARATOR,
-    decimalSeparator: DEFAULT_DECIMAL_SEPARATOR,
+    thousandsSeparator: THOUSANDS_SEPARATOR,
+    decimalSeparator: DECIMAL_SEPARATOR,
   },
   words: {
     zero: ZERO_WORD,
@@ -220,19 +256,22 @@ export const az: Locale = {
     words: (_value, cardinalWords) => azOrdinalWords(cardinalWords),
   },
   notation: {
-    // Long-scale word for each SHORT_SCALES_AZ entry lives at the matching
-    // magnitude in SCALE_WORDS, e.g. SHORT_SCALES_AZ[0] is 1e12/"trln" and
-    // SCALE_WORDS[4] is "trilyon" — both the largest magnitude.
-    scales: SHORT_SCALES_AZ.map(([threshold, short], index) => ({
-      threshold,
-      short,
-      long: SCALE_WORDS[SCALE_WORDS.length - 1 - index] as string,
-    })),
+    // Written out rather than derived from SCALE_WORDS, matching how every
+    // other locale declares this table. The `long` forms are still held to
+    // SCALE_WORDS by `az.test.ts`, which asserts each entry round-trips
+    // through `toLongNotation` — and that reads `words.scales`, so the two
+    // lists cannot drift apart silently.
+    scales: [
+      { threshold: 1e12, short: 'trln', long: 'trilyon' },
+      { threshold: 1e9, short: 'mlrd', long: 'milyard' },
+      { threshold: 1e6, short: 'mln', long: 'milyon' },
+      { threshold: 1e3, short: 'min', long: 'min' },
+    ],
     spaceBeforeShort: true,
   },
   currency: {
     code: 'AZN',
-    symbol: AZN_SYMBOL,
+    symbol: MANAT_SYMBOL,
     symbolPosition: 'after',
     major: { word: 'manat' },
     minor: { word: 'qəpik' },

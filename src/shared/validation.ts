@@ -4,7 +4,7 @@
  * "Shared range-validation helper instead of repeating checks per module").
  *
  * These are internal implementation helpers, not public API — unlike
- * `shared/types.ts`/`shared/constants.ts`, they aren't re-exported from
+ * `shared/types.ts`, they aren't re-exported from
  * `src/index.ts`. A consumer has no use for "assert this is finite"; they
  * only see the `RangeError` a public function throws, which is exactly what
  * these produce. Each `context` argument is the name of the calling public

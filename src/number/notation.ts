@@ -8,14 +8,6 @@ import type {
 import { parseNumber } from './format'
 import { resolveScaleWord } from './words'
 
-/** Short-scale magnitude/abbreviation pairs, largest first. Reused by `locale/az.ts`. */
-export const SHORT_SCALES_AZ: ReadonlyArray<readonly [number, string]> = [
-  [1e12, 'trln'],
-  [1e9, 'mlrd'],
-  [1e6, 'mln'],
-  [1e3, 'min'],
-]
-
 /**
  * Abbreviates a large number to a short scaled form, using `options.locale`'s
  * `notation.scales` (defaults to `en`: `K`/`M`/`B`/`T`).
