@@ -339,39 +339,74 @@ objects, `date-fns` style.
 
 ## 3. Project structure — reconcile the vision doc with the actual repo
 
-The updated project instructions suggest a top-level layout —
+**Resolved 2026-08-25.** The project instructions suggested a top-level layout —
 `src/{format,parse,arithmetic,humanize,locale,stats,financial,utils}/` plus a
-separate top-level `test/` directory and a `scripts/` directory — that
-diverges from what's actually built and from what `CLAUDE.md` documents as
-deliberate. Nothing here should be restructured silently; each point below is
-a decision to make (and reflect back into `CLAUDE.md`) before or during the
-locale refactor, since moving files now vs. after §1 lands changes how much
-gets touched twice.
+separate top-level `test/` directory and a `scripts/` directory — that diverges
+from what's actually built and from what `CLAUDE.md` documents as deliberate.
+Every divergence was reviewed against the code rather than applied on faith:
+the three structural ones were **rejected**, the one real gap (`scripts/`) had
+already been filled, and nothing was restructured. The reasoning now lives in
+`CLAUDE.md`'s Architecture section under "Layout decisions", so it doesn't get
+re-proposed by the next reader of the vision doc.
 
-- [ ] **Tests: colocated vs. top-level `test/`.** Every existing test is
-      `*.test.ts` next to its module, and `CLAUDE.md` documents this as
-      intentional ("no separate `tests/` directory"). The suggested structure
-      lists a top-level `test/`. Decide whether the vision doc's `test/` is
-      aspirational boilerplate (ignore it, keep colocating) or an actual
-      request to move tests — if the latter, update `CLAUDE.md` in the same
-      change so the two docs don't disagree.
-- [ ] **`format/` + `parse/` split vs. per-domain `format.ts`.** Today
-      `formatNumber`/`parseNumber` live together in `src/number/format.ts`
-      (same for money, percentage). The suggested structure implies splitting
-      format and parse into separate top-level directories across every
-      domain. This is a bigger reorg than it looks — decide before adding the
-      new domains below, so they're not built twice.
-- [ ] **`humanize/` as a home for words/ordinal/notation/roman.** Currently
-      under `src/number/`. If the `format/`+`parse/` split happens, `words.ts`,
-      `suffix.ts`, `notation.ts` and `roman.ts` don't fit either bucket and
-      plausibly move to a `humanize/` directory, matching the vision doc.
-- [ ] Once the above are decided, update the "Architecture" section of
-      `CLAUDE.md` to match — it's the source of truth `Claude Code` reads, and
-      it currently describes the pre-reorg layout.
+- [x] **Tests: colocated vs. top-level `test/`.** **Decided: keep colocating**
+      (2026-08-25). The vision doc's `test/` is scaffold boilerplate, not a
+      request. Colocation is load-bearing in five places: the
+      `src/**/*.test.ts` glob is what keeps test files out of the bundle and
+      out of the emitted declarations (`vite.config.ts`'s dts `exclude`,
+      `tsconfig.build.json`), `knip.json`'s project globs assume it,
+      `scripts/new-function.ts` scaffolds the colocated pair, and the 100%
+      per-file coverage gate leans on every module having a visible test
+      neighbour. `src/shared/arbitraries.test.ts` also carries a `.test.ts`
+      name *specifically* to inherit those excludes, which only works inside
+      `src/`. Against that, moving 47 files into a mirror tree rewrites every
+      relative import and buys nothing — this package has no fixtures, no e2e
+      layer and no separate test build. `CLAUDE.md`'s Testing section records
+      it as settled rather than incidental.
+- [x] **`format/` + `parse/` split vs. per-domain `format.ts`.** **Decided:
+      keep the per-domain pair** (2026-08-25). Each formatter and its inverse
+      parser share one small file — `number/format.ts` (121 lines),
+      `money/format.ts` (55), `percentage/format.ts` (76), 252 in total — and
+      they are written, changed and tested as a unit: money and percentage
+      parsing both delegate to `parseNumber`, their option interfaces sit
+      together in `shared/types.ts`, and the `*.property.test.ts` files assert
+      `parse(format(n)) === n` as a single invariant. Splitting would put both
+      halves of every round trip in different directories and fragment the
+      `number`/`money`/`percentage` grouping that callers actually think in.
+      The vision doc's shape fits a library where formatting and parsing are
+      large independent subsystems; here they are three inverse pairs. Note
+      the layout is invisible to consumers either way — the barrel is a flat
+      `export *` and the `exports` map only publishes `.` and `./locale/*` —
+      so this buys no API benefit to trade against the churn.
+- [x] **`humanize/` as a home for words/ordinal/notation/roman.** **Decided:
+      no `humanize/` directory** (2026-08-25). `src/number/` is already almost
+      entirely locale-driven word and scale rendering — `locale` identifiers
+      per module, comments stripped: `words.ts` 23, `notation.ts` 18,
+      `fraction.ts` 11, `suffix.ts` 10, `format.ts` 7, `digits.ts` 5, with
+      `roman.ts` and `byte-size.ts` at 0 (`notation.ts` ranking second is
+      itself the point) — so a `humanize/` directory would swallow most of the
+      directory and leave a two-file rump rather than producing two coherent
+      halves. And
+      `notation.ts` straddles the digits/words line by design:
+      `toShortNotation` emits `"1.5M"` while `toLongNotation` emits
+      `"1 million 234 thousand 567"`, and all four functions share one scale
+      table, so it would have to be split across directories or parked
+      arbitrarily. The only real cleavage in this code is locale-dependent vs.
+      locale-independent, which is not what the vision doc asked for and does
+      not earn a directory for two files.
+- [x] Once the above are decided, update the "Architecture" section of
+      `CLAUDE.md` to match. (2026-08-25: done — added a "Layout decisions"
+      block recording all three rejections with their reasoning, corrected the
+      `src/arithmetic/`/`src/utils/` paragraph that still called the
+      `format/`+`parse/` question open, and strengthened the Testing section's
+      colocation line from a description into a decision. `CONTRIBUTING.md`
+      got the same treatment: its "no separate `test/` directory" line now
+      points at the decision, and its step-1 directory list gained the
+      `stats/` and `financial/` domains it had been missing since 2026-08-10.)
 
 New domains the vision doc calls for that don't conflict with anything above —
-these can be added as new top-level directories regardless of how the
-format/parse question resolves:
+these were landed as new top-level directories while the format/parse question
+was still open, which is why none of them had to wait on it:
 
 - [x] `src/arithmetic/` (see §4). (2026-08-09: created with `clamp`/`inRange`;
       `add`/`subtract`/`multiply`/`divide`/`round` still pending on the
@@ -392,10 +427,30 @@ format/parse question resolves:
       payment and amortization schedule still pending, see §4.)
 - [x] `src/utils/` for the base-conversion and common utility helpers (see §4).
       (2026-08-09: created with `toBase`/`fromBase` and `isEven`/`isOdd`.)
-- [ ] `scripts/` — currently doesn't exist. Natural home for the "add a new
-      function" / "add a new locale" scaffolding scripts §8's `CONTRIBUTING.md`
-      needs to reference, so the guide points at something real instead of
-      describing a manual process.
+- [x] `scripts/` — exists. (Filled incrementally rather than as its own task:
+      `scripts/fix-dist-types.ts` (the `.d.cts` post-build step, §7),
+      `scripts/new-function.ts` (the `bun run new:function` scaffolder that
+      `CONTRIBUTING.md` §"How to add a new function" points at, so the guide
+      references something real), and `scripts/smoke.mjs` +
+      `scripts/smoke/*` (the consumer smoke fixtures, §5). The "add a new
+      locale" scaffolder is still manual — `CONTRIBUTING.md`'s 9-step locale
+      guide is the process, and automating it is tracked in §6.)
+
+Still open in this section — an API-surface question the layout decisions above
+do not resolve:
+
+- [ ] **`az` word-list internals leak out of `number/words.ts`.** `ONES`,
+      `TENS`, `SCALE_WORDS`, `ZERO_WORD`, `NEGATIVE_WORD`, `DECIMAL_WORD` and
+      `HUNDRED_WORD` are Azerbaijani vocabulary exported from a locale-generic
+      module, so they land in `src/index.test.ts`'s pinned public surface and
+      would be semver-locked at 1.0. They stayed put through the locale
+      refactor because `number/digits.ts`'s legacy consumers and
+      `locale/az.ts` both reuse them (see `CLAUDE.md`'s `number/words.ts`
+      entry). Fix before 1.0: move them into `locale/az.ts` or a non-exported
+      module beside it, have `digits.ts` read its vocabulary off the `Locale`
+      object like every other consumer does, and drop the seven names from the
+      pinned list. This is the item `CLAUDE.md`'s export-surface note points
+      at as "slated for removal first".
 
 ## 4. Core features
 

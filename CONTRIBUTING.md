@@ -96,8 +96,9 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
    yourself. See `scripts/new-function.ts`.
 1. **Pick the right directory.** Each unit of functionality lives in its own
    directory under `src/` (`number/`, `money/`, `percentage/`, `arithmetic/`,
-   `utils/`, ...). If your function is a new formatter/parser pair for an
-   existing unit, add it to that unit's `format.ts`. If it's a standalone
+   `stats/`, `financial/`, `utils/`). If your function is a new
+   formatter/parser pair for an existing unit, add it to that unit's
+   `format.ts`. If it's a standalone
    concern (like `toRoman`/`fromRoman` or `clamp`/`inRange`), give it its own
    file — see "Package design principles" below for when to split.
 2. **Write the function.** Follow the conventions already in the codebase:
@@ -113,9 +114,10 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
      reference site exists.
 3. **Add a colocated test file** named `<module>.test.ts` next to the module
    it covers, using `bun:test` (`describe`/`it`/`expect`) — there is no
-   separate `test/` directory. At minimum, cover: the documented default
-   behavior, at least one option override (if the function takes options),
-   and every thrown-error case.
+   separate `test/` directory, and that is a settled decision rather than an
+   omission (see `CLAUDE.md`'s "Layout decisions", `todo.md` §3). At minimum,
+   cover: the documented default behavior, at least one option override (if
+   the function takes options), and every thrown-error case.
 4. **Re-export it flatly from `src/index.ts`**, in alphabetical order by file
    path. There is no default export and no namespacing — every function is
    imported directly from the package root (`import { clamp } from
