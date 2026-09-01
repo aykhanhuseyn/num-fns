@@ -475,7 +475,7 @@ The API-surface question the layout decisions above did not resolve:
       which are now functions, and the root bundle losing the dead Azerbaijani
       vocabulary it had been carrying (size-limit `index` 5.35 → 5.1 kB).
 
-- [ ] **`resolveScaleWord` is the last internal the flat barrel leaks.**
+- [x] **`resolveScaleWord` is the last internal the flat barrel leaks.**
       Unlike the eleven above it is locale-generic, not Azerbaijani —
       `number/notation.ts` imports it from `number/words.ts` for
       `toLongNotation` — so it cannot simply move into a locale file. Making
@@ -483,6 +483,15 @@ The API-surface question the layout decisions above did not resolve:
       named re-exports for `./number/words`, which is a structural change to
       the barrel and worth doing as its own diff. Decide before 1.0, since
       leaving it exported semver-locks it.
+      (2026-09-01: done, and the change was one line — `./number/words`
+      exports exactly `numberToWords` and `resolveScaleWord`, so
+      `export { numberToWords } from './number/words'` covers it. Every other
+      module in the barrel keeps `export *`; the comment above that line and
+      `CLAUDE.md` both record it as the single deliberate exception, so a
+      future `export *` sweep doesn't undo it. `number/notation.ts` and the
+      locale tests import `resolveScaleWord` from the module directly and did
+      not change. **Pinned public surface: 46 → 45 names.** No output changed;
+      `dist` and every locale bundle are byte-identical.)
 
 ## 4. Core features
 
@@ -560,7 +569,7 @@ The API-surface question the layout decisions above did not resolve:
       `shared/types.ts`/`shared/constants.ts`. `src/number/`, `src/stats/`,
       and `src/utils/` still validate inline; migrate opportunistically
       rather than in one large sweep.)
-- [ ] **Reject ambiguous separator configurations.** `parseNumber` (and
+- [x] **Reject ambiguous separator configurations.** `parseNumber` (and
       therefore `parseMoney`/`parsePercentage`, which delegate to it) accepts
       `thousandsSeparator === decimalSeparator` and then strips both, silently
       returning a wrong number: `parseNumber('0.001', { thousandsSeparator:
@@ -576,6 +585,26 @@ The API-surface question the layout decisions above did not resolve:
       scale word ends up glued to the next digit group ("1 million234
       thousand"). Either reject an empty `groupSeparator` at format time or
       document it as unsupported.
+      (2026-09-01: both fixed by rejecting, in two guards added to
+      `shared/validation.ts` — the module's first non-`arithmetic`/`financial`
+      consumers. `assertDistinctSeparators` throws `RangeError` from
+      `formatNumber` *and* `parseNumber` when the two separators are equal,
+      including when both are `''` (an empty decimal separator glues the
+      fractional digits onto the integer part: `1.5` -> `'15'`);
+      `formatMoney`/`parseMoney` and `formatPercentage`/`parsePercentage`
+      inherit it by delegation and have tests pinning that they do.
+      `assertGroupSeparator` throws from `toLongNotation` *and*
+      `parseLongNotation` when `groupSeparator` is empty **or contains a
+      digit** — the digit case was found while writing the guard and is the
+      same bug ("1 million0234 thousand"). A separator whose characters occur
+      inside the locale's own scale words also breaks the round trip, but that
+      is locale-dependent and documented as the caller's responsibility rather
+      than validated. The `fc.pre` exclusion in
+      `number/format.property.test.ts` and the separator list in
+      `number/notation.property.test.ts` are replaced by properties asserting
+      the throw. Suite 855 -> 864 tests, 100% per-file coverage held, `index`
+      size-limit 5.1 -> 5.21 kB. Breaking: shipped as one `minor` changeset
+      with the `resolveScaleWord` removal, i.e. `0.3.0`.)
 - [ ] BigInt input path for `numberToWords` / `toLongNotation`.
 - [ ] Roman numerals above 3999 (vinculum notation) — currently out of scope.
       Note roman numerals are locale-independent and stay outside the locale system.
@@ -695,9 +724,12 @@ New domain from the vision doc.
       both `'.'`) strips both and returns a silently wrong number — `0.001`
       parses as `1` — instead of throwing the way the rest of the package
       does on ambiguous input. See the §4 item added for it.
+      **Fixed 2026-09-01** — `formatNumber`/`parseNumber` now throw; see §4.
       (b) `parseLongNotation` cannot read `toLongNotation`'s own output when
       `groupSeparator: ''` ("1 million234 thousand"); the property excludes it
-      and documents why.
+      and documents why. **Fixed 2026-09-01** — `toLongNotation` and
+      `parseLongNotation` reject that separator (and any containing a digit);
+      the property now asserts the throw. See §4.
       (c) Found 2026-08-21, while verifying the Scale naming decision (§1):
       `formatNumber`'s `'halfUp'`-rounding property test is flaky — it fails
       roughly 1 run in 5-10 with a counterexample like

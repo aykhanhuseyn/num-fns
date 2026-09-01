@@ -5,6 +5,7 @@ import type {
   ShortNotationOptions,
   ShortNotationParseOptions,
 } from '../shared/types'
+import { assertGroupSeparator } from '../shared/validation'
 import { parseNumber } from './format'
 import { resolveScaleWord } from './words'
 
@@ -111,6 +112,10 @@ export function parseShortNotation(value: string, options: ShortNotationParseOpt
  * @example
  * toLongNotation(1234567); // "1 million 234 thousand 567"
  * toLongNotation(1234567, { locale: az }); // "1 milyon 234 min 567"
+ *
+ * @throws {RangeError} when `groupSeparator` is empty or contains a digit —
+ * either would run a scale word into the next group's digits, producing a
+ * string {@link parseLongNotation} cannot read back.
  */
 export function toLongNotation(value: number, options: LongNotationOptions = {}): string {
   if (!Number.isFinite(value)) {
@@ -121,6 +126,9 @@ export function toLongNotation(value: number, options: LongNotationOptions = {})
   }
 
   const { groupSeparator = ' ', locale = en } = options
+
+  assertGroupSeparator(groupSeparator, 'toLongNotation')
+
   const isNegative = value < 0 && value !== 0
   const absolute = Math.abs(value)
   const maxSupportedInteger = 1000 ** locale.words.scales.length - 1
@@ -184,9 +192,13 @@ function buildScaleWordIndex(locale: Locale): Map<string, number> {
  * @example
  * parseLongNotation("1 million 234 thousand 567"); // 1234567
  * parseLongNotation("1 milyon 234 min 567", { locale: az }); // 1234567
+ *
+ * @throws {RangeError} when `groupSeparator` is empty or contains a digit.
  */
 export function parseLongNotation(value: string, options: LongNotationOptions = {}): number {
   const { groupSeparator = ' ', locale = en } = options
+
+  assertGroupSeparator(groupSeparator, 'parseLongNotation')
 
   const trimmed = value.trim()
   if (trimmed === '') {
@@ -198,7 +210,7 @@ export function parseLongNotation(value: string, options: LongNotationOptions = 
 
   if (body === '0') return 0
 
-  const normalized = groupSeparator === '' ? body : body.split(groupSeparator).join(' ')
+  const normalized = body.split(groupSeparator).join(' ')
   const tokens = normalized.split(WHITESPACE_REGEX).filter(Boolean)
   const scaleWordIndex = buildScaleWordIndex(locale)
 

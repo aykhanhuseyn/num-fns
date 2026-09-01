@@ -125,3 +125,26 @@ describe('parseNumber', () => {
     expect(parseNumber('1 234 567,89', { locale: az })).toBeCloseTo(1234567.89)
   })
 })
+
+describe('separator validation', () => {
+  it('throws when formatNumber is given one separator for both roles', () => {
+    expect(() =>
+      formatNumber(1234.5, { decimals: 2, thousandsSeparator: '.', decimalSeparator: '.' }),
+    ).toThrow(RangeError)
+    expect(() =>
+      formatNumber(1.5, { decimals: 1, thousandsSeparator: '', decimalSeparator: '' }),
+    ).toThrow(RangeError)
+  })
+
+  it('throws when parseNumber is given one separator for both roles', () => {
+    // Silently returned 1 before 2026-09-01: both separators were stripped.
+    expect(() => parseNumber('0.001', { thousandsSeparator: '.', decimalSeparator: '.' })).toThrow(
+      RangeError,
+    )
+  })
+
+  it('still accepts an empty thousands separator alongside a real decimal one', () => {
+    expect(formatNumber(1234.5, { decimals: 1, thousandsSeparator: '' })).toBe('1234.5')
+    expect(parseNumber('1234.5', { thousandsSeparator: '' })).toBeCloseTo(1234.5)
+  })
+})

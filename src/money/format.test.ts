@@ -41,3 +41,14 @@ describe('parseMoney', () => {
     expect(parseMoney('1 234,50 ₼', { locale: az })).toBeCloseTo(1234.5)
   })
 })
+
+describe('money separator validation', () => {
+  it('surfaces the ambiguous-separator RangeError from the number layer', () => {
+    expect(() => formatMoney(1234.5, { thousandsSeparator: ',', decimalSeparator: ',' })).toThrow(
+      RangeError,
+    )
+    expect(() => parseMoney('$ 0.001', { thousandsSeparator: '.', decimalSeparator: '.' })).toThrow(
+      RangeError,
+    )
+  })
+})

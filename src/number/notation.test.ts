@@ -174,3 +174,19 @@ describe('parseLongNotation', () => {
     expect(() => parseLongNotation('abc million')).toThrow(SyntaxError)
   })
 })
+
+describe('long notation group separator validation', () => {
+  it('throws when toLongNotation is given an unusable group separator', () => {
+    // Produced "1 million234 thousand" before 2026-09-01 — its own parser
+    // could not read it back.
+    expect(() => toLongNotation(1234567, { groupSeparator: '' })).toThrow(RangeError)
+    expect(() => toLongNotation(1234567, { groupSeparator: ' 0 ' })).toThrow(RangeError)
+  })
+
+  it('throws when parseLongNotation is given an unusable group separator', () => {
+    expect(() => parseLongNotation('1 million 234 thousand', { groupSeparator: '' })).toThrow(
+      RangeError,
+    )
+    expect(() => parseLongNotation('1 million', { groupSeparator: '7' })).toThrow(RangeError)
+  })
+})

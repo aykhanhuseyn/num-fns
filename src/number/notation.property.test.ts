@@ -75,9 +75,8 @@ describe.each(LOCALES)('toLongNotation/parseLongNotation round trip (%s)', (_cod
     fc.assert(
       fc.property(
         fc.integer({ min: -max, max }),
-        // A `''` separator is excluded: it glues a scale word onto the next
-        // digit group ("1 million234 thousand"), which is not parseable and is
-        // not a format `toLongNotation` claims to produce.
+        // `''` and digit-bearing separators are excluded here because
+        // `toLongNotation` rejects them outright — see the property below.
         fc.constantFrom(' ', ', ', ' — ', '\t'),
         (value, groupSeparator) => {
           const options = { locale, groupSeparator }
@@ -93,6 +92,24 @@ describe.each(LOCALES)('toLongNotation/parseLongNotation round trip (%s)', (_cod
       fc.property(fc.integer({ min: 1, max: 1000 }), (offset) => {
         expect(() => toLongNotation(max + offset, { locale })).toThrow(RangeError)
       }),
+    )
+  })
+})
+
+describe('long notation group separator validation', () => {
+  it('rejects separators that would glue a scale word to the next digit group', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1000, max: 999_999_999 }),
+        // `''` glues the scale word straight onto the digits
+        // ("1 million234 thousand"); a separator containing a digit merges
+        // into them. Both make the output unreadable by `parseLongNotation`.
+        fc.constantFrom('', '0', '1', ' 0 ', '-2-'),
+        (value, groupSeparator) => {
+          expect(() => toLongNotation(value, { groupSeparator })).toThrow(RangeError)
+          expect(() => parseLongNotation('1 million', { groupSeparator })).toThrow(RangeError)
+        },
+      ),
     )
   })
 })

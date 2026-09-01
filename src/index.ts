@@ -14,7 +14,12 @@ export * from './number/fraction'
 export * from './number/notation'
 export * from './number/roman'
 export * from './number/suffix'
-export * from './number/words'
+// Explicit rather than `export *`: `number/words` also exports
+// `resolveScaleWord`, a locale-generic internal that `number/notation` imports
+// for `toLongNotation`. It is an implementation detail of how a scale entry
+// resolves to a plural form, not something a consumer calls, so it stays
+// unexported from the package root (`todo.md` §3).
+export { numberToWords } from './number/words'
 export * from './percentage/format'
 export * from './shared/types'
 export * from './stats/max'

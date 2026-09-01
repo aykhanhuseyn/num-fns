@@ -67,3 +67,14 @@ describe('parsePercentage', () => {
     expect(parsePercentage('45,5%', { locale: az })).toBeCloseTo(45.5)
   })
 })
+
+describe('percentage separator validation', () => {
+  it('surfaces the ambiguous-separator RangeError from the number layer', () => {
+    expect(() =>
+      formatPercentage(1234.5, { decimals: 1, thousandsSeparator: ',', decimalSeparator: ',' }),
+    ).toThrow(RangeError)
+    expect(() =>
+      parsePercentage('0.001%', { thousandsSeparator: '.', decimalSeparator: '.' }),
+    ).toThrow(RangeError)
+  })
+})

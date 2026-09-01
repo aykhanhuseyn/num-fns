@@ -76,3 +76,47 @@ export function assertFiniteBounds(min: number, max: number, context: string): v
     throw new RangeError(`${context}: min (${min}) must not be greater than max (${max})`)
   }
 }
+
+/** Matches any decimal digit, i.e. a character that cannot separate digit groups. */
+const DIGIT_REGEX = /\d/
+
+/**
+ * Throws `RangeError` unless the thousands and decimal separators differ.
+ *
+ * Equal separators make the formatted string ambiguous and the parse silently
+ * wrong rather than merely lossy: `formatNumber` writes both, then
+ * `parseNumber` strips the thousands separator first and turns `'0.001'` into
+ * `1` when both are `'.'`. Two empty separators are rejected for the same
+ * reason — an empty decimal separator drops the point and glues the
+ * fractional digits onto the integer part (`1.5` -> `'15'`).
+ */
+export function assertDistinctSeparators(
+  thousandsSeparator: string,
+  decimalSeparator: string,
+  context: string,
+): void {
+  if (thousandsSeparator === decimalSeparator) {
+    throw new RangeError(
+      `${context}: thousandsSeparator and decimalSeparator must differ, received ${JSON.stringify(thousandsSeparator)} for both`,
+    )
+  }
+}
+
+/**
+ * Throws `RangeError` unless `groupSeparator` can separate the digit-group /
+ * scale-word pairs of a long-notation string.
+ *
+ * An empty separator glues a scale word onto the next group's digits
+ * (`'1 million234 thousand'`), and a separator containing a digit merges into
+ * those digits — both produce output `parseLongNotation` cannot read back.
+ * Characters occurring inside the locale's own scale words break the round
+ * trip too, but that depends on the locale and stays the caller's
+ * responsibility.
+ */
+export function assertGroupSeparator(groupSeparator: string, context: string): void {
+  if (groupSeparator === '' || DIGIT_REGEX.test(groupSeparator)) {
+    throw new RangeError(
+      `${context}: groupSeparator must be a non-empty string containing no digits, received ${JSON.stringify(groupSeparator)}`,
+    )
+  }
+}

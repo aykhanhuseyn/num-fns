@@ -1,12 +1,14 @@
 import { en } from '../locale/en'
 import type { NumberFormatOptions, NumberParseOptions, RoundingMode } from '../shared/types'
+import { assertDistinctSeparators } from '../shared/validation'
 
 /**
  * Formats a number using `options.locale`'s conventions by default (`en`:
  * comma thousands separator, period decimal separator — pass
  * `{ locale: az }` for the pre-refactor default of a space and a comma).
  * An explicit `thousandsSeparator`/`decimalSeparator` always overrides the
- * locale's default.
+ * locale's default; the two must differ, since a string written with one
+ * character for both cannot be parsed back (`RangeError`).
  *
  * @example
  * formatNumber(1234567.891, { decimals: 2 }); // "1,234,567.89"
@@ -25,6 +27,8 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
     decimalSeparator = locale.formatDefaults.decimalSeparator,
     roundingMode = 'halfUp',
   } = options
+
+  assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'formatNumber')
 
   const rounded = decimals === undefined ? value : roundToDecimals(value, decimals, roundingMode)
   const isNegative = rounded < 0 && rounded !== 0
@@ -47,6 +51,9 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
  * @example
  * parseNumber("1,234,567.89"); // 1234567.89
  * parseNumber("1 234 567,89", { locale: az }); // 1234567.89
+ *
+ * @throws {RangeError} when `thousandsSeparator` equals `decimalSeparator`,
+ * which would strip both and silently return the wrong number.
  */
 export function parseNumber(value: string, options: NumberParseOptions = {}): number {
   const {
@@ -54,6 +61,8 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
     thousandsSeparator = locale.formatDefaults.thousandsSeparator,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
   } = options
+
+  assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'parseNumber')
 
   const trimmed = value.trim()
   if (trimmed === '') {

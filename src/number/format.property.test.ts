@@ -54,11 +54,9 @@ describe.each(LOCALES)('formatNumber/parseNumber round trip (%s)', (_code, local
         fc.constantFrom('', ' ', ',', '.', "'"),
         fc.constantFrom(',', '.'),
         (value, thousandsSeparator, decimalSeparator) => {
-          // Identical separators are excluded, not asserted about: with
-          // `{ thousandsSeparator: '.', decimalSeparator: '.' }` the formatted
-          // string is genuinely ambiguous, and `parseNumber` currently strips
-          // both and silently returns the wrong number (0.001 -> 1) instead of
-          // throwing the way the rest of the package does. See `todo.md` §4.
+          // Identical separators are rejected outright rather than
+          // round-tripped: the formatted string would be genuinely ambiguous.
+          // See the dedicated property below.
           fc.pre(thousandsSeparator !== decimalSeparator)
           const options = { locale, thousandsSeparator, decimalSeparator }
           expect(parseNumber(formatNumber(value, options), options)).toBe(value)
@@ -98,6 +96,22 @@ describe('formatNumber rounding modes', () => {
         expect(value - floor).toBeLessThanOrEqual(unit + 1e-9)
         expect(ceil).toBeGreaterThanOrEqual(floor)
       }),
+    )
+  })
+})
+
+describe('formatNumber/parseNumber separator validation', () => {
+  it('throws on any separator used for both roles, rather than round-tripping it', () => {
+    fc.assert(
+      fc.property(
+        decimalNumber(3),
+        fc.constantFrom('', ' ', ',', '.', "'", '\u00a0'),
+        (value, separator) => {
+          const options = { thousandsSeparator: separator, decimalSeparator: separator }
+          expect(() => formatNumber(value, { ...options, decimals: 3 })).toThrow(RangeError)
+          expect(() => parseNumber(String(value), options)).toThrow(RangeError)
+        },
+      ),
     )
   })
 })

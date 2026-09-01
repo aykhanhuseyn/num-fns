@@ -14,11 +14,11 @@ import * as numFns from './index'
  * `az.notation.*` / `az.formatDefaults.*` / `az.currency.symbol`
  * (`todo.md` §3).
  *
- * `resolveScaleWord` is the one remaining non-obvious entry. Unlike those
- * constants it is locale-generic, not Azerbaijani — `number/notation.ts`
- * imports it from `number/words.ts`, and the flat `export *` barrel carries
- * it out to the root. Making it internal needs `index.ts` to switch from
- * `export *` to explicit named re-exports, which is a separate change.
+ * `resolveScaleWord` used to sit here for the same kind of reason, though it
+ * is locale-generic rather than Azerbaijani: `number/notation.ts` imports it
+ * from `number/words.ts` and the flat `export *` barrel carried it out to the
+ * root. `index.ts` re-exports `./number/words` by name now (2026-09-01), so
+ * the root surface is exactly the 45 functions below.
  */
 const PUBLIC_EXPORTS = [
   'amortizationSchedule',
@@ -55,7 +55,6 @@ const PUBLIC_EXPORTS = [
   'percentile',
   'presentValue',
   'quantile',
-  'resolveScaleWord',
   'simpleInterest',
   'standardDeviation',
   'sum',

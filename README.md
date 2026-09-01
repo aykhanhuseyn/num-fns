@@ -111,7 +111,12 @@ parsePercentage('45.5%', { asRatio: true }); // 0.455
 ```
 
 Every formatter accepts an options object for overriding separators, decimals,
-currency, or locale — see the JSDoc on each function for details.
+currency, or locale — see the JSDoc on each function for details. Separator
+options have to stay unambiguous: `thousandsSeparator` and `decimalSeparator`
+must differ, and `toLongNotation`'s `groupSeparator` must be non-empty and
+digit-free, so that anything a formatter emits its matching parser can read
+back. A pair that breaks that throws `RangeError` rather than producing a
+string which parses to the wrong number.
 
 Roman numerals and byte-size notation (`toByteSize`/`parseByteSize`) are
 locale-independent and take no `locale` option, as are the financial,

@@ -114,7 +114,12 @@ export interface ShortNotationOptions {
 export type ShortNotationParseOptions = Pick<ShortNotationOptions, 'locale' | 'decimalSeparator'>
 
 export interface LongNotationOptions {
-  /** Separator inserted between each scale group. Defaults to `' '`. */
+  /**
+   * Separator inserted between each scale group. Defaults to `' '`. Must be a
+   * non-empty string containing no digits, so that the scale words stay
+   * separable from the digit groups on the way back through
+   * `parseLongNotation`.
+   */
   groupSeparator?: string
   /** Locale supplying the scale words (`locale.words.scales`). Defaults to `en`. */
   locale?: Locale
