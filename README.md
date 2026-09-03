@@ -1,4 +1,12 @@
-# num-fns
+<p align="center">
+  <a href="https://aykhanhuseyn.github.io/num-fns/">
+    <img
+      src="https://raw.githubusercontent.com/aykhanhuseyn/num-fns/main/site/public/banner.png"
+      alt="num-fns"
+      width="560"
+    />
+  </a>
+</p>
 
 [![npm version](https://img.shields.io/npm/v/num-fns.svg)](https://www.npmjs.com/package/num-fns)
 [![CI](https://github.com/aykhanhuseyn/num-fns/actions/workflows/ci.yml/badge.svg)](https://github.com/aykhanhuseyn/num-fns/actions/workflows/ci.yml)

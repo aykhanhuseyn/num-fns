@@ -1,3 +1,18 @@
+// Brand assets live in `site/public/` and are therefore copied verbatim rather
+// than hashed, so they are addressed by URL instead of imported. `BASE_URL` is
+// `./` (see vite.config.ts), which keeps them resolving under the GitHub Pages
+// project subpath as well as at a domain root.
+const asset = (file: string): string => `${import.meta.env.BASE_URL}${file}`
+
+export const brand = {
+  /** Rounded app mark, transparent corners — sits beside the wordmark. */
+  mark: asset('logo.png'),
+  /** Wordmark + mark, trimmed and keyed to transparency — the hero heading. */
+  lockup: asset('lockup.png'),
+  /** Full-bleed 1280x640 lockup on navy — social card and README banner. */
+  banner: asset('banner.png'),
+}
+
 export const hero = {
   title: 'num-fns',
   tagline: 'Number utilities for JavaScript & TypeScript — like date-fns, but for numbers.',

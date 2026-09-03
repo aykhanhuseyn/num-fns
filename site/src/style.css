@@ -1,17 +1,35 @@
 :root {
   color-scheme: dark;
-  --bg: #0b0d12;
-  --bg-raised: #12151c;
-  --bg-card: #161a23;
-  --border: #262b38;
-  --border-soft: #1d2129;
-  --text: #e7e9ee;
-  --text-dim: #9aa1b2;
-  --text-faint: #666e82;
-  --accent: #5b9dff;
-  --accent-strong: #8ab6ff;
-  --good: #3ecf8e;
-  --bad: #ff6b6b;
+
+  /* Palette derived from the logo: navy #1f2e45, teal #19c0bd, off-white
+     #fdfdfb. The page sits a step darker than the logo's navy so that the
+     mark's own background reads as a raised badge rather than dissolving into
+     the header, and `--bg-raised` *is* the brand navy. */
+  --navy: #1f2e45;
+  --teal: #19c0bd;
+  --paper: #fdfdfb;
+
+  --bg: #131c29;
+  --bg-raised: var(--navy);
+  --bg-card: #1a2537;
+  --border: #2f4159;
+  --border-soft: #243349;
+  --text: var(--paper);
+  --text-dim: #a5b2c6;
+  /* Lifted from the old #666e82: `--text-faint` carries small text
+     (signatures, install tags, the hero status note), so it clears 4.5:1
+     against every surface here, `--bg-raised` included. */
+  --text-faint: #8b99b2;
+  --accent: var(--teal);
+  /* Lightened teal for links and hovers — the base teal on `--bg-card` is
+     below 4.5:1 for body-sized text. */
+  --accent-strong: #58dbd8;
+  /* Dark ink for text sitting *on* the teal fill. */
+  --on-accent: #10202f;
+  /* Green, not teal-green: `--good` has to stay tellable apart from the
+     accent at a glance. */
+  --good: #74dd90;
+  --bad: #ff8080;
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
@@ -68,10 +86,20 @@ h3 {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--mono);
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text);
+}
+
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: block;
 }
 
 .site-nav {
@@ -101,6 +129,19 @@ h3 {
   font-family: var(--mono);
   font-size: 3rem;
   margin: 0 0 12px;
+}
+
+/* The lockup is transparent, so it needs no plate of its own; the intrinsic
+   width/height on the <img> reserve the box so the hero does not reflow once
+   it decodes. */
+.hero-logo {
+  margin: 0 0 24px;
+}
+
+.hero-logo img {
+  width: 100%;
+  max-width: 460px;
+  height: auto;
 }
 
 .hero-tagline {
@@ -149,7 +190,7 @@ h3 {
 
 .button-primary {
   background: var(--accent);
-  color: #08101f;
+  color: var(--on-accent);
 }
 
 .button-primary:hover {

@@ -1,5 +1,5 @@
 import { renderExampleCard } from './card'
-import { badges, hero, install, usageSnippet } from './content'
+import { badges, brand, hero, install, usageSnippet } from './content'
 import { renderLocaleSection } from './locale-section'
 import { categories, exampleCount } from './registry'
 import './style.css'
@@ -11,11 +11,25 @@ function buildHeader(): HTMLElement {
   const header = document.createElement('header')
   header.className = 'site-header'
 
-  const brand = document.createElement('a')
-  brand.className = 'brand'
-  brand.href = '#top'
-  brand.textContent = 'num-fns'
-  header.appendChild(brand)
+  const brandLink = document.createElement('a')
+  brandLink.className = 'brand'
+  brandLink.href = '#top'
+
+  // Decorative: the wordmark right next to it already carries the name, so an
+  // alt text here would just make screen readers say "num-fns" twice.
+  const brandMark = document.createElement('img')
+  brandMark.className = 'brand-mark'
+  brandMark.src = brand.mark
+  brandMark.alt = ''
+  brandMark.width = 28
+  brandMark.height = 28
+  brandLink.appendChild(brandMark)
+
+  const brandName = document.createElement('span')
+  brandName.textContent = 'num-fns'
+  brandLink.appendChild(brandName)
+
+  header.appendChild(brandLink)
 
   const nav = document.createElement('nav')
   nav.className = 'site-nav'
@@ -46,8 +60,19 @@ function buildHero(): HTMLElement {
   section.className = 'hero'
   section.id = 'top'
 
+  // The lockup is the page's h1: the image carries the name as its alt text, so
+  // the heading still reads as "num-fns" to screen readers and to crawlers. It
+  // is the transparent crop, not the social banner — the banner's own navy
+  // field would read as a card floating on the page's near-identical navy.
   const title = document.createElement('h1')
-  title.textContent = hero.title
+  title.className = 'hero-logo'
+  const logo = document.createElement('img')
+  logo.src = brand.lockup
+  logo.alt = hero.title
+  logo.width = 959
+  logo.height = 427
+  logo.decoding = 'async'
+  title.appendChild(logo)
   section.appendChild(title)
 
   const tagline = document.createElement('p')
