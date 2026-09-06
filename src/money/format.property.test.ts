@@ -7,6 +7,7 @@ import { es } from '../locale/es'
 import { ru } from '../locale/ru'
 import type { Locale } from '../locale/types'
 import { decimalNumber, normalizeZero } from '../shared/arbitraries.test'
+import type { CurrencyCode } from './currency'
 import { formatMoney, parseMoney } from './format'
 
 /**
@@ -45,6 +46,20 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
           const options = { locale, decimals, symbolPosition, symbol }
           const roundTrip = parseMoney(formatMoney(value, options), options)
           expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(decimals))))
+        },
+      ),
+    )
+  })
+
+  it('preserves the amount for every registered currency', () => {
+    fc.assert(
+      fc.property(
+        decimalNumber(4),
+        fc.constantFrom<CurrencyCode>('AZN', 'USD', 'EUR', 'RUB', 'GBP'),
+        (value, currency) => {
+          const options = { locale, currency }
+          const roundTrip = parseMoney(formatMoney(value, options), options)
+          expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(2))))
         },
       ),
     )

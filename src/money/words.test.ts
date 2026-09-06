@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
+import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
 import { ru } from '../locale/ru'
+import type { Locale } from '../locale/types'
+import type { CurrencyCode } from './currency'
 import { moneyToWords } from './words'
 
 describe('moneyToWords', () => {
@@ -43,6 +46,55 @@ describe('moneyToWords', () => {
   it('throws for non-finite values', () => {
     expect(() => moneyToWords(Infinity)).toThrow(RangeError)
     expect(() => moneyToWords(NaN)).toThrow(RangeError)
+  })
+
+  describe('{ currency }', () => {
+    it("spells the requested currency with the locale's own unit words", () => {
+      expect(moneyToWords(1.5, { currency: 'GBP' })).toBe('one pound fifty pence')
+      expect(moneyToWords(1.01, { currency: 'GBP' })).toBe('one pound one penny')
+      expect(moneyToWords(2.02, { currency: 'EUR' })).toBe('two euros two cents')
+      expect(moneyToWords(3, { currency: 'RUB' })).toBe('three rubles')
+      expect(moneyToWords(3, { locale: enGB, currency: 'RUB' })).toBe('three roubles')
+      expect(moneyToWords(1.01, { currency: 'AZN' })).toBe('one manat one gapik')
+    })
+
+    it("defaults to the locale's own currency — pounds for enGB", () => {
+      expect(moneyToWords(101.5, { locale: enGB })).toBe('one hundred and one pounds fifty pence')
+    })
+
+    it('inflects and gender-agrees the requested currency in ru', () => {
+      expect(moneyToWords(2.02, { locale: ru, currency: 'USD' })).toBe('два доллара два цента')
+      expect(moneyToWords(21.05, { locale: ru, currency: 'GBP' })).toBe(
+        'двадцать один фунт стерлингов пять пенсов',
+      )
+    })
+
+    it('agrees the feminine "libra" in es', () => {
+      expect(moneyToWords(1, { locale: es, currency: 'GBP' })).toBe('una libra')
+      expect(moneyToWords(200.01, { locale: es, currency: 'GBP' })).toBe(
+        'doscientas libras uno penique',
+      )
+    })
+
+    it("still honours explicit unit words over the currency's", () => {
+      expect(moneyToWords(2, { currency: 'GBP', majorUnit: 'quid' })).toBe('two quid')
+    })
+
+    it('throws RangeError for a code the registry does not know', () => {
+      expect(() => moneyToWords(1, { currency: 'XYZ' as CurrencyCode })).toThrow(RangeError)
+    })
+
+    it('throws RangeError, naming the locale and code, when the locale has no words for the currency', () => {
+      const partial: Locale = {
+        ...en,
+        code: 'xx',
+        currency: { ...en.currency, units: { USD: en.currency.units.USD } },
+      }
+      expect(() => moneyToWords(1, { locale: partial, currency: 'EUR' })).toThrow(
+        'moneyToWords: locale "xx" has no unit words for currency "EUR" — it knows USD',
+      )
+      expect(moneyToWords(1, { locale: partial })).toBe('one dollar')
+    })
   })
 
   describe('{ locale: az }', () => {

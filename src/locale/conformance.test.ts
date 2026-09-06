@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { type CurrencyCode, getCurrency } from '../money/currency'
 import { formatMoney, parseMoney } from '../money/format'
 import { moneyToWords } from '../money/words'
 import { formatNumber, parseNumber } from '../number/format'
@@ -33,6 +34,14 @@ const LOCALE_ENTRIES = Object.entries(locales)
 
 /** Every value `GrammaticalGender` admits (mirrors `number/words.ts`'s own list). */
 const ALL_GENDERS: readonly GrammaticalGender[] = ['masculine', 'feminine', 'neuter']
+
+/**
+ * Every value `CurrencyCode` admits — pinned here, not derived, so that
+ * adding a code to `money/currency.ts` without teaching every launch locale
+ * its unit words fails this suite instead of making `moneyToWords` throw at
+ * the first caller (`Locale.currency.units`'s doc comment).
+ */
+const ALL_CURRENCIES: CurrencyCode[] = ['AZN', 'USD', 'EUR', 'RUB', 'GBP']
 
 /**
  * A spread of `numberToWords` inputs covering: zero, a bare digit, a teen,
@@ -87,14 +96,28 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       }
     })
 
-    it('gives major/minor currency units a non-empty word, with any `gender` a member of `words.genders`', () => {
-      for (const unit of [locale.currency.major, locale.currency.minor]) {
-        expect(unit.word.length).toBeGreaterThan(0)
-        if (unit.gender !== undefined) {
-          expect(locale.words.genders ?? []).toContain(unit.gender)
-        }
-      }
+    it('defaults to a registered currency it has unit words for', () => {
+      expect(() => getCurrency(locale.currency.code)).not.toThrow()
+      expect(locale.currency.units[locale.currency.code]).toBeDefined()
     })
+
+    it('carries unit words for every registered currency, and only registered ones', () => {
+      expect(Object.keys(locale.currency.units).sort()).toEqual([...ALL_CURRENCIES].sort())
+    })
+
+    it.each(ALL_CURRENCIES)(
+      'gives %s major/minor units a non-empty word, with any `gender` a member of `words.genders`',
+      (code) => {
+        const units = locale.currency.units[code]
+        expect(units).toBeDefined()
+        for (const unit of [units?.major, units?.minor]) {
+          expect(unit?.word.length).toBeGreaterThan(0)
+          if (unit?.gender !== undefined) {
+            expect(locale.words.genders ?? []).toContain(unit.gender)
+          }
+        }
+      },
+    )
   })
 
   describe('numberToWords', () => {
@@ -149,6 +172,18 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
     it.each([0, 1, 1234.56, -3.5])('produces clean, non-empty words for %p', (value) => {
       assertCleanWords(moneyToWords(value, { locale }), `moneyToWords(${value})`)
     })
+
+    it.each(ALL_CURRENCIES)(
+      'produces clean, non-empty words in %s for 1, 2, 5 and 21.21',
+      (currency) => {
+        for (const value of [1, 2, 5, 21.21]) {
+          assertCleanWords(
+            moneyToWords(value, { locale, currency }),
+            `moneyToWords(${value}, { currency: '${currency}' })`,
+          )
+        }
+      },
+    )
   })
 
   describe('formatMoney / parseMoney', () => {
@@ -156,6 +191,19 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       "round-trips %p through the locale's own currency defaults",
       (value) => {
         expect(parseMoney(formatMoney(value, { locale }), { locale })).toBeCloseTo(value, 5)
+      },
+    )
+
+    it.each(ALL_CURRENCIES)(
+      'round-trips 1234.5 in %s, placing its symbol per the locale',
+      (currency) => {
+        const formatted = formatMoney(1234.5, { locale, currency })
+        const { symbol } = getCurrency(currency)
+        expect(formatted.split(symbol).length - 1).toBe(1)
+        if (locale.currency.symbolPosition === 'before')
+          expect(formatted.startsWith(`${symbol} `)).toBe(true)
+        else expect(formatted.endsWith(` ${symbol}`)).toBe(true)
+        expect(parseMoney(formatted, { locale, currency })).toBeCloseTo(1234.5, 5)
       },
     )
   })

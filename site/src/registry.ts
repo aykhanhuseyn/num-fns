@@ -10,6 +10,7 @@ import {
   fromBase,
   fromRoman,
   futureValue,
+  getCurrency,
   getOrdinalSuffix,
   inRange,
   isEven,
@@ -60,6 +61,31 @@ const ROUNDING_MODES = [
   { value: 'ceil', label: 'ceil' },
   { value: 'floor', label: 'floor' },
 ]
+
+/** Every ISO 4217 code the currency registry knows (`src/money/currency.ts`'s `CurrencyCode`). */
+const CURRENCY_CODES = ['AZN', 'USD', 'EUR', 'RUB', 'GBP']
+
+/**
+ * A `currency` option field for the three money functions: an ISO 4217 code
+ * that selects the symbol (`formatMoney`/`parseMoney`) or the locale's unit
+ * words (`moneyToWords`). Blank means the locale's own default currency, and
+ * is omitted from the call/snippet like {@link localeField}'s default.
+ */
+function currencyField(): FieldDef {
+  return {
+    id: 'currency',
+    label: 'currency',
+    kind: 'select',
+    valueType: 'string',
+    default: '',
+    omitWhenDefault: true,
+    selectOptions: [
+      { value: '', label: '(locale default)' },
+      ...CURRENCY_CODES.map((code) => ({ value: code, label: code })),
+    ],
+    arg: { kind: 'option', key: 'currency' },
+  }
+}
 
 /**
  * A `locale` option field, shared by every example whose real function
@@ -660,13 +686,14 @@ const moneyCategory: Category = {
   id: 'money',
   title: 'Money',
   description:
-    "Thin wrappers around formatNumber/parseNumber that add a currency symbol. Symbol, position, and separators default from the locale's own currency data (en: $ sign, two decimals, symbol before the amount; az: ₼, symbol after) — pick a locale below, or override any piece explicitly.",
+    'Thin wrappers around formatNumber/parseNumber that add a currency symbol, plus moneyToWords. Every one takes an ISO 4217 currency code (AZN, USD, EUR, RUB, GBP) that picks the symbol from the registry and the unit words from the locale; the locale decides the default currency (en: USD, enGB: GBP, az: AZN, ru: RUB, es: EUR) and which side of the amount the symbol goes. Pick a locale and a currency below, or override the symbol/words explicitly.',
   examples: [
     {
       id: 'formatMoney',
       name: 'formatMoney',
       signature: '(value: number, options?: MoneyFormatOptions): string',
-      description: "Formats a monetary amount using the locale's own currency (defaults to en).",
+      description:
+        "Formats a monetary amount in the locale's default currency (en: USD) or the ISO 4217 code you pass — the symbol comes from the registry, its placement from the locale, so { locale: az, currency: 'USD' } gives \"9,99 $\".",
       sourceFile: 'src/money/format.ts',
       fn: fn(formatMoney),
       fields: [
@@ -680,6 +707,7 @@ const moneyCategory: Category = {
           arg: { kind: 'positional', index: 0 },
         },
         localeField(),
+        currencyField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -715,7 +743,7 @@ const moneyCategory: Category = {
       name: 'parseMoney',
       signature: '(value: string, options?: MoneyParseOptions): number',
       description:
-        "Parses a string produced by formatMoney back into a JavaScript number, stripping the locale's currency symbol (defaults to en's $).",
+        "Parses a string produced by formatMoney back into a JavaScript number, stripping the symbol of the locale's default currency (en: $) or of the ISO 4217 code you pass.",
       sourceFile: 'src/money/format.ts',
       fn: fn(parseMoney),
       fields: [
@@ -728,6 +756,7 @@ const moneyCategory: Category = {
           arg: { kind: 'positional', index: 0 },
         },
         localeField(),
+        currencyField(),
         localeDefaultTextField({
           id: 'symbol',
           label: 'symbol',
@@ -740,7 +769,7 @@ const moneyCategory: Category = {
       name: 'moneyToWords',
       signature: '(value: number, options?: MoneyWordsOptions): string',
       description:
-        'Spells out a monetary amount as words, pairing the integer part with a major currency unit word and the rounded fractional part with a minor unit word, per the locale (defaults to en: dollars/cents). Unit words inflect by the amount\'s plural category where the locale needs it — ru: "один рубль"/"два рубля"/"пять рублей".',
+        'Spells out a monetary amount as words, pairing the integer part with a major currency unit word and the rounded fractional part with a minor unit word, in the locale\'s own words for the locale\'s default currency (en: dollars/cents) or the ISO 4217 code you pass (en + GBP: "one pound fifty pence"). Unit words inflect by the amount\'s plural category and gender where the locale needs it — ru: "один рубль"/"два рубля"/"пять рублей", ru + USD: "два доллара", es + GBP: "una libra".',
       sourceFile: 'src/money/words.ts',
       fn: fn(moneyToWords),
       fields: [
@@ -754,6 +783,7 @@ const moneyCategory: Category = {
           arg: { kind: 'positional', index: 0 },
         },
         localeField(),
+        currencyField(),
         localeDefaultTextField({
           id: 'majorUnit',
           label: 'majorUnit',
@@ -771,6 +801,26 @@ const moneyCategory: Category = {
           valueType: 'boolean',
           default: false,
           arg: { kind: 'option', key: 'includeZeroMinor' },
+        },
+      ],
+    },
+    {
+      id: 'getCurrency',
+      name: 'getCurrency',
+      signature: '(code: CurrencyCode): Currency',
+      description:
+        'The locale-independent record behind an ISO 4217 code — its symbol and minor-unit exponent (decimals). This is what formatMoney reads for the symbol and default decimals; the words for a currency live in each locale (Locale.currency.units) instead. Throws RangeError for a code num-fns does not know.',
+      sourceFile: 'src/money/currency.ts',
+      fn: fn(getCurrency),
+      fields: [
+        {
+          id: 'code',
+          label: 'code',
+          kind: 'select',
+          valueType: 'string',
+          default: 'EUR',
+          selectOptions: CURRENCY_CODES.map((code) => ({ value: code, label: code })),
+          arg: { kind: 'positional', index: 0 },
         },
       ],
     },

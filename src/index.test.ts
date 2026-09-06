@@ -18,7 +18,8 @@ import * as numFns from './index'
  * is locale-generic rather than Azerbaijani: `number/notation.ts` imports it
  * from `number/words.ts` and the flat `export *` barrel carried it out to the
  * root. `index.ts` re-exports `./number/words` by name now (2026-09-01), so
- * the root surface is exactly the 45 functions below.
+ * the root surface is exactly the 46 functions below (`getCurrency` joined
+ * on 2026-09-06 with the ISO 4217 currency registry, `todo.md` §4).
  */
 const PUBLIC_EXPORTS = [
   'amortizationSchedule',
@@ -32,6 +33,7 @@ const PUBLIC_EXPORTS = [
   'fromBase',
   'fromRoman',
   'futureValue',
+  'getCurrency',
   'getOrdinalSuffix',
   'inRange',
   'isEven',

@@ -1,3 +1,9 @@
+import type { CurrencyCode } from '../money/currency'
+
+// Re-exported so a custom locale can type its `currency.units` keys from
+// `num-fns/locale` alone, without also importing the package root.
+export type { CurrencyCode } from '../money/currency'
+
 /**
  * CLDR-style plural/case category for a cardinal value. Kept to the four
  * categories the launch locales actually need (`az`/`en`/`es` only ever
@@ -217,18 +223,45 @@ export interface LocaleCurrencyUnit {
   gender?: GrammaticalGender
 }
 
-/** Default currency for `formatMoney` / `parseMoney` / `moneyToWords`. */
-export interface LocaleCurrency {
-  /** ISO 4217 code this locale defaults to, e.g. `'AZN'`, `'USD'`, `'RUB'`, `'EUR'`. */
-  code: string
-  /** Currency symbol, e.g. `'₼'`, `'$'`, `'€'`. */
-  symbol: string
-  /** Symbol placement relative to the formatted amount. */
-  symbolPosition: 'before' | 'after'
-  /** Major unit (whole currency), e.g. az `'manat'`. */
+/** The major (whole) and minor (subunit) words a locale uses for one currency. */
+export interface LocaleCurrencyUnits {
+  /** Major unit (whole currency), e.g. az `'manat'`, en `'dollar'`. */
   major: LocaleCurrencyUnit
-  /** Minor unit (subunit), e.g. az `'qəpik'`. */
+  /** Minor unit (subunit), e.g. az `'qəpik'`, en `'cent'`. */
   minor: LocaleCurrencyUnit
+}
+
+/**
+ * Currency conventions for `formatMoney` / `parseMoney` / `moneyToWords`:
+ * which ISO 4217 currency this locale assumes when the caller doesn't say,
+ * where the symbol goes, and how the locale *names* each currency it can
+ * spell. The symbol itself and the minor-unit exponent are not here — they
+ * are facts about the currency, not the language, and live in
+ * `money/currency.ts`'s registry (`getCurrency(code)`), keyed by the same
+ * codes.
+ *
+ * Before 2026-09-06 this held a single `symbol`/`major`/`minor` triple for
+ * the default currency, so formatting anything else meant passing a manual
+ * `symbol` string and hand-written unit words (`todo.md` §4's
+ * multi-currency item). Callers now pass `{ currency: 'EUR' }` and both the
+ * symbol and the words resolve from this table.
+ */
+export interface LocaleCurrency {
+  /** ISO 4217 code assumed when no `currency` option is passed, e.g. `'AZN'`, `'USD'`, `'GBP'`. Must have an entry in {@link units}. */
+  code: CurrencyCode
+  /**
+   * Symbol placement relative to the formatted amount, for every currency
+   * in this locale (a language puts `$` and `€` on the same side; `en`
+   * `'before'`, `az`/`ru`/`es` `'after'`).
+   */
+  symbolPosition: 'before' | 'after'
+  /**
+   * Unit words per ISO 4217 code this locale can spell an amount in. Every
+   * launch locale covers every {@link CurrencyCode} (pinned by
+   * `locale/conformance.test.ts`); `moneyToWords` throws `RangeError` for a
+   * code a locale leaves out rather than borrowing another language's words.
+   */
+  units: Readonly<Partial<Record<CurrencyCode, LocaleCurrencyUnits>>>
 }
 
 /**
@@ -277,7 +310,7 @@ export interface Locale {
   ordinal: LocaleOrdinal
   /** Short/long scale notation for `toShortNotation`/`toLongNotation`. */
   notation: LocaleNotation
-  /** Default currency for `formatMoney`/`parseMoney`/`moneyToWords`. */
+  /** Default currency, symbol placement and per-currency unit words for `formatMoney`/`parseMoney`/`moneyToWords`. */
   currency: LocaleCurrency
   /**
    * Fraction-word composition for `fractionToWords`. Optional — only `az`

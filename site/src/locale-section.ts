@@ -1,3 +1,4 @@
+import { getCurrency } from '../../src/money/currency'
 import { type LocaleInfo, localeInfo } from './locales'
 
 function buildStatusTable(): HTMLElement {
@@ -71,10 +72,15 @@ function buildPreview(): HTMLElement {
       ['words.zero', locale.words.zero],
       ['words.ones[1..5]', locale.words.ones.slice(1, 6).join(', ')],
       ['words.negative', locale.words.negative],
-      ['currency.code', locale.currency.code],
-      ['currency.symbol', locale.currency.symbol],
-      ['currency.major.word', locale.currency.major.word],
-      ['currency.minor.word', locale.currency.minor.word],
+      ['currency.code (default)', locale.currency.code],
+      ['getCurrency(currency.code).symbol', getCurrency(locale.currency.code).symbol],
+      ['currency.symbolPosition', locale.currency.symbolPosition],
+      [
+        'currency.units (major / minor)',
+        Object.entries(locale.currency.units)
+          .map(([code, units]) => `${code}: ${units.major.word} / ${units.minor.word}`)
+          .join('; '),
+      ],
       [
         'notation.scales (short)',
         locale.notation.scales.map((scale: { short: string }) => scale.short).join(', '),
@@ -110,7 +116,7 @@ export function renderLocaleSection(): HTMLElement {
   const description = document.createElement('p')
   description.className = 'category-desc'
   description.textContent =
-    'Every function above takes a locale option (default en) and reads from one of these four Locale objects — az, en, ru, es. This reference browser shows the raw vocabulary, currency, and notation data each one carries; try the locale selector on any function card above to see it drive real output. The one gap: fractionToWords only has real fraction-noun vocabulary for az and en (see the table below and its function card for why ru/es throw instead of guessing).'
+    'Every function above takes a locale option (default en) and reads from one of these four Locale objects — az, en, ru, es. This reference browser shows the raw vocabulary, currency (the default ISO 4217 code, symbol placement, and the unit words for every currency the locale can spell), and notation data each one carries; try the locale selector on any function card above to see it drive real output. The one gap: fractionToWords only has real fraction-noun vocabulary for az and en (see the table below and its function card for why ru/es throw instead of guessing).'
   section.appendChild(description)
 
   section.appendChild(buildStatusTable())

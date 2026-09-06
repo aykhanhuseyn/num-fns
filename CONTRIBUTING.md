@@ -182,15 +182,26 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      sync at every magnitude — the conformance suite checks the two arrays'
      lengths align, and `locale/index.test.ts`'s scale-naming block checks
      the actual words agree.
-   - **`currency`** — the default code/symbol/position plus `major`/`minor`
-     units. Each unit's `gender` field (added alongside `en-GB`) is what
-     `moneyToWords` spells the amount with, and only makes sense for a unit
-     word that's actually gendered — it must be a member of `words.genders`,
-     and a genderless locale (`az`/`en`) must leave it unset on both units.
-     `ru.ts`'s minor unit ("копейка", feminine) next to its masculine major
-     unit ("рубль") is the reference example for why this field exists:
-     without it, `moneyToWords` spells every amount with
-     `words.defaultGender` and gets the minor unit wrong.
+   - **`currency`** — the default ISO 4217 `code`, the `symbolPosition`
+     your language puts every currency sign on, and `units`: a map from
+     each `CurrencyCode` (`AZN`, `USD`, `EUR`, `RUB`, `GBP` — the closed
+     union in `src/money/currency.ts`) to that currency's `major`/`minor`
+     unit words in your language. **Cover every code**, not just your
+     default — the conformance suite pins that, so `moneyToWords` can spell
+     any registered currency in any launch locale rather than throwing at
+     the first caller. The symbol itself is *not* yours to set: it comes
+     from the registry (`getCurrency(code).symbol`), because it's a fact
+     about the currency, not the language. Each unit's `plurals` map
+     (`ru`'s `рубль`/`рубля`/`рублей`) and `gender` field are what
+     `moneyToWords` picks the word form and spells the amount with; a
+     `gender` only makes sense for a unit word that's actually gendered — it
+     must be a member of `words.genders`, and a genderless locale
+     (`az`/`en`) must leave it unset on every unit. `ru.ts`'s minor unit
+     ("копейка", feminine) next to its masculine major unit ("рубль"), and
+     `es.ts`'s feminine "libra" among otherwise masculine units, are the
+     reference examples for why the field exists: without it, `moneyToWords`
+     spells every amount with `words.defaultGender` and gets those units
+     wrong. Indeclinable words (`ru`'s "евро") simply omit `plurals`.
    - **`fractions`** (optional) — `half` plus a `words(numerator,
      denominator)` composer for `fractionToWords`. Only implement this once
      you have real fraction-noun vocabulary, not a guess derived from your

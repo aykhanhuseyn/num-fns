@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { formatMoney } from '../money/format'
+import { moneyToWords } from '../money/words'
 import { formatNumber } from '../number/format'
 import { fractionToWords } from '../number/fraction'
 import { toLongNotation, toShortNotation } from '../number/notation'
@@ -136,15 +137,32 @@ describe('az.notation', () => {
 describe('az.currency', () => {
   it('defaults to AZN / manat / qəpik, matching formatMoney', () => {
     expect(az.currency.code).toBe('AZN')
-    expect(az.currency.symbol).toBe('₼')
     expect(az.currency.symbolPosition).toBe('after')
-    expect(az.currency.major.word).toBe('manat')
-    expect(az.currency.minor.word).toBe('qəpik')
-    // az has no grammatical gender (`az.words.genders` is unset), so its
-    // currency units must not declare one either.
-    expect(az.currency.major.gender).toBeUndefined()
-    expect(az.currency.minor.gender).toBeUndefined()
-    expect(formatMoney(10, { locale: az })).toBe(`10,00 ${az.currency.symbol}`)
+    expect(az.currency.units.AZN?.major.word).toBe('manat')
+    expect(az.currency.units.AZN?.minor.word).toBe('qəpik')
+    expect(formatMoney(10, { locale: az })).toBe('10,00 ₼')
+  })
+
+  it('names the other launch currencies with invariant words and no gender', () => {
+    expect(az.currency.units.USD).toEqual({ major: { word: 'dollar' }, minor: { word: 'sent' } })
+    expect(az.currency.units.EUR).toEqual({ major: { word: 'avro' }, minor: { word: 'sent' } })
+    expect(az.currency.units.RUB).toEqual({ major: { word: 'rubl' }, minor: { word: 'qəpik' } })
+    expect(az.currency.units.GBP).toEqual({
+      major: { word: 'funt sterlinq' },
+      minor: { word: 'pens' },
+    })
+    // az has no grammatical gender (`az.words.genders` is unset), so no
+    // currency unit may declare one either.
+    for (const units of Object.values(az.currency.units)) {
+      expect(units.major.gender).toBeUndefined()
+      expect(units.minor.gender).toBeUndefined()
+    }
+  })
+
+  it('places every currency symbol after the amount', () => {
+    expect(formatMoney(9.99, { locale: az, currency: 'USD' })).toBe('9,99 $')
+    expect(formatMoney(9.99, { locale: az, currency: 'EUR' })).toBe('9,99 €')
+    expect(moneyToWords(2.5, { locale: az, currency: 'EUR' })).toBe('iki avro əlli sent')
   })
 })
 

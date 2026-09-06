@@ -157,9 +157,31 @@ export const en: Locale = {
   },
   currency: {
     code: 'USD',
-    symbol: '$',
     symbolPosition: 'before',
-    major: { word: 'dollar', plurals: { one: 'dollar', other: 'dollars' } },
-    minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+    units: {
+      USD: {
+        major: { word: 'dollar', plurals: { one: 'dollar', other: 'dollars' } },
+        minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+      },
+      EUR: {
+        major: { word: 'euro', plurals: { one: 'euro', other: 'euros' } },
+        minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+      },
+      GBP: {
+        major: { word: 'pound', plurals: { one: 'pound', other: 'pounds' } },
+        // "pence" is the plural of "penny" as an amount ("fifty pence"),
+        // never "pennies", which counts the coins.
+        minor: { word: 'penny', plurals: { one: 'penny', other: 'pence' } },
+      },
+      RUB: {
+        major: { word: 'ruble', plurals: { one: 'ruble', other: 'rubles' } },
+        minor: { word: 'kopek', plurals: { one: 'kopek', other: 'kopeks' } },
+      },
+      AZN: {
+        major: { word: 'manat', plurals: { one: 'manat', other: 'manats' } },
+        // The Central Bank of Azerbaijan's own English spelling of "qəpik".
+        minor: { word: 'gapik', plurals: { one: 'gapik', other: 'gapiks' } },
+      },
+    },
   },
 }

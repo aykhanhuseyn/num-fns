@@ -296,14 +296,30 @@ describe('es.notation', () => {
 describe('es.currency', () => {
   it('defaults to EUR / euro / céntimo, with singular/plural forms', () => {
     expect(es.currency.code).toBe('EUR')
-    expect(es.currency.symbol).toBe('€')
     expect(es.currency.symbolPosition).toBe('after')
-    expect(es.currency.major.plurals).toEqual({ one: 'euro', other: 'euros' })
-    expect(es.currency.minor.plurals).toEqual({ one: 'céntimo', other: 'céntimos' })
+    expect(es.currency.units.EUR?.major.plurals).toEqual({ one: 'euro', other: 'euros' })
+    expect(es.currency.units.EUR?.minor.plurals).toEqual({ one: 'céntimo', other: 'céntimos' })
   })
 
-  it('gives both units masculine gender', () => {
-    expect(es.currency.major.gender).toBe('masculine')
-    expect(es.currency.minor.gender).toBe('masculine')
+  it('gives both euro units masculine gender', () => {
+    expect(es.currency.units.EUR?.major.gender).toBe('masculine')
+    expect(es.currency.units.EUR?.minor.gender).toBe('masculine')
+  })
+
+  it('names the other launch currencies, with "libra" the one feminine unit', () => {
+    expect(es.currency.units.USD?.major.plurals).toEqual({ one: 'dólar', other: 'dólares' })
+    expect(es.currency.units.USD?.minor.plurals).toEqual({ one: 'centavo', other: 'centavos' })
+    expect(es.currency.units.GBP?.major).toEqual({
+      word: 'libra',
+      plurals: { one: 'libra', other: 'libras' },
+      gender: 'feminine',
+    })
+    expect(es.currency.units.GBP?.minor.plurals).toEqual({ one: 'penique', other: 'peniques' })
+    expect(es.currency.units.RUB?.major.plurals).toEqual({ one: 'rublo', other: 'rublos' })
+    expect(es.currency.units.AZN?.major.plurals).toEqual({ one: 'manat', other: 'manats' })
+    for (const [code, units] of Object.entries(es.currency.units)) {
+      if (code !== 'GBP') expect(units.major.gender).toBe('masculine')
+      expect(units.minor.gender).toBe('masculine')
+    }
   })
 })

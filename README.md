@@ -62,6 +62,7 @@ numberToWords(1234, { locale: es }); // "mil doscientos treinta y cuatro"
 
 formatMoney(1234.5, { locale: az }); // "1 234,50 ₼" (az.currency defaults to AZN)
 formatMoney(1234.5, { locale: en }); // "$ 1,234.50" (en.currency defaults to USD)
+formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €" (any ISO 4217 code)
 ```
 
 ### Full surface
@@ -83,6 +84,7 @@ import {
   formatMoney,
   parseMoney,
   moneyToWords,
+  getCurrency,
   formatPercentage,
   parsePercentage,
 } from 'num-fns';
@@ -113,6 +115,9 @@ withSuffix(120, 'kg'); // "120 kg"
 formatMoney(1234.5); // "$ 1,234.50"
 parseMoney('$ 1,234.50'); // 1234.5
 moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
+formatMoney(1234.5, { currency: 'GBP' }); // "£ 1,234.50"
+moneyToWords(1.5, { currency: 'GBP' }); // "one pound fifty pence"
+getCurrency('EUR'); // { code: 'EUR', symbol: '€', decimals: 2 }
 
 formatPercentage(45.5, { decimals: 1 }); // "45.5%"
 parsePercentage('45.5%', { asRatio: true }); // 0.455
@@ -130,19 +135,51 @@ Roman numerals and byte-size notation (`toByteSize`/`parseByteSize`) are
 locale-independent and take no `locale` option, as are the financial,
 statistics, arithmetic, and base-conversion utilities.
 
+### Currencies
+
+`formatMoney`, `parseMoney` and `moneyToWords` take an ISO 4217 `currency`
+code — `AZN`, `USD`, `EUR`, `RUB` or `GBP` — and default to the locale's own
+(`az` → AZN, `en` → USD, `en-GB` → GBP, `ru` → RUB, `es` → EUR). The split of
+responsibilities follows the language/currency line: the *currency* owns its
+symbol and minor-unit exponent (`getCurrency(code)`), the *locale* owns
+which side of the amount the symbol goes and what the units are called, in
+every plural form and grammatical gender the language needs.
+
+```ts
+import { formatMoney, moneyToWords } from 'num-fns';
+import { az, en, ru, es } from 'num-fns/locale';
+
+formatMoney(9.99, { currency: 'EUR' }); // "€ 9.99"      (en: symbol before)
+formatMoney(9.99, { locale: az, currency: 'EUR' }); // "9,99 €"     (az: symbol after)
+
+moneyToWords(2.02, { currency: 'EUR' }); // "two euros two cents"
+moneyToWords(2.02, { locale: ru, currency: 'USD' }); // "два доллара два цента"
+moneyToWords(1, { locale: es, currency: 'GBP' }); // "una libra" (libra is feminine)
+```
+
+A code the registry doesn't know, or one a locale has no unit words for,
+throws `RangeError` — `moneyToWords` never borrows another language's words.
+An explicit `symbol`, `symbolPosition`, `majorUnit` or `minorUnit` option still
+overrides whatever the code and locale resolve to, so a custom currency remains
+possible without registering it.
+
 ## Locale support
 
-| Locale | Code | `numberToWords`, ordinals, notation, money, percentage | `fractionToWords` |
-| --- | --- | --- | --- |
-| Azerbaijani | `az` | Implemented | Implemented |
-| English | `en` | Implemented (default) | Implemented |
-| English (UK) | `en-GB` (`import { enGB } from 'num-fns/locale/en-gb'`) | Implemented | Implemented |
-| Russian | `ru` | Implemented | Throws — see below |
-| Spanish | `es` | Implemented | Throws — see below |
+| Locale | Code | Default currency | `numberToWords`, ordinals, notation, money, percentage | `fractionToWords` |
+| --- | --- | --- | --- | --- |
+| Azerbaijani | `az` | AZN | Implemented | Implemented |
+| English | `en` | USD | Implemented (default) | Implemented |
+| English (UK) | `en-GB` (`import { enGB } from 'num-fns/locale/en-gb'`) | GBP | Implemented | Implemented |
+| Russian | `ru` | RUB | Implemented | Throws — see below |
+| Spanish | `es` | EUR | Implemented | Throws — see below |
 
-`en-GB` shares every word and rule `en` (US) defines, differing only in
-reading `and` before the final low part of a number — `"one hundred and
-one"`, `"one thousand and one"` — where `en` says `"one hundred one"`.
+Every locale carries unit words for all five currencies (AZN, USD, EUR, RUB,
+GBP), so `moneyToWords` can spell any of them in any launch locale.
+
+`en-GB` shares every word and rule `en` (US) defines, differing in reading
+`and` before the final low part of a number — `"one hundred and one"`, `"one
+thousand and one"` — where `en` says `"one hundred one"`, in defaulting to
+sterling rather than dollars, and in spelling `"rouble"`.
 
 `fractionToWords` only has real fraction-noun vocabulary for `az`, `en`, and
 `en-GB`. Russian and Spanish fraction nouns aren't simple derivations of

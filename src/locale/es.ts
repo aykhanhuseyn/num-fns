@@ -456,17 +456,46 @@ export const es: Locale = {
   },
   currency: {
     code: 'EUR',
-    symbol: '€',
     symbolPosition: 'after',
-    // Both "euro" and "céntimo" are masculine, matching `words.defaultGender` —
-    // set explicitly so it's self-documenting; output is unchanged from the
-    // pre-gender-field behavior since masculine is what the default already
-    // produced.
-    major: { word: 'euro', plurals: { one: 'euro', other: 'euros' }, gender: 'masculine' },
-    minor: {
-      word: 'céntimo',
-      plurals: { one: 'céntimo', other: 'céntimos' },
-      gender: 'masculine',
+    units: {
+      EUR: {
+        // Both "euro" and "céntimo" are masculine, matching
+        // `words.defaultGender` — set explicitly so it's self-documenting;
+        // output is unchanged from the pre-gender-field behavior since
+        // masculine is what the default already produced.
+        major: { word: 'euro', plurals: { one: 'euro', other: 'euros' }, gender: 'masculine' },
+        minor: {
+          word: 'céntimo',
+          plurals: { one: 'céntimo', other: 'céntimos' },
+          gender: 'masculine',
+        },
+      },
+      USD: {
+        major: { word: 'dólar', plurals: { one: 'dólar', other: 'dólares' }, gender: 'masculine' },
+        minor: {
+          word: 'centavo',
+          plurals: { one: 'centavo', other: 'centavos' },
+          gender: 'masculine',
+        },
+      },
+      GBP: {
+        // "libra" is feminine — the one launch unit where the gender field
+        // changes Spanish output: "una libra", "doscientas libras".
+        major: { word: 'libra', plurals: { one: 'libra', other: 'libras' }, gender: 'feminine' },
+        minor: {
+          word: 'penique',
+          plurals: { one: 'penique', other: 'peniques' },
+          gender: 'masculine',
+        },
+      },
+      RUB: {
+        major: { word: 'rublo', plurals: { one: 'rublo', other: 'rublos' }, gender: 'masculine' },
+        minor: { word: 'kopek', plurals: { one: 'kopek', other: 'kopeks' }, gender: 'masculine' },
+      },
+      AZN: {
+        major: { word: 'manat', plurals: { one: 'manat', other: 'manats' }, gender: 'masculine' },
+        minor: { word: 'gapik', plurals: { one: 'gapik', other: 'gapiks' }, gender: 'masculine' },
+      },
     },
   },
 }

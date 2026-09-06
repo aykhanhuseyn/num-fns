@@ -140,8 +140,19 @@ describe('enGB.notation', () => {
 })
 
 describe('enGB.currency', () => {
-  it('matches en: USD / dollar / cent, with singular/plural forms', () => {
-    expect(enGB.currency).toEqual(en.currency)
+  it('defaults to GBP / pound / penny (plural "pence"), symbol before the amount', () => {
+    expect(enGB.currency.code).toBe('GBP')
+    expect(enGB.currency.symbolPosition).toBe('before')
+    expect(enGB.currency.units.GBP?.major.plurals).toEqual({ one: 'pound', other: 'pounds' })
+    expect(enGB.currency.units.GBP?.minor.plurals).toEqual({ one: 'penny', other: 'pence' })
+  })
+
+  it('shares en\'s unit words for every currency, bar the British "rouble" spelling', () => {
+    const { RUB, ...rest } = enGB.currency.units
+    const { RUB: enRUB, ...enRest } = en.currency.units
+    expect(rest).toEqual(enRest)
+    expect(RUB?.major.plurals).toEqual({ one: 'rouble', other: 'roubles' })
+    expect(RUB?.minor).toEqual(enRUB?.minor)
   })
 })
 

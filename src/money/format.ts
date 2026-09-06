@@ -1,25 +1,32 @@
 import { en } from '../locale/en'
 import { formatNumber, parseNumber } from '../number/format'
 import type { MoneyFormatOptions, MoneyParseOptions } from '../shared/types'
+import { getCurrency } from './currency'
 
 /**
  * Formats a monetary amount using `options.locale`'s currency conventions by
  * default (`en`: `$` before the amount, two decimals — pass `{ locale: az }`
  * for the pre-refactor default of the manat sign `₼` after the amount).
+ * Pass an ISO 4217 `currency` code to format a different currency in the
+ * same locale: the symbol comes from `getCurrency(code)`, its placement from
+ * the locale, so `{ locale: az, currency: 'USD' }` gives `"9,99 $"`.
  *
  * @example
  * formatMoney(1234.5); // "$ 1,234.50"
  * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
- * formatMoney(9.99, { symbol: '€', symbolPosition: 'after' }); // "9.99 €"
+ * formatMoney(1234.5, { currency: 'EUR' }); // "€ 1,234.50"
+ * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"
+ * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after' }); // "9.99 US$"
  */
 export function formatMoney(value: number, options: MoneyFormatOptions = {}): string {
+  const { locale = en, currency: code = locale.currency.code } = options
+  const currency = getCurrency(code)
   const {
-    locale = en,
-    decimals = 2,
+    decimals = currency.decimals,
     thousandsSeparator = locale.formatDefaults.thousandsSeparator,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
     roundingMode,
-    symbol = locale.currency.symbol,
+    symbol = currency.symbol,
     symbolPosition = locale.currency.symbolPosition,
   } = options
 
@@ -36,18 +43,21 @@ export function formatMoney(value: number, options: MoneyFormatOptions = {}): st
 
 /**
  * Parses a string produced by {@link formatMoney} (or an equivalent format)
- * back into a JavaScript number, stripping the currency symbol.
+ * back into a JavaScript number, stripping the currency symbol — the
+ * locale's default currency's unless a `currency` code or an explicit
+ * `symbol` says otherwise.
  *
  * @example
  * parseMoney("$ 1,234.50"); // 1234.5
  * parseMoney("1 234,50 ₼", { locale: az }); // 1234.5
+ * parseMoney("€ 1,234.50", { currency: 'EUR' }); // 1234.5
  */
 export function parseMoney(value: string, options: MoneyParseOptions = {}): number {
+  const { locale = en, currency: code = locale.currency.code } = options
   const {
-    locale = en,
     thousandsSeparator = locale.formatDefaults.thousandsSeparator,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
-    symbol = locale.currency.symbol,
+    symbol = getCurrency(code).symbol,
   } = options
 
   const withoutSymbol = value.split(symbol).join('').trim()

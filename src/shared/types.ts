@@ -1,4 +1,5 @@
 import type { GrammaticalGender, Locale } from '../locale/types'
+import type { CurrencyCode } from '../money/currency'
 
 /**
  * How `formatNumber` (and anything that delegates to it) rounds a value to
@@ -39,21 +40,39 @@ export type NumberParseOptions = Pick<
 >
 
 export interface MoneyFormatOptions extends NumberFormatOptions {
-  /** Currency symbol to render. Defaults to `locale.currency.symbol`. */
+  /**
+   * ISO 4217 code of the currency to format, e.g. `'EUR'`. Defaults to
+   * `locale.currency.code` (`en`: `'USD'`, `az`: `'AZN'`, `enGB`: `'GBP'`).
+   * Selects the symbol and the default `decimals` (the currency's minor-unit
+   * exponent) from `getCurrency(code)`; an explicit `symbol`/`decimals`
+   * still wins. Throws `RangeError` for a code `num-fns` doesn't know.
+   */
+  currency?: CurrencyCode
+  /** Currency symbol to render. Defaults to the symbol of `currency` (`getCurrency(currency).symbol`). */
   symbol?: string
   /** Whether the symbol is placed before or after the amount. Defaults to `locale.currency.symbolPosition`. */
   symbolPosition?: 'before' | 'after'
 }
 
 export interface MoneyParseOptions extends NumberParseOptions {
-  /** Currency symbol to strip before parsing. Defaults to `locale.currency.symbol`. */
+  /** ISO 4217 code whose symbol to strip before parsing. Defaults to `locale.currency.code`. Throws `RangeError` for an unknown code. */
+  currency?: CurrencyCode
+  /** Currency symbol to strip before parsing. Defaults to the symbol of `currency` (`getCurrency(currency).symbol`). */
   symbol?: string
 }
 
 export interface MoneyWordsOptions {
-  /** Word for the major currency unit. Defaults to `locale.currency.major`'s word, resolved for the amount's plural category. */
+  /**
+   * ISO 4217 code of the currency to spell, e.g. `'EUR'`. Defaults to
+   * `locale.currency.code`. Selects the unit words (and their plural forms
+   * and gender) from `locale.currency.units[currency]`, and the major/minor
+   * split from the currency's minor-unit exponent. Throws `RangeError` for a
+   * code `num-fns` doesn't know, or one this locale has no unit words for.
+   */
+  currency?: CurrencyCode
+  /** Word for the major currency unit. Defaults to `locale.currency.units[currency].major`'s word, resolved for the amount's plural category. */
   majorUnit?: string
-  /** Word for the minor currency unit (subunit). Defaults to `locale.currency.minor`'s word, resolved for the amount's plural category. */
+  /** Word for the minor currency unit (subunit). Defaults to `locale.currency.units[currency].minor`'s word, resolved for the amount's plural category. */
   minorUnit?: string
   /** Include the minor unit part even when its value is zero. Defaults to `false`. */
   includeZeroMinor?: boolean

@@ -48,9 +48,6 @@ const THOUSANDS_SEPARATOR = ' '
 /** Separator between the integer and fractional part, e.g. `1234,56`. */
 const DECIMAL_SEPARATOR = ','
 
-/** Currency symbol for the Azerbaijani manat. */
-const MANAT_SYMBOL = '₼'
-
 /**
  * Maps the last vowel of an Azerbaijani number word to the correct ordinal
  * suffix, following vowel harmony: back unrounded (a, ı) -> "cı", front
@@ -271,10 +268,17 @@ export const az: Locale = {
   },
   currency: {
     code: 'AZN',
-    symbol: MANAT_SYMBOL,
     symbolPosition: 'after',
-    major: { word: 'manat' },
-    minor: { word: 'qəpik' },
+    // Azerbaijani nouns don't inflect after a numeral ("iki manat", "beş
+    // dollar"), so every unit is a single invariant word. "qəpik" doubles as
+    // the Russian kopek, as it does in everyday Azerbaijani usage.
+    units: {
+      AZN: { major: { word: 'manat' }, minor: { word: 'qəpik' } },
+      USD: { major: { word: 'dollar' }, minor: { word: 'sent' } },
+      EUR: { major: { word: 'avro' }, minor: { word: 'sent' } },
+      RUB: { major: { word: 'rubl' }, minor: { word: 'qəpik' } },
+      GBP: { major: { word: 'funt sterlinq' }, minor: { word: 'pens' } },
+    },
   },
   fractions: {
     half: 'yarım',

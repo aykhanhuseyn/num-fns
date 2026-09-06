@@ -429,22 +429,73 @@ export const ru: Locale = {
   },
   currency: {
     code: 'RUB',
-    symbol: '₽',
     symbolPosition: 'after',
-    // "рубль" is masculine ("один рубль"), matching `words.defaultGender`;
-    // set explicitly so it's self-documenting rather than an accident of the
-    // default. "копейка" is feminine ("одна копейка", "две копейки") — the
-    // gender that actually changes output here, since without it the
-    // amount defaults to masculine ("один копейка", wrong).
-    major: {
-      word: 'рубль',
-      plurals: { one: 'рубль', few: 'рубля', many: 'рублей' },
-      gender: 'masculine',
-    },
-    minor: {
-      word: 'копейка',
-      plurals: { one: 'копейка', few: 'копейки', many: 'копеек' },
-      gender: 'feminine',
+    units: {
+      RUB: {
+        // "рубль" is masculine ("один рубль"), matching `words.defaultGender`;
+        // set explicitly so it's self-documenting rather than an accident of
+        // the default. "копейка" is feminine ("одна копейка", "две копейки")
+        // — the gender that actually changes output here, since without it
+        // the amount defaults to masculine ("один копейка", wrong).
+        major: {
+          word: 'рубль',
+          plurals: { one: 'рубль', few: 'рубля', many: 'рублей' },
+          gender: 'masculine',
+        },
+        minor: {
+          word: 'копейка',
+          plurals: { one: 'копейка', few: 'копейки', many: 'копеек' },
+          gender: 'feminine',
+        },
+      },
+      USD: {
+        major: {
+          word: 'доллар',
+          plurals: { one: 'доллар', few: 'доллара', many: 'долларов' },
+          gender: 'masculine',
+        },
+        minor: {
+          word: 'цент',
+          plurals: { one: 'цент', few: 'цента', many: 'центов' },
+          gender: 'masculine',
+        },
+      },
+      EUR: {
+        // "евро" is indeclinable — the same form in every plural category —
+        // and masculine in the current standard ("один евро").
+        major: { word: 'евро', gender: 'masculine' },
+        minor: {
+          word: 'цент',
+          plurals: { one: 'цент', few: 'цента', many: 'центов' },
+          gender: 'masculine',
+        },
+      },
+      GBP: {
+        // "стерлингов" is an invariant genitive-plural attribute: only "фунт"
+        // inflects ("один фунт стерлингов", "два фунта стерлингов").
+        major: {
+          word: 'фунт стерлингов',
+          plurals: { one: 'фунт стерлингов', few: 'фунта стерлингов', many: 'фунтов стерлингов' },
+          gender: 'masculine',
+        },
+        minor: {
+          word: 'пенс',
+          plurals: { one: 'пенс', few: 'пенса', many: 'пенсов' },
+          gender: 'masculine',
+        },
+      },
+      AZN: {
+        major: {
+          word: 'манат',
+          plurals: { one: 'манат', few: 'маната', many: 'манатов' },
+          gender: 'masculine',
+        },
+        minor: {
+          word: 'гяпик',
+          plurals: { one: 'гяпик', few: 'гяпика', many: 'гяпиков' },
+          gender: 'masculine',
+        },
+      },
     },
   },
 }

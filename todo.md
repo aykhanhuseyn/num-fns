@@ -499,8 +499,36 @@ The API-surface question the layout decisions above did not resolve:
 - [x] `ordinalToWords` — fully spelled ordinals.
 - [x] `parseShortNotation` — inverse of `toShortNotation`.
 - [x] `parseLongNotation` — inverse of `toLongNotation`.
-- [ ] Multi-currency support keyed off ISO 4217 codes (AZN, USD, EUR, RUB) with
+- [x] Multi-currency support keyed off ISO 4217 codes (AZN, USD, EUR, RUB) with
       per-locale symbol placement — replaces the manual `symbol` string.
+      (2026-09-06: `src/money/currency.ts` — `CurrencyCode` (a closed union:
+      `AZN`, `USD`, `EUR`, `RUB`, plus `GBP` so `enGB` has a currency of its
+      own), `Currency` and `getCurrency(code)`, the locale-independent
+      registry of symbol + minor-unit exponent; throws `RangeError` for an
+      unknown code. `formatMoney`/`parseMoney`/`moneyToWords` take a
+      `currency` option defaulting to `locale.currency.code`. The
+      language/currency split decides where each fact lives: the registry
+      owns the symbol and `decimals`, the locale owns `symbolPosition` and
+      the unit words. `LocaleCurrency` reshaped accordingly — `symbol`/
+      `major`/`minor` replaced by `units: Partial<Record<CurrencyCode,
+      { major, minor }>>` — and every launch locale carries words for all
+      five codes (conformance suite pins both directions: every registered
+      code has words, every `units` key is registered). `moneyToWords`
+      throws rather than borrowing another language's words when a locale
+      lacks a code. **`enGB` now defaults to `GBP`** (it had been `USD`
+      only because no other currency existed) and spells "rouble". New
+      vocabulary: az `dollar`/`sent`, `avro`/`sent`, `rubl`/`qəpik`, `funt
+      sterlinq`/`pens`; en `pound`/`penny`→`pence`, `euro`, `ruble`/`kopek`,
+      `manat`/`gapik`; ru `доллар`/`цент`, indeclinable `евро`, `фунт
+      стерлингов`/`пенс`, `манат`/`гяпик`, all masculine; es `dólar`/
+      `centavo`, feminine `libra`/`penique` (the gender field's first
+      Spanish payoff: "una libra"), `rublo`/`kopek`, `manat`/`gapik`.
+      `getCurrency` is the 46th pinned root export; `CURRENCIES` stays
+      module-private so the root remains functions-only. Suite 864 → 977
+      tests, 100% per-file coverage held, every size budget still met
+      (index 5.21 → 5.57 kB of 6). The non-native currency words for
+      `ru`/`es` (and the English "gapik") fold into §5's native-speaker
+      review item.)
 - [x] Fraction words (Azerbaijani) — `yarım` / `half` / `половина` / `medio`,
       plus `1/3`, `1/4`. (2026-08-10: `src/number/fraction.ts` —
       `fractionToWords(numerator, denominator)`. `1/2` returns the idiomatic
@@ -744,7 +772,10 @@ New domain from the vision doc.
       the `arithmetic`/`round` decision in §1).)
 - [ ] Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
       locales — catches separator mistakes no human reviewer will spot.
-- [ ] Native-speaker review of the `ru` and `es` word lists before publishing.
+- [ ] Native-speaker review of the `ru` and `es` word lists before publishing —
+      including the foreign-currency unit words added 2026-09-06 (§4's
+      multi-currency item; es `kopek`/`gapik` and en `gapik` are the least
+      certain spellings).
       Machine-generated number words are wrong in embarrassing, specific ways.
 - [x] `bun test --coverage` in CI with an enforced threshold — "high test
       coverage" is an explicit success criterion in the project vision, so this

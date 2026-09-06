@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { moneyToWords } from '../money/words'
 import { ordinalToWords } from '../number/suffix'
 import { numberToWords } from '../number/words'
 import { ru } from './ru'
@@ -354,16 +355,43 @@ describe('ru.notation', () => {
 describe('ru.currency', () => {
   it('defaults to RUB / рубль / копейка, with one/few/many forms', () => {
     expect(ru.currency.code).toBe('RUB')
-    expect(ru.currency.symbol).toBe('₽')
     expect(ru.currency.symbolPosition).toBe('after')
-    expect(ru.currency.major.plurals).toEqual({ one: 'рубль', few: 'рубля', many: 'рублей' })
-    expect(ru.currency.minor.plurals).toEqual({ one: 'копейка', few: 'копейки', many: 'копеек' })
+    const rub = ru.currency.units.RUB
+    expect(rub?.major.plurals).toEqual({ one: 'рубль', few: 'рубля', many: 'рублей' })
+    expect(rub?.minor.plurals).toEqual({ one: 'копейка', few: 'копейки', many: 'копеек' })
   })
 
   it('gives the major unit masculine gender and the minor unit feminine gender', () => {
     // "рубль" agrees masculine ("один рубль"); "копейка" agrees feminine
     // ("одна копейка", "две копейки") — the mismatch this field exists to fix.
-    expect(ru.currency.major.gender).toBe('masculine')
-    expect(ru.currency.minor.gender).toBe('feminine')
+    expect(ru.currency.units.RUB?.major.gender).toBe('masculine')
+    expect(ru.currency.units.RUB?.minor.gender).toBe('feminine')
+  })
+
+  it('names the other launch currencies with one/few/many forms, all masculine', () => {
+    const { RUB: _rub, ...others } = ru.currency.units
+    expect(Object.keys(others).sort()).toEqual(['AZN', 'EUR', 'GBP', 'USD'])
+    for (const units of Object.values(others)) {
+      expect(units.major.gender).toBe('masculine')
+      expect(units.minor.gender).toBe('masculine')
+    }
+    expect(ru.currency.units.USD?.major.plurals).toEqual({
+      one: 'доллар',
+      few: 'доллара',
+      many: 'долларов',
+    })
+    expect(ru.currency.units.GBP?.major.plurals?.few).toBe('фунта стерлингов')
+    expect(ru.currency.units.AZN?.minor.plurals).toEqual({
+      one: 'гяпик',
+      few: 'гяпика',
+      many: 'гяпиков',
+    })
+  })
+
+  it('keeps the indeclinable "евро" the same in every plural category', () => {
+    expect(ru.currency.units.EUR?.major).toEqual({ word: 'евро', gender: 'masculine' })
+    expect(moneyToWords(1, { locale: ru, currency: 'EUR' })).toBe('один евро')
+    expect(moneyToWords(2, { locale: ru, currency: 'EUR' })).toBe('два евро')
+    expect(moneyToWords(5.05, { locale: ru, currency: 'EUR' })).toBe('пять евро пять центов')
   })
 })

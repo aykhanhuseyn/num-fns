@@ -142,11 +142,13 @@ function fractionWords(numerator: number, denominator: number): string {
 /**
  * British English locale (`todo.md` §2's en-GB follow-up). Shares every word
  * and rule `en.ts` (en-US) defines — hyphenation, irregular teens, `st`/`nd`/
- * `rd`/`th` suffixes, short-scale `billion`/`trillion`, separators, currency,
- * notation — except the one thing that actually distinguishes the dialects:
+ * `rd`/`th` suffixes, short-scale `billion`/`trillion`, separators,
+ * notation — except the things that actually distinguish the dialects:
  * "and" before the final low part of a number (`"one hundred and one"`,
  * `"one thousand and one"`), per the module-level doc comments on
- * {@link renderGroup} and {@link compose} above.
+ * {@link renderGroup} and {@link compose} above, and a default currency of
+ * sterling (`GBP`) rather than `en`'s `USD` (2026-09-06, with the
+ * multi-currency `Locale.currency.units` table).
  *
  * Deliberately self-contained rather than importing `ONES`/`TEENS`/`TENS`/the
  * ordinal-irregulars table from `en.ts`: `en.ts` doesn't export them (they're
@@ -224,11 +226,33 @@ export const enGB: Locale = {
     spaceBeforeShort: false,
   },
   currency: {
-    code: 'USD',
-    symbol: '$',
+    // Sterling by default (the one currency-shaped thing that separates this
+    // locale from `en`, whose default is USD); the unit words are otherwise
+    // `en`'s, bar the British "rouble" spelling.
+    code: 'GBP',
     symbolPosition: 'before',
-    major: { word: 'dollar', plurals: { one: 'dollar', other: 'dollars' } },
-    minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+    units: {
+      GBP: {
+        major: { word: 'pound', plurals: { one: 'pound', other: 'pounds' } },
+        minor: { word: 'penny', plurals: { one: 'penny', other: 'pence' } },
+      },
+      USD: {
+        major: { word: 'dollar', plurals: { one: 'dollar', other: 'dollars' } },
+        minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+      },
+      EUR: {
+        major: { word: 'euro', plurals: { one: 'euro', other: 'euros' } },
+        minor: { word: 'cent', plurals: { one: 'cent', other: 'cents' } },
+      },
+      RUB: {
+        major: { word: 'rouble', plurals: { one: 'rouble', other: 'roubles' } },
+        minor: { word: 'kopek', plurals: { one: 'kopek', other: 'kopeks' } },
+      },
+      AZN: {
+        major: { word: 'manat', plurals: { one: 'manat', other: 'manats' } },
+        minor: { word: 'gapik', plurals: { one: 'gapik', other: 'gapiks' } },
+      },
+    },
   },
   fractions: {
     half: 'half',

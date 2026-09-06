@@ -154,18 +154,33 @@ describe('en.notation', () => {
 describe('en.currency', () => {
   it('defaults to USD / dollar / cent, with singular/plural forms', () => {
     expect(en.currency.code).toBe('USD')
-    expect(en.currency.symbol).toBe('$')
     expect(en.currency.symbolPosition).toBe('before')
-    expect(en.currency.major.word).toBe('dollar')
-    expect(en.currency.major.plurals?.one).toBe('dollar')
-    expect(en.currency.major.plurals?.other).toBe('dollars')
-    expect(en.currency.minor.word).toBe('cent')
-    expect(en.currency.minor.plurals?.one).toBe('cent')
-    expect(en.currency.minor.plurals?.other).toBe('cents')
-    // en has no grammatical gender (`en.words.genders` is unset), so its
-    // currency units must not declare one either.
-    expect(en.currency.major.gender).toBeUndefined()
-    expect(en.currency.minor.gender).toBeUndefined()
+    const usd = en.currency.units.USD
+    expect(usd?.major.word).toBe('dollar')
+    expect(usd?.major.plurals?.one).toBe('dollar')
+    expect(usd?.major.plurals?.other).toBe('dollars')
+    expect(usd?.minor.word).toBe('cent')
+    expect(usd?.minor.plurals?.one).toBe('cent')
+    expect(usd?.minor.plurals?.other).toBe('cents')
+  })
+
+  it('names the other launch currencies, pluralizing "penny" as "pence"', () => {
+    expect(en.currency.units.EUR?.major.plurals).toEqual({ one: 'euro', other: 'euros' })
+    expect(en.currency.units.GBP?.major.plurals).toEqual({ one: 'pound', other: 'pounds' })
+    expect(en.currency.units.GBP?.minor.plurals).toEqual({ one: 'penny', other: 'pence' })
+    expect(en.currency.units.RUB?.major.plurals).toEqual({ one: 'ruble', other: 'rubles' })
+    expect(en.currency.units.RUB?.minor.plurals).toEqual({ one: 'kopek', other: 'kopeks' })
+    expect(en.currency.units.AZN?.major.plurals).toEqual({ one: 'manat', other: 'manats' })
+    expect(en.currency.units.AZN?.minor.plurals).toEqual({ one: 'gapik', other: 'gapiks' })
+  })
+
+  it('declares no unit gender, since en has no grammatical gender', () => {
+    // en has no grammatical gender (`en.words.genders` is unset), so no
+    // currency unit may declare one either.
+    for (const units of Object.values(en.currency.units)) {
+      expect(units.major.gender).toBeUndefined()
+      expect(units.minor.gender).toBeUndefined()
+    }
   })
 })
 
