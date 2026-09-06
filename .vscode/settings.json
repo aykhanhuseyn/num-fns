@@ -18,7 +18,6 @@
     ".editorconfig": true,
     ".github": true,
     ".gitignore": true,
-    ".gitleaks.toml": true,
     "**/.vscode/": false,
     "biome.json": true,
     "bun.lock": true,
@@ -36,10 +35,6 @@
     "tsconfig.tsbuildinfo": true,
     "vite.config.ts": true
   },
-  "files.watcherExclude": {
-    "chakra-config.json": true,
-    "src/routeTree.gen.ts": true
-  },
   "git.autofetch": true,
   "github.copilot.chat.agent.autoFix": true,
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
@@ -54,17 +49,10 @@
   "js/ts.tsdk.path": "node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": false,
   "prettier.enable": false,
-  "redhat.telemetry.enabled": true,
   "search.exclude": {
     "**/.github/": true,
     "**/.vscode/": true,
-    "node_modules": true,
-    "src/routeTree.gen.ts": true
-  },
-  "snyk.advanced.autoSelectOrganization": true,
-  "sonarlint.connectedMode.project": {
-    "connectionId": "sonar.iktex.az",
-    "projectKey": "platform-core_platform-core_frontend_genesis_829111d9-e0a9-4f62-8062-6e0c630780d7"
+    "node_modules": true
   },
   "workbench.editor.empty.hint": "hidden",
   "workbench.editor.wrapTabs": true

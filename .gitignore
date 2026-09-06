@@ -1,14 +1,30 @@
+# Dependencies
 node_modules
+
+# Build output
 dist
 site-dist*
 coverage
 *.tsbuildinfo
+
+# OS
 .DS_Store
+
+# Logs
 *.log
+
+# Editor
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Local overrides
 lefthook-local.yml
 CLAUDE.local.md
+
+# Env
 .env
 .env.local
+
+# Scratch
+_to_delete
