@@ -1,5 +1,98 @@
 # num-fns
 
+## 0.4.0
+
+### Minor Changes
+
+- [`54c28ad`](https://github.com/aykhanhuseyn/num-fns/commit/54c28ad7e984eff4f6c0559d2c2fca2f5b384e51) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Accept `bigint` input in every integer-domain function, and return an exact `bigint` from every parser on request.
+
+  A JavaScript `number` stops being exact at `Number.MAX_SAFE_INTEGER` (about 9 × 10¹⁵), which is smaller than a 64-bit database id, a file size from `fs.statSync(path, { bigint: true })`, or a token amount in wei. Those values now go through `num-fns` without ever touching a float:
+
+  ```ts
+  // Input: number | bigint, handled exactly at any magnitude.
+  formatNumber(BigInt("1234567890123456789")); // "1,234,567,890,123,456,789"
+  formatNumber(BigInt(10), { decimals: 2 }); // "10.00" (decimals pads; nothing to round)
+  formatMoney(BigInt("98765432109876543210"), { currency: "EUR" }); // "€ 98,765,432,109,876,543,210.00"
+  numberToWords(BigInt("123456789012345")); // "one hundred twenty-three trillion ..."
+  toLongNotation(BigInt("999999999999999")); // "999 trillion 999 billion 999 million 999 thousand 999"
+  toShortNotation(BigInt(1500)); // "1.5K"
+  toByteSize(fs.statSync(path, { bigint: true }).size); // "1.5 GB"
+  toOrdinal(BigInt(101)); // "101-st"
+  toRoman(BigInt(1994)); // "MCMXCIV"
+  isEven(BigInt("9007199254740993")); // false — a number would have said true
+
+  // Output: pass { output: 'bigint' } to any parser.
+  parseNumber("1,234,567,890,123,456,789", { output: "bigint" }); // 1234567890123456789n
+  parseMoney("$ 1,234.00", { output: "bigint" }); // 1234n
+  parseShortNotation("2.5M", { output: "bigint" }); // 2500000n
+  parseLongNotation("999 trillion 999 billion", { output: "bigint" }); // 999999000000000n
+  parseByteSize("1.5 KB", { output: "bigint" }); // 1536n
+  fromBase("ffffffffffffffffffff", 16, { output: "bigint" }); // 1208925819614629174706175n
+
+  // The return type follows the option through overloads — no cast needed.
+  const n = parseNumber("1"); // number
+  const b = parseNumber("1", { output: "bigint" }); // bigint
+  ```
+
+  **Input.** `formatNumber`, `formatMoney`, `formatPercentage`, `numberToWords`, `moneyToWords`, `toLongNotation`, `toShortNotation`, `toByteSize`, `numberToDigitWords`, `getOrdinalSuffix`, `toOrdinal`, `ordinalToWords`, `withSuffix`, `toRoman`, `toBase`, `isEven` and `isOdd` take `number | bigint`. A `bigint` is chunked, scaled and grouped in integer arithmetic, so every digit survives; `decimals` pads it with zeros; `moneyToWords(bigint)` reads a whole amount of the major unit. `numberToWords` and `toLongNotation` keep their `1000 ** locale.words.scales.length - 1` cap (999 trillion for every launch locale), now computed exactly, so a custom locale that names quadrillions and beyond can be fed a `bigint` and stay exact. The ordinal family narrows a `bigint` to a `number` for the locale's `ordinal` hooks and throws `RangeError` above `Number.MAX_SAFE_INTEGER` rather than reaching the hook rounded.
+
+  **Output.** `parseNumber`, `parseMoney`, `parsePercentage`, `parseShortNotation`, `parseLongNotation`, `parseByteSize` and `fromBase(value, radix, { output })` take an `output: 'number' | 'bigint'` option (default `'number'`). With `'bigint'` the parsed value must be a whole number — `"1,234.00"` is `1234n`, `"2.5M"` is `2500000n`, `"1.5 KB"` is `1536n`, but `"1.5"`, `"1.2345K"` and `parsePercentage` with `asRatio: true` throw `RangeError`, because a `bigint` cannot carry a fraction and truncating silently would be exactly the wrong answer the package throws to avoid. Any other `output` value is a `RangeError` too.
+
+  **Breaking change** (pre-1.0, so `minor` per semver's `0.x` rule — see `CONTRIBUTING.md`'s "Releasing" section):
+
+  - `parseLongNotation` and `fromBase` now compute exactly and throw `RangeError` — with a message pointing at `output: 'bigint'` — when a `number` result would exceed `Number.MAX_SAFE_INTEGER`, instead of silently returning a rounded `number`. Only strings that were already coming back wrong are affected: a long-notation string with an oversized digit group or a custom locale's scales past a trillion, or a base-N string of more than 53 bits.
+
+  **Unchanged, deliberately.** `add`/`subtract`/`multiply`/`divide`/`round` and `clamp`/`inRange` still take and return plain numbers — the arithmetic domain's "raw numbers" decision stands, and JavaScript already has exact native `bigint` operators for that. The statistics and financial functions are float-domain and stay `number`. `fractionToWords` and `fromRoman` (whose range ends at 3999) are unchanged. The `Locale` interface is untouched: `plural`, `ordinal.suffix`/`ordinal.words` and `words.renderGroup` keep their `number` signatures, so a custom locale never sees a `bigint` and needs no update. No new root exports — the public surface is the same 51 functions.
+
+- [`a242e92`](https://github.com/aykhanhuseyn/num-fns/commit/a242e922ebcfa99e1e347d919742afb3f835b019) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Add multi-currency support keyed off ISO 4217 codes.
+
+  `formatMoney`, `parseMoney` and `moneyToWords` take a new `currency` option — `'AZN' | 'USD' | 'EUR' | 'RUB' | 'GBP'` — that defaults to the locale's own currency. The symbol and minor-unit exponent come from a new locale-independent registry (`getCurrency(code)`, the 46th root export); the locale decides which side of the amount the symbol goes and supplies the unit words, in every plural form and grammatical gender the language needs. Every launch locale now carries words for all five currencies:
+
+  ```ts
+  formatMoney(9.99, { currency: "EUR" }); // "€ 9.99"
+  formatMoney(9.99, { locale: az, currency: "USD" }); // "9,99 $"
+  moneyToWords(1.5, { currency: "GBP" }); // "one pound fifty pence"
+  moneyToWords(2.02, { locale: ru, currency: "USD" }); // "два доллара два цента"
+  moneyToWords(1, { locale: es, currency: "GBP" }); // "una libra"
+  ```
+
+  An unknown code, or one the locale has no unit words for, throws `RangeError`. Explicit `symbol`, `symbolPosition`, `majorUnit` and `minorUnit` options still override whatever the code resolves to, so a currency outside the registry remains possible.
+
+  **Breaking changes** (pre-1.0, so `minor` per semver's `0.x` rule — see `CONTRIBUTING.md`'s "Releasing" section):
+
+  - `Locale.currency` is reshaped. The single `symbol`/`major`/`minor` triple is gone; the object is now `{ code, symbolPosition, units }`, where `units` maps each `CurrencyCode` to `{ major, minor }`. Read `az.currency.units.AZN.major.word` instead of `az.currency.major.word`, and `getCurrency(az.currency.code).symbol` instead of `az.currency.symbol`. Custom `Locale` objects must be updated to the new shape (`CurrencyCode` is re-exported from `num-fns/locale` for that).
+  - `enGB` defaults to `GBP` rather than `USD`: `formatMoney(1, { locale: enGB })` is now `"£ 1.00"` and `moneyToWords(1, { locale: enGB })` `"one pound"`. It also spells `RUB` as "rouble".
+
+- [`b18129c`](https://github.com/aykhanhuseyn/num-fns/commit/b18129cc1d8cd777d5e26d601ea931aba5fb9e4b) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Add decimal-safe arithmetic: `add`, `subtract`, `multiply`, `divide` and `round`.
+
+  Five new root exports (46 → 51) do arithmetic on plain numbers without the classic floating-point traps. Each operand is taken at its shortest decimal reading — the string `String(0.1)` gives you, which is what you meant by the number — the operation runs exactly on integers, and the result is the closest JavaScript number to the exact answer. Everything goes in and comes out as a plain `number`; there is no decimal type to wrap and unwrap, and no new dependency:
+
+  ```ts
+  add(0.1, 0.2); // 0.3   (0.1 + 0.2 is 0.30000000000000004)
+  subtract(0.3, 0.1); // 0.2   (0.3 - 0.1 is 0.19999999999999998)
+  multiply(1.1, 1.1); // 1.21  (1.1 * 1.1 is 1.2100000000000002)
+  divide(0.3, 0.1); // 3     (0.3 / 0.1 is 2.9999999999999996)
+  divide(1, 3); // 0.3333333333333333
+
+  round(1.005, 2); // 1.01  ((1.005).toFixed(2) is "1.00")
+  round(2.5, 0, "halfEven"); // 2
+  round(-2.5, 0, "halfDown"); // -2
+  round(-1.21, 1, "floor"); // -1.3
+  round(1234, -2); // 1200
+  ```
+
+  `round(value, precision = 0, mode = 'halfUp')` takes the same `RoundingMode` values as `formatNumber`'s `roundingMode` option (`'halfUp'`, `'halfDown'`, `'halfEven'`, `'ceil'`, `'floor'`) and accepts a negative `precision` to round to tens, hundreds and so on. It is now the one rounding implementation in the package: `formatNumber`, `formatMoney` and `formatPercentage` all delegate to it, and `formatPercentage`'s `multiplyBy100`/`asRatio` scaling goes through `multiply`/`divide`. `divide` carries the quotient to 25 significant digits, so a terminating quotient is exact and a non-terminating one matches correctly rounding the true quotient.
+
+  All five throw `RangeError` rather than returning `NaN` or `Infinity` — on non-finite input, division by zero, a non-integer `precision`, or a result too large for a JavaScript number — and never return `-0`.
+
+  The long-standing `halfUp` property-test flake in `formatNumber`'s round-trip suite (a `0.000050008...` diff on values like `-268435456.47635`) is gone: the rounding is exact now, and the property measures the round-trip difference with `subtract` instead of float `-`.
+
+  **Breaking changes** (pre-1.0, so `minor` per semver's `0.x` rule — see `CONTRIBUTING.md`'s "Releasing" section):
+
+  - `formatNumber` (and therefore `formatMoney`) rounds decimal-safely in every `roundingMode`. Values that sit on a decimal tie but a hair below it in binary now round the way they are written: `formatNumber(1.005, { decimals: 2 })` is `"1.01"`, where it was `"1.00"` via `toFixed`. Most outputs are unchanged; the ones that differ were the floating-point artefacts.
+  - `formatPercentage` scales exactly: `formatPercentage(1.005, { multiplyBy100: true })` is `"101%"`, where it was `"100%"` because `1.005 * 100` is `100.49999999999999` in JavaScript.
+  - `formatNumber`, `formatMoney` and `formatPercentage` throw `RangeError` for a non-integer `decimals` (e.g. `decimals: 1.5`), which `toFixed` used to truncate silently.
+
 ## 0.3.0
 
 ### Minor Changes
