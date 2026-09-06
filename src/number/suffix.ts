@@ -1,4 +1,5 @@
 import { en } from '../locale/en'
+import { toSafeNumber } from '../shared/bigint'
 import type { OrdinalOptions, SuffixOptions, ToOrdinalOptions } from '../shared/types'
 import { numberToWords } from './words'
 
@@ -13,13 +14,20 @@ import { numberToWords } from './words'
  * (see its doc comment) rather than here, since it's Azerbaijani-specific
  * data, not a generic algorithm.
  *
+ * A `bigint` behaves exactly like the equal `number` as long as it is a
+ * safe integer: `locale.ordinal.suffix` takes a `number` (see
+ * `LocaleOrdinal` in `locale/types.ts`), so the value is narrowed with
+ * `toSafeNumber` first and a `bigint` beyond `Number.MAX_SAFE_INTEGER`
+ * throws `RangeError` rather than reaching the hook rounded.
+ *
  * @example
  * getOrdinalSuffix(1); // "st"
+ * getOrdinalSuffix(BigInt(22)); // "nd"
  * getOrdinalSuffix(1, { locale: az }); // "ci" (bir -> birinci)
  */
-export function getOrdinalSuffix(value: number, options: OrdinalOptions = {}): string {
+export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions = {}): string {
   const { locale = en } = options
-  return locale.ordinal.suffix(value)
+  return locale.ordinal.suffix(toSafeNumber(value, 'getOrdinalSuffix'))
 }
 
 /**
@@ -28,17 +36,26 @@ export function getOrdinalSuffix(value: number, options: OrdinalOptions = {}): s
  * appends the short digit suffix (`"5th"`), this replaces (or transforms)
  * the cardinal reading's relevant word(s) via `locale.ordinal.words`.
  *
+ * A `bigint` is accepted like a `number` (a `bigint` is always an integer,
+ * so only the sign is checked) and narrowed with `toSafeNumber` for the
+ * `number`-only `locale.ordinal.words` hook — see {@link getOrdinalSuffix}.
+ * Beyond `Number.MAX_SAFE_INTEGER` it throws `RangeError`; no launch locale
+ * can spell a cardinal that large anyway.
+ *
  * @example
  * ordinalToWords(3); // "third"
+ * ordinalToWords(BigInt(21)); // "twenty-first"
  * ordinalToWords(3, { locale: az }); // "üçüncü"
  */
-export function ordinalToWords(value: number, options: OrdinalOptions = {}): string {
-  if (!Number.isInteger(value) || value < 0) {
+export function ordinalToWords(value: number | bigint, options: OrdinalOptions = {}): string {
+  const isInteger = typeof value === 'bigint' || Number.isInteger(value)
+  if (!isInteger || value < 0) {
     throw new RangeError(`ordinalToWords: value must be a non-negative integer, received ${value}`)
   }
 
   const { locale = en } = options
-  return locale.ordinal.words(value, numberToWords(value, { locale }))
+  const safe = toSafeNumber(value, 'ordinalToWords')
+  return locale.ordinal.words(safe, numberToWords(safe, { locale }))
 }
 
 /**
@@ -81,12 +98,18 @@ export function cardinalToOrdinalWords(
  * convention (`CLAUDE.md`'s Package Design Principles) now that this
  * function has more than one optional parameter.
  *
+ * A `bigint` renders its own digits exactly (`toOrdinal(BigInt(101))` is
+ * `"101-st"`); only the suffix lookup narrows it to a `number`, via
+ * {@link getOrdinalSuffix}, so a `bigint` past `Number.MAX_SAFE_INTEGER`
+ * throws `RangeError` there.
+ *
  * @example
- * toOrdinal(3); // "3rd"
+ * toOrdinal(3); // "3-rd"
+ * toOrdinal(BigInt(3)); // "3-rd"
  * toOrdinal(3, { locale: az }); // "3-cü"
  * toOrdinal(5, { separator: ' ' }); // "5 th"
  */
-export function toOrdinal(value: number, options: ToOrdinalOptions = {}): string {
+export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
   const { separator = '-', locale } = options
   return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
 }
@@ -94,14 +117,16 @@ export function toOrdinal(value: number, options: ToOrdinalOptions = {}): string
 /**
  * Attaches an arbitrary suffix to a value, e.g. a unit or label. Not
  * locale-dependent — the suffix is caller-supplied text, not derived
- * linguistic data.
+ * linguistic data. A `bigint` renders its digits exactly, as a `number` or
+ * string does.
  *
  * @example
  * withSuffix(120, 'kg'); // "120 kg"
+ * withSuffix(BigInt(120), 'kg'); // "120 kg"
  * withSuffix(5, '-cı', { separator: '' }); // "5-cı"
  */
 export function withSuffix(
-  value: number | string,
+  value: number | string | bigint,
   suffix: string,
   options: SuffixOptions = {},
 ): string {

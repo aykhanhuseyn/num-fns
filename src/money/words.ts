@@ -6,6 +6,7 @@ import type {
   PluralCategory,
 } from '../locale/types'
 import { numberToWords } from '../number/words'
+import { absBigInt, pluralOperand, ZERO } from '../shared/bigint'
 import type { MoneyWordsOptions } from '../shared/types'
 import { type CurrencyCode, getCurrency } from './currency'
 
@@ -43,6 +44,15 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * копейка"`, not `"...один копейка"`, and Spanish `1` pound reads `"una
  * libra"`.
  *
+ * A `bigint` is an exact whole amount of the major unit (the minor part is
+ * zero, spelled only with `includeZeroMinor`), read at any magnitude the
+ * locale can name — `numberToWords` throws `RangeError` beyond
+ * `1000 ** locale.words.scales.length - 1` (999 trillion for every launch
+ * locale). The unit word is still inflected for the amount's plural
+ * category (`moneyToWords(2n, { locale: ru })` is `"два рубля"`), and a
+ * negative `bigint` is prefixed with `locale.words.negative` like a
+ * negative `number`.
+ *
  * @example
  * moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
  * moneyToWords(1, { locale: en }); // "one dollar"
@@ -50,9 +60,10 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * moneyToWords(1234.5, { locale: az }); // "min iki yüz otuz dörd manat əlli qəpik"
  * moneyToWords(1.01, { locale: ru }); // "один рубль одна копейка"
  * moneyToWords(2.02, { locale: ru, currency: 'USD' }); // "два доллара два цента"
+ * moneyToWords(1000000000000n); // "one trillion dollars"
  */
-export function moneyToWords(value: number, options: MoneyWordsOptions = {}): string {
-  if (!Number.isFinite(value)) {
+export function moneyToWords(value: number | bigint, options: MoneyWordsOptions = {}): string {
+  if (typeof value === 'number' && !Number.isFinite(value)) {
     throw new RangeError(`moneyToWords: value must be finite, received ${value}`)
   }
 
@@ -61,17 +72,13 @@ export function moneyToWords(value: number, options: MoneyWordsOptions = {}): st
   const units = resolveUnits(locale, code)
   const { majorUnit, minorUnit, includeZeroMinor = false } = options
 
-  const isNegative = value < 0 && value !== 0
-  const absolute = Math.abs(value)
-  const minorPerMajor = 10 ** decimals
-  let major = Math.floor(absolute)
-  let minor = Math.round((absolute - major) * minorPerMajor)
-  if (minor === minorPerMajor) {
-    minor = 0
-    major += 1
-  }
+  const { isNegative, major, minor } =
+    typeof value === 'bigint' ? splitBigIntAmount(value) : splitAmount(value, decimals)
 
-  const majorUnitWord = majorUnit ?? resolveUnitWord(units.major, locale.plural(major))
+  // `locale.plural` takes a `number`: a `bigint` major amount beyond the safe
+  // range is folded by `pluralOperand` to a value with the same plural category.
+  const majorCount = typeof major === 'bigint' ? pluralOperand(major) : major
+  const majorUnitWord = majorUnit ?? resolveUnitWord(units.major, locale.plural(majorCount))
   const minorUnitWord = minorUnit ?? resolveUnitWord(units.minor, locale.plural(minor))
 
   const majorWords = `${numberToWords(major, { locale, gender: units.major.gender })} ${majorUnitWord}`
@@ -82,4 +89,36 @@ export function moneyToWords(value: number, options: MoneyWordsOptions = {}): st
   const words = `${majorWords}${minorWords}`
 
   return isNegative ? `${locale.words.negative} ${words}` : words
+}
+
+/** The sign and the non-negative major/minor unit counts an amount spells out as. */
+interface AmountParts {
+  isNegative: boolean
+  /** Whole major units — a `bigint` when the input was one, read exactly by `numberToWords`. */
+  major: number | bigint
+  /** Minor units, `0` to `10 ** decimals - 1`; always a plain `number` (a `bigint` amount has none). */
+  minor: number
+}
+
+/**
+ * Splits a `number` amount into major and minor units, rounding the fraction
+ * to the currency's `decimals` and carrying a rounded-up minor part
+ * (`1.999` at two decimals) into the major unit.
+ */
+function splitAmount(value: number, decimals: number): AmountParts {
+  const isNegative = value < 0 && value !== 0
+  const absolute = Math.abs(value)
+  const minorPerMajor = 10 ** decimals
+  let major = Math.floor(absolute)
+  let minor = Math.round((absolute - major) * minorPerMajor)
+  if (minor === minorPerMajor) {
+    minor = 0
+    major += 1
+  }
+  return { isNegative, major, minor }
+}
+
+/** A `bigint` amount is a whole number of major units: nothing to round, no minor part. */
+function splitBigIntAmount(value: bigint): AmountParts {
+  return { isNegative: value < ZERO, major: absBigInt(value), minor: 0 }
 }

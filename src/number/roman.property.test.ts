@@ -4,6 +4,8 @@ import { fromRoman, toRoman } from './roman'
 
 /** `toRoman` covers 1-3999; standard numerals have no zero and no vinculum. */
 const ROMAN_RANGE = { min: 1, max: 3999 }
+/** The same range as `bigint` bounds, for the `bigint` input path. */
+const ROMAN_BIGINT_RANGE = { min: BigInt(1), max: BigInt(3999) }
 const ROMAN_NUMERAL_REGEX = /^[MDCLXVI]+$/
 
 describe('toRoman/fromRoman', () => {
@@ -40,6 +42,32 @@ describe('toRoman/fromRoman', () => {
         expect(fromRoman(numeral.toLowerCase())).toBe(value)
         expect(fromRoman(numeral.toUpperCase())).toBe(value)
       }),
+    )
+  })
+
+  it('gives a bigint the same numeral as the equal number, and round-trips it', () => {
+    fc.assert(
+      fc.property(fc.bigInt(ROMAN_BIGINT_RANGE), (value) => {
+        const numeral = toRoman(value)
+        expect(numeral).toBe(toRoman(Number(value)))
+        expect(fromRoman(numeral)).toBe(Number(value))
+      }),
+    )
+  })
+
+  it('rejects every bigint outside 1-3999', () => {
+    fc.assert(
+      fc.property(fc.bigInt({ min: BigInt('-100000000000000000000'), max: BigInt(0) }), (value) => {
+        expect(() => toRoman(value)).toThrow(RangeError)
+      }),
+    )
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: BigInt(4000), max: BigInt('100000000000000000000') }),
+        (value) => {
+          expect(() => toRoman(value)).toThrow(RangeError)
+        },
+      ),
     )
   })
 

@@ -1,5 +1,6 @@
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
+import { maxSupportedBigInt, toThousandGroups, ZERO } from '../shared/bigint'
 import type { NumberWordsOptions } from '../shared/types'
 
 /**
@@ -82,6 +83,12 @@ export function resolveScaleWord(
  * `locale/types.ts` for the `en`/`ru`/`es` gap this leaves, tracked in
  * `todo.md` §2).
  *
+ * A `bigint` is read exactly at any magnitude (`todo.md` §4's BigInt input
+ * path): it is chunked with integer arithmetic rather than `Math.floor`, so
+ * a custom locale that names scales beyond `Number.MAX_SAFE_INTEGER`
+ * (quadrillion and up) gets every digit right. The same
+ * `1000 ** scales.length - 1` cap applies, computed exactly.
+ *
  * For locales whose number words inflect by grammatical gender (`ru`, `es`),
  * `options.gender` selects the agreement forms for the noun being counted
  * (see `NumberWordsOptions.gender` in `shared/types.ts` for exactly which
@@ -96,8 +103,11 @@ export function resolveScaleWord(
  * numberToWords(-5, { locale: ru }); // "минус пять"
  * numberToWords(21, { locale: ru, gender: 'feminine' }); // "двадцать одна"
  * numberToWords(200, { locale: es, gender: 'feminine' }); // "doscientas"
+ * numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion ..."
  */
-export function numberToWords(value: number, options: NumberWordsOptions = {}): string {
+export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
+  if (typeof value === 'bigint') return bigIntToWords(value, options)
+
   if (!Number.isFinite(value)) {
     throw new RangeError(`numberToWords: value must be finite, received ${value}`)
   }
@@ -122,7 +132,7 @@ export function numberToWords(value: number, options: NumberWordsOptions = {}): 
     integerPart += 1
   }
 
-  let words = integerToWords(integerPart, locale, gender)
+  let words = integerToWords(toThousandGroups(integerPart), locale, gender)
   if (fractionDigits > 0) {
     const fractionWords = locale.words.renderGroup(fractionDigits, gender)
     words = locale.words.decimalConnector
@@ -133,19 +143,34 @@ export function numberToWords(value: number, options: NumberWordsOptions = {}): 
   return isNegative ? `${locale.words.negative} ${words}` : words
 }
 
+/**
+ * The `bigint` path of {@link numberToWords}: no fraction to read, and the
+ * magnitude cap is checked exactly (`maxSupportedBigInt`) instead of through
+ * a `number` that could not hold a custom locale's larger scales.
+ */
+function bigIntToWords(value: bigint, options: NumberWordsOptions): string {
+  const { locale = en } = options
+  const gender = resolveGender(options.gender, locale)
+
+  const isNegative = value < ZERO
+  const groups = toThousandGroups(isNegative ? -value : value)
+  if (groups.length > locale.words.scales.length) {
+    throw new RangeError(
+      `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length)}`,
+    )
+  }
+
+  const words = integerToWords(groups, locale, gender)
+  return isNegative ? `${locale.words.negative} ${words}` : words
+}
+
+/** Renders base-1000 `groups` (least significant first, as `toThousandGroups` returns them; `[]` is zero). */
 function integerToWords(
-  value: number,
+  groups: readonly number[],
   locale: Locale,
   gender: GrammaticalGender | undefined,
 ): string {
-  if (value === 0) return locale.words.zero
-
-  const groups: number[] = []
-  let remaining = value
-  while (remaining > 0) {
-    groups.push(remaining % 1000)
-    remaining = Math.floor(remaining / 1000)
-  }
+  if (groups.length === 0) return locale.words.zero
 
   const chunks: WordChunk[] = []
   for (let i = groups.length - 1; i >= 0; i--) {

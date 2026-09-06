@@ -23,6 +23,35 @@ import type { CurrencyCode } from '../money/currency'
  */
 export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
 
+/**
+ * Which numeric type a parser returns — the `output` option of `parseNumber`,
+ * `parseMoney`, `parsePercentage`, `parseShortNotation`, `parseLongNotation`,
+ * `parseByteSize` and `fromBase`:
+ * - `'number'` — a plain JavaScript `number`. The default. When the parsed
+ *   value is an integer beyond `Number.MAX_SAFE_INTEGER` — which only a
+ *   parser that computes exactly can notice, e.g. `parseLongNotation` — the
+ *   parser throws `RangeError` rather than handing back a rounded `number`.
+ * - `'bigint'` — an exact `bigint` of any magnitude. The parsed value must be
+ *   a whole number (`"1,234.00"` is fine, `"1.5"` throws `RangeError`), since
+ *   a `bigint` cannot carry a fraction and truncating would silently be
+ *   wrong. `parsePercentage`'s `asRatio` and `parseByteSize`'s fractional
+ *   sizes go through the same rule: `"2.5 KB"` is `2560n`, `"2.5 KB"` at
+ *   `base: 1000` is `2500n`, and `"1.1%"` as a ratio throws.
+ *
+ * Every parser's return type follows the option through overloads, so
+ * `parseNumber("1", { output: 'bigint' })` is typed `bigint` and
+ * `parseNumber("1")` stays `number` — no cast on the consumer's side. The
+ * formatters accept `bigint` inputs symmetrically (`formatNumber(10n)` is
+ * `"10"`), so a parse/format round trip can stay exact end to end.
+ */
+export type ParseOutput = 'number' | 'bigint'
+
+/** The `output` option every parser accepts — see {@link ParseOutput}. */
+export interface ParseOutputOptions {
+  /** Return a `bigint` instead of a `number`. Defaults to `'number'`. Any other value throws `RangeError`. */
+  output?: ParseOutput
+}
+
 export interface NumberFormatOptions {
   /** Number of fractional digits to keep (a non-negative integer, `RangeError` otherwise). Omit to keep the value's natural precision. */
   decimals?: number
@@ -36,10 +65,9 @@ export interface NumberFormatOptions {
   locale?: Locale
 }
 
-export type NumberParseOptions = Pick<
-  NumberFormatOptions,
-  'thousandsSeparator' | 'decimalSeparator' | 'locale'
->
+export interface NumberParseOptions
+  extends Pick<NumberFormatOptions, 'thousandsSeparator' | 'decimalSeparator' | 'locale'>,
+    ParseOutputOptions {}
 
 export interface MoneyFormatOptions extends NumberFormatOptions {
   /**
@@ -132,7 +160,9 @@ export interface ShortNotationOptions {
   decimalSeparator?: string
 }
 
-export type ShortNotationParseOptions = Pick<ShortNotationOptions, 'locale' | 'decimalSeparator'>
+export interface ShortNotationParseOptions
+  extends Pick<ShortNotationOptions, 'locale' | 'decimalSeparator'>,
+    ParseOutputOptions {}
 
 export interface LongNotationOptions {
   /**
@@ -145,6 +175,9 @@ export interface LongNotationOptions {
   /** Locale supplying the scale words (`locale.words.scales`). Defaults to `en`. */
   locale?: Locale
 }
+
+/** `parseLongNotation`'s options: {@link LongNotationOptions} plus the `output` type. */
+export interface LongNotationParseOptions extends LongNotationOptions, ParseOutputOptions {}
 
 export interface SuffixOptions {
   /** String inserted between the value and the suffix. Defaults to `' '`. */
@@ -203,7 +236,12 @@ export interface ByteSizeOptions {
   decimalSeparator?: string
 }
 
-export type ByteSizeParseOptions = Pick<ByteSizeOptions, 'base' | 'decimalSeparator'>
+export interface ByteSizeParseOptions
+  extends Pick<ByteSizeOptions, 'base' | 'decimalSeparator'>,
+    ParseOutputOptions {}
+
+/** `fromBase`'s trailing options: only the `output` type — see {@link ParseOutput}. */
+export type BaseParseOptions = ParseOutputOptions
 
 export interface DigitWordsOptions {
   /** String inserted between each spoken digit. Defaults to `' '`. */

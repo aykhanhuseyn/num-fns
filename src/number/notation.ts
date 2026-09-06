@@ -1,7 +1,19 @@
 import { en } from '../locale/en'
 import type { Locale } from '../locale/types'
+import {
+  absBigInt,
+  maxSupportedBigInt,
+  resolveOutput,
+  scaleBigInt,
+  scaledBigInt,
+  THOUSAND,
+  toOutput,
+  toThousandGroups,
+  ZERO,
+} from '../shared/bigint'
 import type {
   LongNotationOptions,
+  LongNotationParseOptions,
   ShortNotationOptions,
   ShortNotationParseOptions,
 } from '../shared/types'
@@ -18,12 +30,21 @@ import { resolveScaleWord } from './words'
  * note on this). It's now folded into the full `Locale` system per the
  * `todo.md` §1 plan.
  *
+ * A `bigint` is scaled exactly — divided by the threshold in integer
+ * arithmetic and rounded half up on the true remainder — where a `number`
+ * goes through `toFixed`, so `toShortNotation(1500n)` is `"1.5K"` and a
+ * value past the largest scale keeps every digit (`"1500T"`, not `"1.5e15"`).
+ *
  * @example
  * toShortNotation(1500); // "1.5K"
  * toShortNotation(1500, { locale: az }); // "1,5 min"
+ * toShortNotation(1500n); // "1.5K"
  */
-export function toShortNotation(value: number, options: ShortNotationOptions = {}): string {
-  if (!Number.isFinite(value)) {
+export function toShortNotation(
+  value: number | bigint,
+  options: ShortNotationOptions = {},
+): string {
+  if (typeof value === 'number' && !Number.isFinite(value)) {
     throw new RangeError(`toShortNotation: value must be finite, received ${value}`)
   }
 
@@ -32,13 +53,17 @@ export function toShortNotation(value: number, options: ShortNotationOptions = {
     locale = en,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
   } = options
-  const isNegative = value < 0 && value !== 0
-  const absolute = Math.abs(value)
-  const sign = isNegative ? '-' : ''
+  if (typeof value === 'bigint' && (!Number.isInteger(decimals) || decimals < 0)) {
+    throw new RangeError(
+      `toShortNotation: decimals must be a non-negative integer, received ${decimals}`,
+    )
+  }
+  const sign = value < 0 ? '-' : ''
+  const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
 
   for (const { threshold, short } of locale.notation.scales) {
     if (absolute >= threshold) {
-      const scaled = trimTrailingZeros((absolute / threshold).toFixed(decimals)).replace(
+      const scaled = trimTrailingZeros(scaleFixed(absolute, threshold, decimals)).replace(
         '.',
         decimalSeparator,
       )
@@ -47,7 +72,19 @@ export function toShortNotation(value: number, options: ShortNotationOptions = {
     }
   }
 
-  return `${sign}${absolute.toFixed(0)}`
+  return `${sign}${typeof absolute === 'bigint' ? absolute : absolute.toFixed(0)}`
+}
+
+/**
+ * `absolute / threshold` rendered with exactly `decimals` fraction digits:
+ * `toFixed` on the float path, exact integer division rounded half up on
+ * the `bigint` path (`scaleBigInt`), so a value past the largest scale
+ * keeps every digit instead of collapsing to `1.5e15`.
+ */
+function scaleFixed(absolute: number | bigint, threshold: number, decimals: number): string {
+  return typeof absolute === 'bigint'
+    ? scaleBigInt(absolute, BigInt(threshold), decimals)
+    : (absolute / threshold).toFixed(decimals)
 }
 
 /** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */
@@ -74,14 +111,34 @@ function correctFloatingPointNoise(value: number): number {
 
 /**
  * Parses a string produced by {@link toShortNotation} (or an equivalent
- * format) back into a JavaScript number.
+ * format) back into a JavaScript number — or, with `{ output: 'bigint' }`,
+ * into an exact `bigint`: the mantissa is multiplied by the scale's
+ * threshold in decimal, so `"2.5M"` is `2500000n`, and a value that is not a
+ * whole number after scaling (`"1.2345K"`) throws `RangeError`.
  *
  * @example
  * parseShortNotation("2.5M"); // 2500000
  * parseShortNotation("2,5 mln", { locale: az }); // 2500000
+ * parseShortNotation("2.5M", { output: 'bigint' }); // 2500000n
  */
-export function parseShortNotation(value: string, options: ShortNotationParseOptions = {}): number {
+export function parseShortNotation(
+  value: string,
+  options: ShortNotationParseOptions & { output: 'bigint' },
+): bigint
+export function parseShortNotation(
+  value: string,
+  options?: ShortNotationParseOptions & { output?: 'number' },
+): number
+export function parseShortNotation(
+  value: string,
+  options: ShortNotationParseOptions,
+): number | bigint
+export function parseShortNotation(
+  value: string,
+  options: ShortNotationParseOptions = {},
+): number | bigint {
   const { locale = en, decimalSeparator = locale.formatDefaults.decimalSeparator } = options
+  const output = resolveOutput(options.output, 'parseShortNotation')
 
   const trimmed = value.trim()
   if (trimmed === '') {
@@ -96,12 +153,15 @@ export function parseShortNotation(value: string, options: ShortNotationParseOpt
     const lowerSuffixToken = suffixToken.toLowerCase()
     if (lowerTrimmed.endsWith(lowerSuffixToken)) {
       const numericPart = trimmed.slice(0, trimmed.length - suffixToken.length).trim()
+      if (output === 'bigint') {
+        return scaledBigInt(numericPart, threshold, decimalSeparator, 'parseShortNotation')
+      }
       const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
       return correctFloatingPointNoise(numeric * threshold)
     }
   }
 
-  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator })
+  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
 }
 
 /**
@@ -109,43 +169,40 @@ export function parseShortNotation(value: string, options: ShortNotationParseOpt
  * `options.locale`, defaults to `en`), without spelling every number out —
  * e.g. `1234567` becomes `"1 million 234 thousand 567"`.
  *
+ * A `bigint` is expanded exactly at any magnitude (`todo.md` §4's BigInt
+ * input path) — the natural input for a custom locale whose scale words go
+ * past `Number.MAX_SAFE_INTEGER`; the same `1000 ** scales.length - 1` cap
+ * applies, computed exactly.
+ *
  * @example
  * toLongNotation(1234567); // "1 million 234 thousand 567"
  * toLongNotation(1234567, { locale: az }); // "1 milyon 234 min 567"
+ * toLongNotation(BigInt('1234567')); // "1 million 234 thousand 567"
  *
  * @throws {RangeError} when `groupSeparator` is empty or contains a digit —
  * either would run a scale word into the next group's digits, producing a
  * string {@link parseLongNotation} cannot read back.
  */
-export function toLongNotation(value: number, options: LongNotationOptions = {}): string {
-  if (!Number.isFinite(value)) {
-    throw new RangeError(`toLongNotation: value must be finite, received ${value}`)
-  }
-  if (!Number.isInteger(value)) {
-    throw new TypeError(`toLongNotation: value must be an integer, received ${value}`)
-  }
+export function toLongNotation(value: number | bigint, options: LongNotationOptions = {}): string {
+  assertLongNotationInput(value)
 
   const { groupSeparator = ' ', locale = en } = options
 
   assertGroupSeparator(groupSeparator, 'toLongNotation')
 
-  const isNegative = value < 0 && value !== 0
-  const absolute = Math.abs(value)
-  const maxSupportedInteger = 1000 ** locale.words.scales.length - 1
+  const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
+  const groups = toThousandGroups(absolute)
 
-  if (absolute > maxSupportedInteger) {
+  if (groups.length > locale.words.scales.length) {
+    const maxSupportedInteger =
+      typeof value === 'bigint'
+        ? maxSupportedBigInt(locale.words.scales.length)
+        : 1000 ** locale.words.scales.length - 1
     throw new RangeError(
       `toLongNotation: value exceeds the maximum supported magnitude of ${maxSupportedInteger}`,
     )
   }
-  if (absolute === 0) return '0'
-
-  const groups: number[] = []
-  let remaining = absolute
-  while (remaining > 0) {
-    groups.push(remaining % 1000)
-    remaining = Math.floor(remaining / 1000)
-  }
+  if (groups.length === 0) return '0'
 
   const parts: string[] = []
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -156,7 +213,18 @@ export function toLongNotation(value: number, options: LongNotationOptions = {})
     parts.push(scaleWord ? `${groupValue} ${scaleWord}` : `${groupValue}`)
   }
 
-  return `${isNegative ? '-' : ''}${parts.join(groupSeparator)}`
+  return `${value < 0 ? '-' : ''}${parts.join(groupSeparator)}`
+}
+
+/** A `number` must be a finite integer; a `bigint` is one by construction. */
+function assertLongNotationInput(value: number | bigint): void {
+  if (typeof value === 'bigint') return
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`toLongNotation: value must be finite, received ${value}`)
+  }
+  if (!Number.isInteger(value)) {
+    throw new TypeError(`toLongNotation: value must be an integer, received ${value}`)
+  }
 }
 
 /** Splits a long-notation string into its digit-group and scale-word tokens. */
@@ -187,16 +255,37 @@ function buildScaleWordIndex(locale: Locale): Map<string, number> {
 
 /**
  * Parses a string produced by {@link toLongNotation} (or an equivalent
- * format) back into a JavaScript number.
+ * format) back into a JavaScript number — or, with `{ output: 'bigint' }`,
+ * into an exact `bigint`.
+ *
+ * The total is accumulated exactly in `bigint` arithmetic whatever the
+ * output, so a `number` result is either exact or a `RangeError`: a string
+ * whose value exceeds `Number.MAX_SAFE_INTEGER` (only reachable through a
+ * custom locale with scales past a trillion, or an oversized digit group) is
+ * refused with a pointer to `output: 'bigint'` rather than rounded.
  *
  * @example
  * parseLongNotation("1 million 234 thousand 567"); // 1234567
  * parseLongNotation("1 milyon 234 min 567", { locale: az }); // 1234567
+ * parseLongNotation("1 million 234 thousand 567", { output: 'bigint' }); // 1234567n
  *
  * @throws {RangeError} when `groupSeparator` is empty or contains a digit.
  */
-export function parseLongNotation(value: string, options: LongNotationOptions = {}): number {
+export function parseLongNotation(
+  value: string,
+  options: LongNotationParseOptions & { output: 'bigint' },
+): bigint
+export function parseLongNotation(
+  value: string,
+  options?: LongNotationParseOptions & { output?: 'number' },
+): number
+export function parseLongNotation(value: string, options: LongNotationParseOptions): number | bigint
+export function parseLongNotation(
+  value: string,
+  options: LongNotationParseOptions = {},
+): number | bigint {
   const { groupSeparator = ' ', locale = en } = options
+  const output = resolveOutput(options.output, 'parseLongNotation')
 
   assertGroupSeparator(groupSeparator, 'parseLongNotation')
 
@@ -208,26 +297,24 @@ export function parseLongNotation(value: string, options: LongNotationOptions = 
   const isNegative = trimmed.startsWith('-')
   const body = isNegative ? trimmed.slice(1) : trimmed
 
-  if (body === '0') return 0
-
   const normalized = body.split(groupSeparator).join(' ')
   const tokens = normalized.split(WHITESPACE_REGEX).filter(Boolean)
   const scaleWordIndex = buildScaleWordIndex(locale)
 
-  let total = 0
+  let total = ZERO
   let i = 0
   while (i < tokens.length) {
     const countToken = tokens[i] as string
     if (!DIGITS_ONLY_REGEX.test(countToken)) {
       throw new SyntaxError(`parseLongNotation: unable to parse "${value}" as a number`)
     }
-    const count = Number(countToken)
+    const count = BigInt(countToken)
 
     const nextToken = tokens[i + 1]
     const scaleIndex = nextToken === undefined ? -1 : (scaleWordIndex.get(nextToken) ?? -1)
 
     if (scaleIndex > 0) {
-      total += count * 1000 ** scaleIndex
+      total += count * THOUSAND ** BigInt(scaleIndex)
       i += 2
     } else {
       total += count
@@ -235,5 +322,6 @@ export function parseLongNotation(value: string, options: LongNotationOptions = 
     }
   }
 
-  return isNegative ? -total : total
+  // `-0n` does not exist and `toOutput` maps `0n` to `0`, so "-0" parses to plain `0`.
+  return toOutput(isNegative ? -total : total, output, 'parseLongNotation')
 }

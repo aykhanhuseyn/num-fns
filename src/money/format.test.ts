@@ -66,6 +66,37 @@ describe('formatMoney', () => {
       )
     })
   })
+
+  describe('bigint input', () => {
+    it('formats a whole amount exactly, padding the currency decimals with zeros', () => {
+      expect(formatMoney(BigInt(1234))).toBe('$ 1,234.00')
+      expect(formatMoney(BigInt('1234567890123456789'))).toBe('$ 1,234,567,890,123,456,789.00')
+    })
+
+    it('keeps the sign and honours the locale placement', () => {
+      expect(formatMoney(BigInt(-1234))).toBe('$ -1,234.00')
+      expect(formatMoney(BigInt(-5), { locale: az })).toBe('-5,00 ₼')
+      expect(formatMoney(BigInt('-1234567890123456789'), { locale: ru, currency: 'EUR' })).toBe(
+        '-1 234 567 890 123 456 789,00 €',
+      )
+    })
+
+    it('formats zero', () => {
+      expect(formatMoney(BigInt(0))).toBe('$ 0.00')
+      expect(formatMoney(BigInt(0), { decimals: 0 })).toBe('$ 0')
+    })
+
+    it('pads to an explicit decimals and ignores roundingMode', () => {
+      expect(formatMoney(BigInt(10), { decimals: 0 })).toBe('$ 10')
+      expect(formatMoney(BigInt(10), { decimals: 3 })).toBe('$ 10.000')
+      expect(formatMoney(BigInt(10), { roundingMode: 'floor' })).toBe('$ 10.00')
+    })
+
+    it('throws RangeError for a non-integer decimals', () => {
+      expect(() => formatMoney(BigInt(1), { decimals: 1.5 })).toThrow(RangeError)
+      expect(() => formatMoney(BigInt(1), { decimals: -1 })).toThrow(RangeError)
+    })
+  })
 })
 
 describe('parseMoney', () => {
@@ -89,6 +120,52 @@ describe('parseMoney', () => {
 
   it('throws RangeError for a code the registry does not know', () => {
     expect(() => parseMoney('1', { currency: 'XYZ' as CurrencyCode })).toThrow(RangeError)
+  })
+
+  describe("{ output: 'bigint' }", () => {
+    it('returns a whole amount as an exact bigint', () => {
+      expect(parseMoney('$ 1,234.00', { output: 'bigint' })).toBe(BigInt(1234))
+      expect(parseMoney('$ 1,234', { output: 'bigint' })).toBe(BigInt(1234))
+      expect(parseMoney('$ -1,234.00', { output: 'bigint' })).toBe(BigInt(-1234))
+      expect(parseMoney('$ 0.00', { output: 'bigint' })).toBe(BigInt(0))
+      expect(parseMoney('$ 1,234,567,890,123,456,789.00', { output: 'bigint' })).toBe(
+        BigInt('1234567890123456789'),
+      )
+    })
+
+    it('strips the symbol of the locale or requested currency before reading the digits', () => {
+      expect(parseMoney('1 234,00 ₼', { locale: az, output: 'bigint' })).toBe(BigInt(1234))
+      expect(parseMoney('€ 1,234.00', { currency: 'EUR', output: 'bigint' })).toBe(BigInt(1234))
+      expect(parseMoney('9.00 US$', { symbol: 'US$', output: 'bigint' })).toBe(BigInt(9))
+    })
+
+    it('round-trips with formatMoney exactly beyond Number.MAX_SAFE_INTEGER', () => {
+      const amount = BigInt('123456789012345678901234567890')
+      expect(parseMoney(formatMoney(amount), { output: 'bigint' })).toBe(amount)
+      expect(
+        parseMoney(formatMoney(amount, { locale: ru }), { locale: ru, output: 'bigint' }),
+      ).toBe(amount)
+    })
+
+    it('throws RangeError when the amount is not a whole number', () => {
+      expect(() => parseMoney('$ 1.50', { output: 'bigint' })).toThrow(RangeError)
+      expect(() => parseMoney('$ 1.50', { output: 'bigint' })).toThrow(
+        'not a whole number and cannot be returned as a bigint',
+      )
+      expect(() => parseMoney('1,50 ₼', { locale: az, output: 'bigint' })).toThrow(RangeError)
+    })
+
+    it('throws RangeError for an output value that is neither "number" nor "bigint"', () => {
+      expect(() => parseMoney('$ 1.00', { output: 'float' as 'bigint' })).toThrow(RangeError)
+      expect(() => parseMoney('$ 1.00', { output: 'float' as 'bigint' })).toThrow(
+        'output must be "number" or "bigint", received float',
+      )
+    })
+
+    it("keeps returning a number for output 'number' or when omitted", () => {
+      expect(parseMoney('$ 1,234.50', { output: 'number' })).toBeCloseTo(1234.5)
+      expect(parseMoney('$ 1,234.50', {})).toBeCloseTo(1234.5)
+    })
   })
 })
 

@@ -1,9 +1,21 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
+import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
 import { ru } from '../locale/ru'
+import type { Locale } from '../locale/types'
 import { numberToWords } from './words'
+
+/**
+ * `en` with a sixth scale word, so the `bigint` path has a locale whose cap
+ * (`1000 ** 6 - 1`) lies past `Number.MAX_SAFE_INTEGER` — the motivating
+ * case for accepting a `bigint` at all (`todo.md` §4).
+ */
+const enWithQuadrillion: Locale = {
+  ...en,
+  words: { ...en.words, scales: [...en.words.scales, 'quadrillion'] },
+}
 
 describe('numberToWords', () => {
   it('defaults to English', () => {
@@ -248,6 +260,141 @@ describe('numberToWords', () => {
       expect(() => numberToWords(1, { locale: en, gender: 42 })).toThrow(
         'gender must be one of "masculine", "feminine", "neuter", received 42',
       )
+    })
+  })
+
+  describe('bigint', () => {
+    const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
+      ['en', en],
+      ['en-GB', enGB],
+      ['az', az],
+      ['ru', ru],
+      ['es', es],
+    ]
+
+    /** Integers spanning every group shape the launch locales spell: zero, units, teens, tens, hundreds, each scale word, and the 999-trillion cap. */
+    const AGREEMENT_VALUES = [
+      0, 1, 2, 5, 10, 11, 15, 20, 21, 99, 100, 101, 200, 231, 999, 1000, 1001, 2000, 5000, 21000,
+      100000, 231000, 999999, 1000000, 1000001, 21000000, 31000000, 1234567, 1000000000, 2000000005,
+      1000000000000, 123456789012345, 999999999999999,
+    ]
+
+    it.each(LOCALES)('spells a bigint exactly like the equivalent number (%s)', (_code, locale) => {
+      for (const value of AGREEMENT_VALUES) {
+        expect(numberToWords(BigInt(value), { locale })).toBe(numberToWords(value, { locale }))
+        expect(numberToWords(BigInt(-value), { locale })).toBe(numberToWords(-value, { locale }))
+      }
+    })
+
+    it('spells zero', () => {
+      expect(numberToWords(BigInt(0))).toBe('zero')
+      expect(numberToWords(BigInt(0), { locale: az })).toBe('sıfır')
+      expect(numberToWords(BigInt(0), { locale: ru })).toBe('ноль')
+      expect(numberToWords(BigInt(0), { locale: es })).toBe('cero')
+      expect(numberToWords(BigInt(-0))).toBe('zero')
+    })
+
+    it('spells composite values', () => {
+      expect(numberToWords(BigInt(1234))).toBe('one thousand two hundred thirty-four')
+      expect(numberToWords(BigInt(1234), { locale: az })).toBe('min iki yüz otuz dörd')
+      expect(numberToWords(BigInt(101), { locale: enGB })).toBe('one hundred and one')
+      expect(numberToWords(BigInt(21000000), { locale: es })).toBe('veintiún millones')
+      expect(numberToWords(BigInt(21000), { locale: ru })).toBe('двадцать одна тысяча')
+    })
+
+    it("prefixes a negative bigint with the locale's negative word", () => {
+      expect(numberToWords(BigInt(-5))).toBe('negative five')
+      expect(numberToWords(BigInt(-1234))).toBe('negative one thousand two hundred thirty-four')
+      expect(numberToWords(BigInt(-5), { locale: az })).toBe('mənfi beş')
+      expect(numberToWords(BigInt(-5), { locale: ru })).toBe('минус пять')
+      expect(numberToWords(BigInt(-5), { locale: es })).toBe('menos cinco')
+    })
+
+    it('applies the gender option to a bigint', () => {
+      expect(numberToWords(BigInt(21), { locale: ru, gender: 'feminine' })).toBe('двадцать одна')
+      expect(numberToWords(BigInt(1), { locale: ru, gender: 'neuter' })).toBe('одно')
+      expect(numberToWords(BigInt(-21), { locale: ru, gender: 'feminine' })).toBe(
+        'минус двадцать одна',
+      )
+      expect(numberToWords(BigInt(200), { locale: es, gender: 'feminine' })).toBe('doscientas')
+      expect(numberToWords(BigInt(200500), { locale: es, gender: 'feminine' })).toBe(
+        'doscientas mil quinientas',
+      )
+      expect(numberToWords(BigInt(21000000), { locale: ru, gender: 'feminine' })).toBe(
+        'двадцать один миллион',
+      )
+    })
+
+    it('validates gender the same way as the number path', () => {
+      expect(() => numberToWords(BigInt(1), { gender: 'feminine' })).toThrow(RangeError)
+      expect(() => numberToWords(BigInt(1), { locale: en, gender: 'masculine' })).toThrow(
+        'locale "en" has no grammatical gender',
+      )
+      expect(() => numberToWords(BigInt(1), { locale: az, gender: 'feminine' })).toThrow(RangeError)
+      expect(() => numberToWords(BigInt(1), { locale: es, gender: 'neuter' })).toThrow(
+        'locale "es" does not distinguish the "neuter" gender (supported: "masculine", "feminine")',
+      )
+      // @ts-expect-error — deliberately invalid gender to exercise the runtime guard
+      expect(() => numberToWords(BigInt(1), { locale: ru, gender: 'common' })).toThrow(RangeError)
+      // @ts-expect-error — deliberately invalid gender to exercise the runtime guard
+      expect(() => numberToWords(BigInt(1), { locale: en, gender: 42 })).toThrow(
+        'gender must be one of "masculine", "feminine", "neuter", received 42',
+      )
+    })
+
+    it('spells up to the 999-trillion cap of the launch locales, and no further', () => {
+      expect(numberToWords(BigInt('999999999999999'))).toBe(
+        'nine hundred ninety-nine trillion nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine',
+      )
+      expect(() => numberToWords(BigInt('1000000000000000'))).toThrow(RangeError)
+      expect(() => numberToWords(BigInt('1000000000000000'))).toThrow('999999999999999')
+      expect(() => numberToWords(BigInt('-1000000000000000'))).toThrow(RangeError)
+      expect(() => numberToWords(BigInt('1000000000000000'), { locale: az })).toThrow(RangeError)
+      expect(() => numberToWords(BigInt('1000000000000000'), { locale: ru })).toThrow(RangeError)
+      expect(() => numberToWords(BigInt('1000000000000000'), { locale: es })).toThrow(RangeError)
+    })
+
+    it('reports the cap as an exact integer in the error message', () => {
+      expect(() => numberToWords(BigInt('1000000000000000'))).toThrow(
+        'numberToWords: value exceeds the maximum supported magnitude of 999999999999999',
+      )
+    })
+
+    describe('a custom locale with scales past Number.MAX_SAFE_INTEGER', () => {
+      it('spells the first value the launch locales cannot', () => {
+        expect(numberToWords(BigInt('1000000000000000'), { locale: enWithQuadrillion })).toBe(
+          'one quadrillion',
+        )
+      })
+
+      it('gets every digit of a value a number would have rounded', () => {
+        // 9007199254740993 is Number.MAX_SAFE_INTEGER + 2, the first integer
+        // with no exact double; as a number it would read as ...992.
+        expect(numberToWords(BigInt('9007199254740993'), { locale: enWithQuadrillion })).toBe(
+          'nine quadrillion seven trillion one hundred ninety-nine billion two hundred fifty-four million seven hundred forty thousand nine hundred ninety-three',
+        )
+        expect(numberToWords(BigInt('-9007199254740993'), { locale: enWithQuadrillion })).toBe(
+          'negative nine quadrillion seven trillion one hundred ninety-nine billion two hundred fifty-four million seven hundred forty thousand nine hundred ninety-three',
+        )
+      })
+
+      it('spells up to the new cap, and reports it exactly past it', () => {
+        expect(numberToWords(BigInt('999999999999999999'), { locale: enWithQuadrillion })).toBe(
+          'nine hundred ninety-nine quadrillion nine hundred ninety-nine trillion nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine',
+        )
+        // 1000 ** 6 - 1 as a number is 1e18; the exact cap has no double.
+        expect(() =>
+          numberToWords(BigInt('1000000000000000000'), { locale: enWithQuadrillion }),
+        ).toThrow('999999999999999999')
+      })
+
+      it('still agrees with the number path below the old cap', () => {
+        for (const value of [0, 1, 1234567, 999999999999999]) {
+          expect(numberToWords(BigInt(value), { locale: enWithQuadrillion })).toBe(
+            numberToWords(value, { locale: enWithQuadrillion }),
+          )
+        }
+      })
     })
   })
 })

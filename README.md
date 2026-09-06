@@ -18,15 +18,16 @@ Modern internationalized number utility library for JavaScript — like
 
 Format and parse numbers, money and percentages; spell numbers out in words;
 ordinals, short/long notation and roman numerals; decimal-safe arithmetic and
-rounding. Written in TypeScript, built as dual ESM/CJS with type declarations,
-so it works in modern and older projects alike.
+rounding; `bigint` in and out for values a `number` can't hold exactly. Written
+in TypeScript, built as dual ESM/CJS with type declarations, so it works in
+modern and older projects alike.
 
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
-> **Status: 0.2.0**, the first stable release — the alpha line ends here
-> (npm's `latest` previously pointed at `0.2.0-alpha.0`). Still `0.x`, so the
-> API can change in a minor bump until 1.0; see [`todo.md`](./todo.md) for
-> what's queued before then. The locale system is implemented: `az`, `en`, `en-GB`,
+> **Status: 0.3.0** — the alpha line ended with `0.2.0`, the first stable
+> release (npm's `latest` previously pointed at `0.2.0-alpha.0`). Still `0.x`,
+> so the API can change in a minor bump until 1.0; see [`todo.md`](./todo.md)
+> for what's queued before then. The locale system is implemented: `az`, `en`, `en-GB`,
 > `ru`, and `es` are all wired into `numberToWords`, ordinals, notation, and
 > money/percentage formatting. **The default locale is `en`** if you don't
 > pass one — `az` was the implicit default before 2026-08-18 and now requires
@@ -101,6 +102,8 @@ Examples below use the default locale (`en`) unless a `locale` is passed:
 formatNumber(1234567.89, { decimals: 2 }); // "1,234,567.89"
 formatNumber(1234567.89, { decimals: 2, locale: az }); // "1 234 567,89"
 parseNumber('1,234,567.89'); // 1234567.89
+formatNumber(BigInt('1234567890123456789')); // "1,234,567,890,123,456,789"
+parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123456789n
 
 numberToWords(1234); // "one thousand two hundred thirty-four"
 numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
@@ -113,7 +116,7 @@ toLongNotation(1234567); // "1 million 234 thousand 567"
 parseShortNotation('2.5M'); // 2500000
 parseLongNotation('1 million 234 thousand 567'); // 1234567
 
-toOrdinal(3); // "3rd"
+toOrdinal(3); // "3-rd"
 ordinalToWords(3); // "third"
 withSuffix(120, 'kg'); // "120 kg"
 
@@ -136,7 +139,9 @@ round(2.5, 0, 'halfEven'); // 2
 ```
 
 Every formatter accepts an options object for overriding separators, decimals,
-currency, or locale — see the JSDoc on each function for details. Separator
+currency, or locale — see the JSDoc on each function for details. Every
+integer-domain function also takes a `bigint` where it takes a `number`, and
+every parser can return one — see "BigInt in and out" below. Separator
 options have to stay unambiguous: `thousandsSeparator` and `decimalSeparator`
 must differ, and `toLongNotation`'s `groupSeparator` must be non-empty and
 digit-free, so that anything a formatter emits its matching parser can read
@@ -217,6 +222,85 @@ Like the rest of the package, these throw `RangeError` rather than returning
 `NaN` or `Infinity`: on non-finite input, on division by zero, on a
 non-integer `precision`, or when a result is too large for a JavaScript
 number. None of them ever returns `-0`.
+
+### BigInt in and out
+
+A JavaScript `number` is exact only up to `Number.MAX_SAFE_INTEGER` (about
+9 × 10¹⁵). A 64-bit database id, a file size from
+`fs.statSync(path, { bigint: true })`, or a token balance in wei is already
+past that, so every integer-domain function accepts `number | bigint` and
+handles a `bigint` exactly at any magnitude — chunked, scaled and grouped in
+integer arithmetic, never converted to a float on the way through. The same
+goes in reverse: every parser takes `{ output: 'bigint' }` and hands back an
+exact `bigint`, with the return type following the option through overloads so
+there is nothing to cast.
+
+```ts
+import { statSync } from 'node:fs';
+import {
+  formatMoney,
+  formatNumber,
+  isEven,
+  numberToWords,
+  parseLongNotation,
+  parseMoney,
+  parseNumber,
+  toByteSize,
+  toLongNotation,
+} from 'num-fns';
+
+// In: number | bigint
+formatNumber(BigInt('1234567890123456789')); // "1,234,567,890,123,456,789"
+formatNumber(BigInt(10), { decimals: 2 }); // "10.00" — pads; there is nothing to round
+formatMoney(BigInt('98765432109876543210'), { currency: 'EUR' }); // "€ 98,765,432,109,876,543,210.00"
+numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion four hundred ..."
+toLongNotation(BigInt('999999999999999')); // "999 trillion 999 billion 999 million 999 thousand 999"
+toByteSize(statSync('video.mkv', { bigint: true }).size); // "1.5 GB"
+isEven(BigInt('9007199254740993')); // false — as a number this would be 9007199254740992, and even
+
+// Out: { output: 'bigint' }
+parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123456789n
+parseMoney('$ 1,234.00', { output: 'bigint' }); // 1234n
+parseLongNotation('999 trillion 999 billion', { output: 'bigint' }); // 999999000000000n
+
+// The return type tracks the option
+const asNumber = parseNumber('1'); // number
+const asBigInt = parseNumber('1', { output: 'bigint' }); // bigint
+```
+
+`formatNumber`, `formatMoney`, `formatPercentage`, `numberToWords`,
+`moneyToWords`, `toLongNotation`, `toShortNotation`, `toByteSize`,
+`numberToDigitWords`, `getOrdinalSuffix`, `toOrdinal`, `ordinalToWords`,
+`withSuffix`, `toRoman`, `toBase`, `isEven` and `isOdd` take a `bigint`;
+`parseNumber`, `parseMoney`, `parsePercentage`, `parseShortNotation`,
+`parseLongNotation`, `parseByteSize` and `fromBase(value, radix, { output })`
+return one. `moneyToWords(bigint)` reads a whole amount of the major unit.
+`numberToWords` and `toLongNotation` keep their cap of
+`1000 ** locale.words.scales.length - 1` (999 trillion for every launch
+locale), computed exactly — so a custom locale that names quadrillions and
+beyond needs a `bigint` to stay exact, and gets one. The ordinal family
+narrows a `bigint` to a `number` for the locale's `ordinal` hooks and throws
+`RangeError` above `Number.MAX_SAFE_INTEGER` rather than reaching the hook
+rounded.
+
+Two rules keep the `bigint` side honest:
+
+- **A `bigint` result must be a whole number.** `"1,234.00"` parses to
+  `1234n` and `"2.5M"` to `2500000n`, `"1.5 KB"` to `1536n`; but `"1.5"`,
+  `"1.2345K"` and `parsePercentage(…, { asRatio: true, output: 'bigint' })`
+  throw `RangeError`, because a `bigint` cannot carry a fraction and
+  truncating it silently would be the wrong answer.
+- **A parser never hands back an unsafe `number`.** `parseLongNotation` and
+  `fromBase` compute exactly whatever the `output`, so when a `number` result
+  would exceed `Number.MAX_SAFE_INTEGER` they throw `RangeError` pointing at
+  `output: 'bigint'` instead of returning a rounded value.
+
+Deliberately not included: `add`/`subtract`/`multiply`/`divide`/`round` and
+`clamp`/`inRange` stay `number`-only — JavaScript already has exact native
+`bigint` operators — as do the float-domain statistics and financial
+functions; `fractionToWords` and `fromRoman` (range ≤ 3999) are unchanged.
+Custom locales are unaffected: `plural`, `ordinal.*` and `words.renderGroup`
+keep their `number` signatures and never receive a `bigint`.
 
 ## Locale support
 

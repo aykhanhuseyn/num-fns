@@ -51,6 +51,15 @@ const ALL_CURRENCIES: CurrencyCode[] = ['AZN', 'USD', 'EUR', 'RUB', 'GBP']
 const CARDINAL_VALUES = [0, 1, 7, 21, 100, 101, 1234, 1e6, -5, 12.34]
 
 /**
+ * The integer members of {@link CARDINAL_VALUES} plus every scale boundary
+ * and the 999-trillion cap — the values whose `bigint` reading must be
+ * byte-identical to the `number` one in every locale (`shared/bigint.ts`).
+ */
+const CARDINAL_INTEGERS = [
+  0, 1, 7, 21, 100, 101, 1234, 1e6, -5, 1000, 21000, 1e9, 1e12, -1234567, 999_999_999_999_999,
+]
+
+/**
  * A spread of `ordinalToWords`/`getOrdinalSuffix` inputs covering: zero, a
  * bare digit, a teen, a round ten-plus-one, a round hundred, and two scale
  * boundaries.
@@ -124,6 +133,16 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
     it.each(CARDINAL_VALUES)('produces clean, non-empty words for %p', (value) => {
       assertCleanWords(numberToWords(value, { locale }), `numberToWords(${value})`)
     })
+
+    it.each(CARDINAL_INTEGERS)('spells the bigint %p exactly like the number', (value) => {
+      expect(numberToWords(BigInt(value), { locale })).toBe(numberToWords(value, { locale }))
+    })
+
+    it('throws RangeError for a bigint one past the cap its scale words allow', () => {
+      const max = BigInt(1000) ** BigInt(locale.words.scales.length) - BigInt(1)
+      assertCleanWords(numberToWords(max, { locale }), `numberToWords(${max})`)
+      expect(() => numberToWords(max + BigInt(1), { locale })).toThrow(RangeError)
+    })
   })
 
   describe('ordinals', () => {
@@ -165,6 +184,28 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
     it('round-trips a multi-scale value exactly (digits are kept verbatim, only the scale word is localized)', () => {
       const value = 1234567
       expect(parseLongNotation(toLongNotation(value, { locale }), { locale })).toBe(value)
+    })
+
+    it.each(CARDINAL_INTEGERS)('expands the bigint %p exactly like the number', (value) => {
+      expect(toLongNotation(BigInt(value), { locale })).toBe(toLongNotation(value, { locale }))
+    })
+
+    it("round-trips a bigint exactly through { output: 'bigint' }", () => {
+      for (const value of CARDINAL_INTEGERS) {
+        const formatted = toLongNotation(BigInt(value), { locale })
+        expect(parseLongNotation(formatted, { locale, output: 'bigint' })).toBe(BigInt(value))
+      }
+    })
+  })
+
+  describe('formatNumber / parseNumber (bigint)', () => {
+    it("round-trips a bigint past Number.MAX_SAFE_INTEGER through the locale's own separators", () => {
+      for (const text of ['0', '-42', '1234567890123456789', '-9007199254740993']) {
+        const value = BigInt(text)
+        expect(parseNumber(formatNumber(value, { locale }), { locale, output: 'bigint' })).toBe(
+          value,
+        )
+      }
     })
   })
 

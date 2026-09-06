@@ -1,4 +1,4 @@
-import type { RunResult } from './engine'
+import { formatScalar, type RunResult } from './engine'
 
 export function renderResult(container: HTMLElement, result: RunResult): void {
   container.replaceChildren()
@@ -21,7 +21,7 @@ function renderValue(value: unknown): HTMLElement {
     }
     const el = document.createElement('code')
     el.className = 'playground-value'
-    el.textContent = `[${value.map(String).join(', ')}]`
+    el.textContent = `[${value.map(formatScalar).join(', ')}]`
     return el
   }
 
@@ -32,9 +32,12 @@ function renderValue(value: unknown): HTMLElement {
     return el
   }
 
+  // `formatScalar` keeps a bigint's `n` suffix (`1234n`), so a parser card
+  // with `output: 'bigint'` visibly returns a different type than `1234`.
+  // Never `JSON.stringify` here — it throws on bigint.
   const el = document.createElement('code')
   el.className = 'playground-value'
-  el.textContent = String(value)
+  el.textContent = formatScalar(value)
   return el
 }
 
@@ -62,7 +65,7 @@ function renderTable(rows: Record<string, unknown>[]): HTMLElement {
       const td = document.createElement('td')
       const cell = row[key]
       td.textContent =
-        typeof cell === 'number' && !Number.isInteger(cell) ? cell.toFixed(2) : String(cell)
+        typeof cell === 'number' && !Number.isInteger(cell) ? cell.toFixed(2) : formatScalar(cell)
       tr.appendChild(td)
     }
     tbody.appendChild(tr)

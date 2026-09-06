@@ -24,6 +24,31 @@ describe('getOrdinalSuffix', () => {
     expect(() => getOrdinalSuffix(1.5)).toThrow(RangeError)
   })
 
+  describe('bigint input', () => {
+    it('behaves like the equal number for a safe integer', () => {
+      expect(getOrdinalSuffix(BigInt(0))).toBe('th')
+      expect(getOrdinalSuffix(BigInt(1))).toBe('st')
+      expect(getOrdinalSuffix(BigInt(22))).toBe('nd')
+      expect(getOrdinalSuffix(BigInt(103))).toBe('rd')
+      expect(getOrdinalSuffix(BigInt(Number.MAX_SAFE_INTEGER))).toBe(
+        getOrdinalSuffix(Number.MAX_SAFE_INTEGER),
+      )
+      expect(getOrdinalSuffix(BigInt(3), { locale: az })).toBe('cü')
+    })
+
+    it('throws for a negative bigint like a negative number', () => {
+      expect(() => getOrdinalSuffix(BigInt(-1))).toThrow(RangeError)
+    })
+
+    it('throws RangeError beyond Number.MAX_SAFE_INTEGER, since the locale hook takes a number', () => {
+      expect(() => getOrdinalSuffix(BigInt('9007199254740993'))).toThrow(RangeError)
+      expect(() => getOrdinalSuffix(BigInt('9007199254740993'))).toThrow(
+        'ordinal hooks take a number',
+      )
+      expect(() => getOrdinalSuffix(BigInt('123456789012345678901234567890'))).toThrow(RangeError)
+    })
+  })
+
   describe('{ locale: az }', () => {
     it('follows vowel harmony for 1 through 10', () => {
       expect(getOrdinalSuffix(1, { locale: az })).toBe('ci') // bir
@@ -73,6 +98,29 @@ describe('ordinalToWords', () => {
   it('throws for negative or non-integer values', () => {
     expect(() => ordinalToWords(-1)).toThrow(RangeError)
     expect(() => ordinalToWords(1.5)).toThrow(RangeError)
+  })
+
+  describe('bigint input', () => {
+    it('spells a bigint like the equal number', () => {
+      expect(ordinalToWords(BigInt(0))).toBe('zeroth')
+      expect(ordinalToWords(BigInt(1))).toBe('first')
+      expect(ordinalToWords(BigInt(21))).toBe('twenty-first')
+      expect(ordinalToWords(BigInt(100))).toBe('one hundredth')
+      expect(ordinalToWords(BigInt(1234), { locale: az })).toBe('min iki yüz otuz dördüncü')
+      expect(ordinalToWords(BigInt(2000), { locale: es })).toBe('dosmilésimo')
+    })
+
+    it('throws for a negative bigint', () => {
+      expect(() => ordinalToWords(BigInt(-1))).toThrow(RangeError)
+      expect(() => ordinalToWords(BigInt(-1))).toThrow('non-negative integer')
+    })
+
+    it('throws RangeError beyond Number.MAX_SAFE_INTEGER, since the locale hook takes a number', () => {
+      expect(() => ordinalToWords(BigInt('9007199254740993'))).toThrow(RangeError)
+      expect(() => ordinalToWords(BigInt('9007199254740993'))).toThrow(
+        'ordinal hooks take a number',
+      )
+    })
   })
 
   describe('{ locale: az }', () => {
@@ -169,6 +217,25 @@ describe('toOrdinal', () => {
     expect(toOrdinal(5, { locale: az })).toBe('5-ci')
     expect(toOrdinal(5, { locale: az, separator: ' ' })).toBe('5 ci')
   })
+
+  describe('bigint input', () => {
+    it('renders the bigint digits exactly with the suffix of the equal number', () => {
+      expect(toOrdinal(BigInt(0))).toBe('0-th')
+      expect(toOrdinal(BigInt(1))).toBe('1-st')
+      expect(toOrdinal(BigInt(22))).toBe('22-nd')
+      expect(toOrdinal(BigInt(101), { separator: '' })).toBe('101st')
+      expect(toOrdinal(BigInt(5), { locale: az })).toBe('5-ci')
+      expect(toOrdinal(BigInt(Number.MAX_SAFE_INTEGER))).toBe('9007199254740991-st')
+    })
+
+    it('throws for a negative bigint', () => {
+      expect(() => toOrdinal(BigInt(-1))).toThrow(RangeError)
+    })
+
+    it('throws RangeError beyond Number.MAX_SAFE_INTEGER, since the suffix hook takes a number', () => {
+      expect(() => toOrdinal(BigInt('9007199254740993'))).toThrow(RangeError)
+    })
+  })
 })
 
 describe('withSuffix', () => {
@@ -178,5 +245,13 @@ describe('withSuffix', () => {
 
   it('supports a custom separator', () => {
     expect(withSuffix(5, 'cı', { separator: '-' })).toBe('5-cı')
+  })
+
+  it('accepts a string or a bigint value, rendering a bigint exactly', () => {
+    expect(withSuffix('5', 'kg')).toBe('5 kg')
+    expect(withSuffix(BigInt(120), 'kg')).toBe('120 kg')
+    expect(withSuffix(BigInt('123456789012345678901234567890'), 'B', { separator: '' })).toBe(
+      '123456789012345678901234567890B',
+    )
   })
 })

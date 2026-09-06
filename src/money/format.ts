@@ -15,6 +15,12 @@ import { getCurrency } from './currency'
  * hence `round`): `formatMoney(1.005)` is `"$ 1.01"`, not the `"$ 1.00"`
  * that `toFixed(2)` would produce.
  *
+ * A `bigint` is an exact whole amount of the major unit, formatted at any
+ * magnitude — its digits are grouped as written, never converted to a
+ * `number` — with the currency's `decimals` padded as zeros
+ * (`formatMoney(10n)` is `"$ 10.00"`); `roundingMode` has nothing to round
+ * and is ignored.
+ *
  * @example
  * formatMoney(1234.5); // "$ 1,234.50"
  * formatMoney(1.005); // "$ 1.01"
@@ -22,8 +28,9 @@ import { getCurrency } from './currency'
  * formatMoney(1234.5, { currency: 'EUR' }); // "€ 1,234.50"
  * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"
  * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after' }); // "9.99 US$"
+ * formatMoney(1234567890123456789n); // "$ 1,234,567,890,123,456,789.00"
  */
-export function formatMoney(value: number, options: MoneyFormatOptions = {}): string {
+export function formatMoney(value: number | bigint, options: MoneyFormatOptions = {}): string {
   const { locale = en, currency: code = locale.currency.code } = options
   const currency = getCurrency(code)
   const {
@@ -52,19 +59,33 @@ export function formatMoney(value: number, options: MoneyFormatOptions = {}): st
  * locale's default currency's unless a `currency` code or an explicit
  * `symbol` says otherwise.
  *
+ * With `{ output: 'bigint' }` the amount comes back as an exact `bigint` of
+ * whole major units, so the string must be a whole number once the symbol is
+ * stripped: `"$ 1,234.00"` is `1234n`, `"$ 1.50"` throws `RangeError` (a
+ * `bigint` cannot carry the fifty cents, and truncating them silently would
+ * be the wrong answer). Any other `output` value is a `RangeError` too.
+ *
  * @example
  * parseMoney("$ 1,234.50"); // 1234.5
  * parseMoney("1 234,50 ₼", { locale: az }); // 1234.5
  * parseMoney("€ 1,234.50", { currency: 'EUR' }); // 1234.5
+ * parseMoney("$ 1,234,567,890,123,456,789.00", { output: 'bigint' }); // 1234567890123456789n
  */
-export function parseMoney(value: string, options: MoneyParseOptions = {}): number {
+export function parseMoney(value: string, options: MoneyParseOptions & { output: 'bigint' }): bigint
+export function parseMoney(
+  value: string,
+  options?: MoneyParseOptions & { output?: 'number' },
+): number
+export function parseMoney(value: string, options: MoneyParseOptions): number | bigint
+export function parseMoney(value: string, options: MoneyParseOptions = {}): number | bigint {
   const { locale = en, currency: code = locale.currency.code } = options
   const {
     thousandsSeparator = locale.formatDefaults.thousandsSeparator,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
     symbol = getCurrency(code).symbol,
+    output,
   } = options
 
   const withoutSymbol = value.split(symbol).join('').trim()
-  return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator })
+  return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator, output })
 }

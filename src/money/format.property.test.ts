@@ -26,6 +26,17 @@ const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
   ['es', es],
 ]
 
+/**
+ * Whole amounts well past `Number.MAX_SAFE_INTEGER` in both directions — the
+ * `bigint` path never converts to a `number`, so any magnitude is fair game.
+ * Bounds are built with `BigInt(string)`, never a `10n`-style literal, which
+ * the ES2018 build target would reject.
+ */
+const wholeAmount = fc.bigInt({
+  min: BigInt('-1000000000000000000000'),
+  max: BigInt('1000000000000000000000'),
+})
+
 describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale) => {
   it('preserves the amount rounded decimal-safely to the default two decimals', () => {
     // The oracle is `round`, not `toFixed`: `formatMoney(1.005)` is `"$ 1.01"`.
@@ -62,6 +73,46 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
           const options = { locale, currency }
           const roundTrip = parseMoney(formatMoney(value, options), options)
           expect(normalizeZero(roundTrip)).toBe(round(value, 2))
+        },
+      ),
+    )
+  })
+
+  it('preserves a bigint amount exactly, for any decimals, currency and symbol position', () => {
+    fc.assert(
+      fc.property(wholeAmount, (amount) => {
+        expect(parseMoney(formatMoney(amount, { locale }), { locale, output: 'bigint' })).toBe(
+          amount,
+        )
+      }),
+    )
+    fc.assert(
+      fc.property(
+        wholeAmount,
+        fc.integer({ min: 0, max: 4 }),
+        fc.constantFrom<CurrencyCode>('AZN', 'USD', 'EUR', 'RUB', 'GBP'),
+        fc.constantFrom<'before' | 'after'>('before', 'after'),
+        (amount, decimals, currency, symbolPosition) => {
+          const options = { locale, decimals, currency, symbolPosition }
+          const roundTrip = parseMoney(formatMoney(amount, options), {
+            ...options,
+            output: 'bigint',
+          })
+          expect(roundTrip).toBe(amount)
+        },
+      ),
+    )
+  })
+
+  it('formats a bigint amount identically to the equivalent safe integer number', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }),
+        fc.integer({ min: 0, max: 4 }),
+        (amount, decimals) => {
+          expect(formatMoney(BigInt(amount), { locale, decimals })).toBe(
+            formatMoney(amount, { locale, decimals }),
+          )
         },
       ),
     )

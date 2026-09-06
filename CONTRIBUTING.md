@@ -109,6 +109,29 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
      `SyntaxError` for unparseable strings) rather than returning `NaN` or
      `undefined`. Look at `src/number/roman.ts` or `src/arithmetic/clamp.ts`
      for the pattern.
+   - **Integer-domain functions accept `number | bigint`; parsers take an
+     `output` option.** If your function takes a whole number (a count, an
+     id, a byte size — anything `numberToWords`, `toLongNotation`, `toBase`
+     or `isEven` would take), type the parameter `number | bigint` and handle
+     the `bigint` exactly: chunk, scale and group it in integer arithmetic,
+     never `Number(value)` it on the way through. If it parses a string into
+     a number, extend `ParseOutputOptions` (`src/shared/types.ts`), validate
+     with `resolveOutput`, and declare the three-overload signature
+     `parseNumber` uses so `{ output: 'bigint' }` is typed `bigint` and the
+     default stays `number`. A `bigint` result must be a whole number
+     (`RangeError` otherwise), and a parser that computes exactly must not
+     return a `number` past `Number.MAX_SAFE_INTEGER` — throw and point at
+     `output: 'bigint'`. The helpers for all of this (`toThousandGroups`,
+     `scaleBigInt`, `decimalToBigInt`, `toOutput`, `toSafeNumber`, …) live
+     in `src/shared/bigint.ts`; read its doc comment and reuse them rather
+     than re-deriving the arithmetic. **Never write a BigInt literal**
+     (`10n`) — the build targets ES2018, where it is a parse error; go
+     through the `BigInt(...)` constructor, as `shared/bigint.ts` and
+     `arithmetic/decimal.ts` do. Float-domain functions (statistics,
+     financial, the decimal-safe arithmetic) stay `number`-only — see
+     `README.md`'s "BigInt in and out" for the settled boundary — and the
+     `Locale` hooks keep their `number` signatures, so narrow with
+     `toSafeNumber`/`pluralOperand` before calling one.
    - Add a JSDoc comment with at least one `@example` — this is what shows up
      in editor tooltips and is the primary API documentation until a full
      reference site exists.
@@ -222,10 +245,14 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
 
 4. Keep all of your locale's linguistic data — vocabulary tables, irregular-
    word maps, composition logic — in the locale file itself, not in a shared
-   module. `number/words.ts`'s `ONES`/`TENS`/`SCALE_WORDS` constants are
-   legacy Azerbaijani-only exports kept there for `az.ts` and
-   `number/digits.ts`'s backwards compatibility, not a pattern to extend —
-   see that file's doc comment.
+   module. `number/words.ts` holds no vocabulary of its own any more: the
+   `ONES`/`TENS`/`SCALE_WORDS` constants that used to live there were
+   Azerbaijani-only and moved into `locale/az.ts` as module-private values on
+   2026-08-25 (`todo.md` §3) — that is the pattern, with `az.words.ones` and
+   friends as the only way to read them. The engine (`numberToWords`,
+   `toLongNotation`) only ever hands your hooks plain 0–999 `number`s — even
+   when the caller passed a `bigint`, which the engine chunks before it
+   reaches you — so a locale never has to handle `bigint`.
 
 5. **Add a colocated `<code>.test.ts`** following the structure of the
    existing locale test files — pin real vocabulary and hand-build the
@@ -308,6 +335,12 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
   `src/shared/types.ts`.
 - **Throw on bad input.** See "How to add a new function" above — this
   applies package-wide, not just to new code.
+- **`number | bigint` in, `output` out, no BigInt literals.** Integer-domain
+  functions take `number | bigint` and parsers take `{ output: 'bigint' }`
+  (see "How to add a new function"). `BigInt` is reached only through the
+  `BigInt(...)` constructor — a `10n` literal is a parse error at the ES2018
+  build target — and the shared helpers in `src/shared/bigint.ts` are the
+  place for any new `bigint` arithmetic, not a fresh copy in your module.
 
 ## Pull request process
 

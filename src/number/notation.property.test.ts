@@ -6,6 +6,7 @@ import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
 import { ru } from '../locale/ru'
 import type { Locale } from '../locale/types'
+import { bigIntArb } from '../shared/arbitraries.test'
 import { parseLongNotation, parseShortNotation, toLongNotation, toShortNotation } from './notation'
 
 const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
@@ -92,6 +93,193 @@ describe.each(LOCALES)('toLongNotation/parseLongNotation round trip (%s)', (_cod
       fc.property(fc.integer({ min: 1, max: 1000 }), (offset) => {
         expect(() => toLongNotation(max + offset, { locale })).toThrow(RangeError)
       }),
+    )
+  })
+})
+
+/**
+ * `en` with a sixth scale word, so the `bigint` round trip has a locale whose
+ * range runs past `Number.MAX_SAFE_INTEGER` — the case the `bigint` paths
+ * exist for. Its cap is `1000 ** 6 - 1`, which has no exact `number` form.
+ */
+const enWithQuadrillion: Locale = {
+  ...en,
+  words: { ...en.words, scales: [...en.words.scales, 'quadrillion'] },
+}
+
+/** The `bigint` counterpart of {@link maxLongNotationValue}, exact for any scale count. */
+function maxLongNotationBigInt(locale: Locale): bigint {
+  return BigInt(1000) ** BigInt(locale.words.scales.length) - BigInt(1)
+}
+
+/** Every integer within ±`max`, biased toward the extremes and zero as `fc.bigInt` is. */
+function bigIntWithin(max: bigint): fc.Arbitrary<bigint> {
+  return fc.bigInt({ min: -max, max })
+}
+
+describe.each(LOCALES)(
+  'toShortNotation/parseShortNotation bigint round trip (%s)',
+  (_code, locale) => {
+    it('agrees with the number path for every safe integer the locale can scale', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: -999_999_999_999_999, max: 999_999_999_999_999 }),
+          fc.integer({ min: 0, max: 6 }),
+          (value, decimals) => {
+            // `toFixed` on the number path and exact half-up rounding on the
+            // bigint path can differ by one unit in the last kept digit when
+            // the true quotient is a tie the double does not represent exactly
+            // (`1005 / 1000` is stored below 1.005) — so parse both back and
+            // allow that one unit, rather than comparing the strings.
+            const options = { locale, decimals }
+            const fromNumber = parseShortNotation(toShortNotation(value, options), options)
+            const fromBigInt = parseShortNotation(toShortNotation(BigInt(value), options), options)
+            const magnitude = Math.abs(value)
+            const threshold =
+              locale.notation.scales.find((scale) => magnitude >= scale.threshold)?.threshold ?? 1
+            const unit = threshold * 10 ** -decimals
+            expect(Math.abs(fromBigInt - fromNumber)).toBeLessThanOrEqual(unit + 1e-9 * magnitude)
+          },
+        ),
+      )
+    })
+
+    it('recovers a bigint to within the precision the format keeps, at any magnitude', () => {
+      fc.assert(
+        fc.property(bigIntArb(24), fc.integer({ min: 0, max: 6 }), (value, decimals) => {
+          const options = { locale, decimals }
+          const formatted = toShortNotation(value, options)
+          const roundTrip = parseShortNotation(formatted, { ...options, output: 'bigint' })
+          expect(typeof roundTrip).toBe('bigint')
+          expect(formatted.startsWith('-')).toBe(value < BigInt(0))
+          const magnitude = value < BigInt(0) ? -value : value
+          if (magnitude < BigInt(1000)) {
+            // Below the smallest threshold the value is emitted verbatim.
+            expect(roundTrip).toBe(value)
+            return
+          }
+          // The largest threshold the value clears is the unit the mantissa is
+          // written in; half a unit in its last kept digit is the rounding bound.
+          const threshold = [...locale.notation.scales]
+            .map((scale) => BigInt(scale.threshold))
+            .filter((scale) => magnitude >= scale)
+            .reduce((largest, scale) => (scale > largest ? scale : largest))
+          const halfUnit = threshold / BigInt(2) // ... / 10^decimals, scaled below
+          const error =
+            (roundTrip > value ? roundTrip - value : value - roundTrip) *
+            BigInt(10) ** BigInt(decimals)
+          expect(error <= halfUnit).toBe(true)
+        }),
+      )
+    })
+
+    it('is exact for a bigint that is a whole multiple of the unit the format keeps', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1, max: 999_999 }),
+          fc.integer({ min: 0, max: 3 }),
+          fc.integer({ min: 0, max: 6 }),
+          fc.boolean(),
+          (mantissa, scaleIndex, decimals, negative) => {
+            // `notation.scales` is ordered largest first; index 0 here is the smallest.
+            const scales = [...locale.notation.scales].reverse()
+            const threshold = BigInt((scales[scaleIndex] as { threshold: number }).threshold)
+            const nextThreshold = scales[scaleIndex + 1]?.threshold
+            // mantissa × threshold / 10^decimals must itself be a whole number
+            // for the format to keep every digit.
+            const unit = threshold / BigInt(10) ** BigInt(decimals)
+            fc.pre(unit * BigInt(10) ** BigInt(decimals) === threshold)
+            const magnitude = BigInt(mantissa) * unit
+            // Stay within this scale: at or above its threshold, below the next.
+            fc.pre(magnitude >= threshold)
+            fc.pre(nextThreshold === undefined || magnitude < BigInt(nextThreshold))
+            const value = negative ? -magnitude : magnitude
+            const options = { locale, decimals }
+            expect(
+              parseShortNotation(toShortNotation(value, options), { ...options, output: 'bigint' }),
+            ).toBe(value)
+          },
+        ),
+      )
+    })
+  },
+)
+
+describe.each([...LOCALES, ['en + quadrillion', enWithQuadrillion] as const])(
+  'toLongNotation/parseLongNotation bigint round trip (%s)',
+  (_code, locale) => {
+    it('is exact for every bigint the locale has scale words for', () => {
+      fc.assert(
+        fc.property(bigIntWithin(maxLongNotationBigInt(locale)), (value) => {
+          const roundTrip = parseLongNotation(toLongNotation(value, { locale }), {
+            locale,
+            output: 'bigint',
+          })
+          expect(typeof roundTrip).toBe('bigint')
+          expect(roundTrip).toBe(value)
+        }),
+      )
+    })
+
+    it('is exact for any non-empty group separator', () => {
+      fc.assert(
+        fc.property(
+          bigIntWithin(maxLongNotationBigInt(locale)),
+          fc.constantFrom(' ', ', ', ' — ', '\t'),
+          (value, groupSeparator) => {
+            const options = { locale, groupSeparator }
+            expect(
+              parseLongNotation(toLongNotation(value, options), { ...options, output: 'bigint' }),
+            ).toBe(value)
+          },
+        ),
+      )
+    })
+
+    it('agrees with the number path for every safe integer in range', () => {
+      const max = Math.min(maxLongNotationValue(locale), Number.MAX_SAFE_INTEGER)
+      fc.assert(
+        fc.property(fc.integer({ min: -max, max }), (value) => {
+          const formatted = toLongNotation(value, { locale })
+          expect(toLongNotation(BigInt(value), { locale })).toBe(formatted)
+          expect(parseLongNotation(formatted, { locale })).toBe(value)
+          expect(parseLongNotation(formatted, { locale, output: 'bigint' })).toBe(BigInt(value))
+        }),
+      )
+    })
+
+    it('throws above the largest magnitude the locale can name, exactly at the boundary', () => {
+      const max = maxLongNotationBigInt(locale)
+      expect(() => toLongNotation(max, { locale })).not.toThrow()
+      expect(() => toLongNotation(-max, { locale })).not.toThrow()
+      fc.assert(
+        fc.property(fc.bigInt({ min: BigInt(1), max: BigInt(1000) }), (offset) => {
+          expect(() => toLongNotation(max + offset, { locale })).toThrow(RangeError)
+          expect(() => toLongNotation(-max - offset, { locale })).toThrow(RangeError)
+        }),
+      )
+    })
+  },
+)
+
+describe('parseLongNotation number output past Number.MAX_SAFE_INTEGER', () => {
+  it('throws RangeError for every unsafe value instead of rounding it', () => {
+    const maxSafe = BigInt(Number.MAX_SAFE_INTEGER)
+    fc.assert(
+      fc.property(
+        fc.bigInt({ min: maxSafe + BigInt(1), max: maxLongNotationBigInt(enWithQuadrillion) }),
+        fc.boolean(),
+        (magnitude, negative) => {
+          const value = negative ? -magnitude : magnitude
+          const formatted = toLongNotation(value, { locale: enWithQuadrillion })
+          expect(() => parseLongNotation(formatted, { locale: enWithQuadrillion })).toThrow(
+            RangeError,
+          )
+          expect(
+            parseLongNotation(formatted, { locale: enWithQuadrillion, output: 'bigint' }),
+          ).toBe(value)
+        },
+      ),
     )
   })
 })

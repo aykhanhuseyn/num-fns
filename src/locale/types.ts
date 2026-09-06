@@ -169,6 +169,13 @@ export interface LocaleOrdinal {
    * Short numeral suffix for a value, e.g. az `getOrdinalSuffix` returning
    * `'ci'`/`'cı'`/`'cu'`/`'cü'` by vowel harmony, en `'st'`/`'nd'`/`'rd'`/`'th'`.
    * Used by `toOrdinal` (`5` -> `'5-ci'` / `'5th'`).
+   *
+   * Like {@link words} below, always receives a `number`: the ordinal
+   * functions accept a `bigint` but narrow it with `shared/bigint.ts`'s
+   * `toSafeNumber` first, throwing `RangeError` beyond
+   * `Number.MAX_SAFE_INTEGER` — no launch locale can spell a cardinal that
+   * large anyway (they stop at 999 trillion), so a locale never sees a
+   * `bigint` here.
    */
   suffix: (value: number) => string
   /**
@@ -304,6 +311,15 @@ export interface Locale {
    * rules. `az`, `en`, and `es` can return `'other'` unconditionally; `ru`
    * needs the real `one`/`few`/`many` split to pick the right scale and
    * currency word forms.
+   *
+   * Always receives a `number`, even when the public function was given a
+   * `bigint` (2026-09-06): the 0–999 groups `numberToWords` classifies are
+   * plain numbers anyway, and `moneyToWords` passes a `bigint` amount
+   * through `shared/bigint.ts`'s `pluralOperand`, which converts a safe
+   * integer directly and folds a larger one to its last six digits plus a
+   * million — a reduction every CLDR integer rule (`n % 10`, `n % 100`,
+   * `n % 1000`, Breton's `n % 1000000`, comparisons against small
+   * constants) is invariant under. A locale never has to handle `bigint`.
    */
   plural: (n: number) => PluralCategory
   /** Ordinal suffix and full-word derivation for `toOrdinal`/`ordinalToWords`. */

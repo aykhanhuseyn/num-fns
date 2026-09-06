@@ -29,6 +29,17 @@ const UNIT_SCALE: Record<PercentageUnit, number> = {
   basisPoint: 10000,
 }
 
+/**
+ * Whole values well past `Number.MAX_SAFE_INTEGER` in both directions — the
+ * `bigint` path never converts to a `number`, so any magnitude is fair game.
+ * Bounds are built with `BigInt(string)`, never a `10n`-style literal, which
+ * the ES2018 build target would reject.
+ */
+const wholeValue = fc.bigInt({
+  min: BigInt('-1000000000000000000000'),
+  max: BigInt('1000000000000000000000'),
+})
+
 describe.each(LOCALES)('formatPercentage/parsePercentage round trip (%s)', (_code, locale) => {
   it('preserves the value, rounded decimal-safely, for every unit, decimal count and spacing', () => {
     // The oracle is `round`, not `toFixed`: rounding goes through
@@ -81,6 +92,62 @@ describe.each(LOCALES)('formatPercentage/parsePercentage round trip (%s)', (_cod
         (ratio, unit, decimals) => {
           const formatted = formatPercentage(ratio, { locale, unit, decimals, multiplyBy100: true })
           expect(parsePercentage(formatted, { locale, unit, asRatio: true })).toBe(ratio)
+        },
+      ),
+    )
+  })
+
+  it('preserves a bigint value exactly, for every unit, decimal count and spacing', () => {
+    fc.assert(
+      fc.property(wholeValue, (value) => {
+        expect(
+          parsePercentage(formatPercentage(value, { locale }), { locale, output: 'bigint' }),
+        ).toBe(value)
+      }),
+    )
+    fc.assert(
+      fc.property(
+        wholeValue,
+        fc.integer({ min: 0, max: 4 }),
+        fc.constantFrom(...UNITS),
+        fc.boolean(),
+        (value, decimals, unit, space) => {
+          const options = { locale, decimals, unit, space }
+          const roundTrip = parsePercentage(formatPercentage(value, options), {
+            ...options,
+            output: 'bigint',
+          })
+          expect(roundTrip).toBe(value)
+        },
+      ),
+    )
+  })
+
+  it('scales a bigint by the unit factor exactly under multiplyBy100', () => {
+    // A bigint ratio is a whole number, so scaling it up is exact integer
+    // multiplication and parsing the result back gives value × scale, whatever
+    // the magnitude — `asRatio` is refused for bigint output, so the check is
+    // against the scaled value rather than a round trip to the ratio.
+    fc.assert(
+      fc.property(wholeValue, fc.constantFrom(...UNITS), (value, unit) => {
+        const formatted = formatPercentage(value, { locale, unit, multiplyBy100: true })
+        expect(parsePercentage(formatted, { locale, unit, output: 'bigint' })).toBe(
+          value * BigInt(UNIT_SCALE[unit]),
+        )
+      }),
+    )
+  })
+
+  it('formats a bigint value identically to the equivalent safe integer number', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }),
+        fc.integer({ min: 0, max: 4 }),
+        fc.constantFrom(...UNITS),
+        fc.boolean(),
+        (value, decimals, unit, multiplyBy100) => {
+          const options = { locale, decimals, unit, multiplyBy100 }
+          expect(formatPercentage(BigInt(value), options)).toBe(formatPercentage(value, options))
         },
       ),
     )

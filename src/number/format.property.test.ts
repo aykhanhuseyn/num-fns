@@ -8,7 +8,7 @@ import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
 import { ru } from '../locale/ru'
 import type { Locale } from '../locale/types'
-import { decimalNumber, normalizeZero } from '../shared/arbitraries.test'
+import { bigIntArb, decimalNumber, normalizeZero, safeBigIntArb } from '../shared/arbitraries.test'
 import type { RoundingMode } from '../shared/types'
 import { formatNumber, parseNumber } from './format'
 
@@ -67,6 +67,76 @@ describe.each(LOCALES)('formatNumber/parseNumber round trip (%s)', (_code, local
           expect(parseNumber(formatNumber(value, options), options)).toBe(value)
         },
       ),
+    )
+  })
+})
+
+describe.each(LOCALES)('formatNumber/parseNumber bigint round trip (%s)', (_code, locale) => {
+  it('is exact at any magnitude', () => {
+    fc.assert(
+      fc.property(bigIntArb(), (value) => {
+        expect(parseNumber(formatNumber(value, { locale }), { locale, output: 'bigint' })).toBe(
+          value,
+        )
+      }),
+    )
+  })
+
+  it('is exact through decimals padding', () => {
+    fc.assert(
+      fc.property(bigIntArb(), fc.integer({ min: 0, max: 6 }), (value, decimals) => {
+        const formatted = formatNumber(value, { locale, decimals })
+        expect(parseNumber(formatted, { locale, output: 'bigint' })).toBe(value)
+      }),
+    )
+  })
+
+  it('is exact with explicit separators that shadow another locale’s defaults', () => {
+    fc.assert(
+      fc.property(
+        bigIntArb(),
+        fc.constantFrom('', ' ', ',', '.', "'"),
+        fc.constantFrom(',', '.'),
+        (value, thousandsSeparator, decimalSeparator) => {
+          fc.pre(thousandsSeparator !== decimalSeparator)
+          const options = { locale, thousandsSeparator, decimalSeparator }
+          expect(parseNumber(formatNumber(value, options), { ...options, output: 'bigint' })).toBe(
+            value,
+          )
+        },
+      ),
+    )
+  })
+
+  it('formats a safe bigint identically to the equivalent number', () => {
+    fc.assert(
+      fc.property(safeBigIntArb(), fc.integer({ min: 0, max: 4 }), (value, decimals) => {
+        expect(formatNumber(value, { locale })).toBe(formatNumber(Number(value), { locale }))
+        expect(formatNumber(value, { locale, decimals })).toBe(
+          formatNumber(Number(value), { locale, decimals }),
+        )
+      }),
+    )
+  })
+
+  it('parses a formatted safe integer to the same value on both output paths', () => {
+    fc.assert(
+      fc.property(safeBigIntArb(), (value) => {
+        const formatted = formatNumber(value, { locale })
+        expect(parseNumber(formatted, { locale })).toBe(Number(value))
+        expect(parseNumber(formatted, { locale, output: 'number' })).toBe(Number(value))
+        expect(parseNumber(formatted, { locale, output: 'bigint' })).toBe(value)
+      }),
+    )
+  })
+
+  it('refuses to return a bigint for any formatted value with a non-zero fraction', () => {
+    fc.assert(
+      fc.property(decimalNumber(4), (value) => {
+        fc.pre(!Number.isInteger(value))
+        const formatted = formatNumber(value, { locale })
+        expect(() => parseNumber(formatted, { locale, output: 'bigint' })).toThrow(RangeError)
+      }),
     )
   })
 })

@@ -20,23 +20,34 @@ const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
  *
  * Passing a string preserves leading zeros, which a `number` input cannot
  * represent (`numberToDigitWords(55)` and `numberToDigitWords("055")` read
- * differently). A leading `-` (string input) or a negative `number` is
- * prefixed with `options.locale`'s negative word (defaults to `en`
- * `"negative"`), matching {@link numberToWords}.
+ * differently). A leading `-` (string input), a negative `number` or a
+ * negative `bigint` is prefixed with `options.locale`'s negative word
+ * (defaults to `en` `"negative"`), matching {@link numberToWords}.
+ *
+ * A `bigint` is read exactly as `String(value)` renders it — every digit,
+ * at any magnitude — which is what a `number` past
+ * `Number.MAX_SAFE_INTEGER` cannot promise (its `String()` form may already
+ * be rounded, or be in exponent notation).
  *
  * @example
  * numberToDigitWords("+994 55 123 45 67");
  * // "nine nine four five five one two three four five six seven"
  * numberToDigitWords("055"); // "zero five five"
  * numberToDigitWords(90); // "nine zero"
+ * numberToDigitWords(BigInt('12345678901234567890')); // "one two three ... nine zero"
  * numberToDigitWords("055", { locale: az }); // "sıfır beş beş"
  */
 export function numberToDigitWords(
-  value: number | string,
+  value: number | string | bigint,
   options: DigitWordsOptions = {},
 ): string {
   const { separator = ' ', locale = en } = options
-  const raw = typeof value === 'number' ? validateNumericInput(value) : value
+  const raw =
+    typeof value === 'number'
+      ? validateNumericInput(value)
+      : typeof value === 'bigint'
+        ? String(value)
+        : value
 
   const isNegative = raw.startsWith('-')
   const body = isNegative ? raw.slice(1) : raw

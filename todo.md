@@ -643,7 +643,69 @@ The API-surface question the layout decisions above did not resolve:
       the throw. Suite 855 -> 864 tests, 100% per-file coverage held, `index`
       size-limit 5.1 -> 5.21 kB. Breaking: shipped as one `minor` changeset
       with the `resolveScaleWord` removal, i.e. `0.3.0`.)
-- [ ] BigInt input path for `numberToWords` / `toLongNotation`.
+- [x] BigInt input path for `numberToWords` / `toLongNotation`.
+      (2026-09-06: landed, and broadened well past the two functions named —
+      a `bigint` input path *only* for the word functions would have left
+      `formatNumber(BigInt(...))` a type error for the same 64-bit id, so the
+      rule became "every integer-domain function takes `number | bigint`, and
+      every parser can hand a `bigint` back". **Input:** `formatNumber`,
+      `formatMoney`, `formatPercentage`, `numberToWords`, `moneyToWords`,
+      `toLongNotation`, `toShortNotation`, `toByteSize`, `numberToDigitWords`,
+      `getOrdinalSuffix`/`toOrdinal`/`ordinalToWords`/`withSuffix`, `toRoman`,
+      `toBase`, `isEven`/`isOdd`. A `bigint` is handled exactly at any
+      magnitude — chunked (`toThousandGroups`), scaled (`scaleBigInt`, the
+      exact half-up stand-in for `(value / threshold).toFixed(decimals)`) and
+      grouped in integer arithmetic, never `Number()`-converted on the way
+      through; `decimals` zero-pads it (nothing to round, so `roundingMode`
+      is ignored but still validated); `moneyToWords(bigint)` is a whole
+      amount of the major unit. The motivating cases: `fs.statSync(p, {
+      bigint: true }).size`, 64-bit database ids, wei
+      (`formatNumber(BigInt('1234567890123456789'))` →
+      `"1,234,567,890,123,456,789"`), and a custom locale whose `words.scales`
+      go past a trillion — `numberToWords` of a quadrillion needs a `bigint`
+      to stay exact, and the `1000 ** scales.length - 1` cap is now computed
+      exactly (`maxSupportedBigInt`) instead of through a `number` that could
+      not hold it. **Output:** `parseNumber`, `parseMoney`, `parsePercentage`,
+      `parseShortNotation`, `parseLongNotation`, `parseByteSize` and
+      `fromBase(value, radix, { output })` take `output: 'number' | 'bigint'`
+      (`ParseOutput`/`ParseOutputOptions` in `shared/types.ts`; new
+      `LongNotationParseOptions` and `BaseParseOptions` for the two parsers
+      that had no options object), typed through three overloads so
+      `parseNumber('1', { output: 'bigint' })` is `bigint` and
+      `parseNumber('1')` stays `number`. A `bigint` result must be a whole
+      number — `"1,234.00"` → `1234n`, `"2.5M"` → `2500000n`, `"1.5 KB"` →
+      `1536n`, but `"1.5"`, `"1.2345K"` and `asRatio` + `bigint` throw
+      `RangeError` rather than truncate. **Locale boundary:** no `Locale`
+      signature changed — `plural`, `ordinal.suffix`/`words` and
+      `renderGroup` still take a `number`. The engine hands them 0–999
+      chunks anyway; `moneyToWords` feeds `plural` through `pluralOperand`
+      (a `bigint` past the safe range is folded to its last six digits plus a
+      million, which every CLDR integer rule is invariant under); and the
+      ordinal family narrows with `toSafeNumber`, throwing `RangeError` above
+      `Number.MAX_SAFE_INTEGER` rather than reaching the hook rounded. All of
+      it lives in the new internal `src/shared/bigint.ts` (not in the barrel,
+      like `validation.ts` and `arithmetic/decimal.ts`), `BigInt(...)`
+      constructor only — no `10n` literals at the ES2018 target. **The one
+      breaking change**, shipped `minor` (0.x): `parseLongNotation` and
+      `fromBase` now accumulate exactly whatever the `output`, so a `number`
+      result past `Number.MAX_SAFE_INTEGER` is a `RangeError` pointing at
+      `output: 'bigint'` instead of a silently rounded value — throw-not-wrong,
+      the same shape as the 2026-09-01 separator guards. **Deliberately not
+      widened:** `add`/`subtract`/`multiply`/`divide`/`round` and
+      `clamp`/`inRange` (the arithmetic domain's "raw numbers" decision above
+      stands — JS already has exact native `bigint` operators, and the
+      decimal-safe functions exist for the float traps `bigint` does not
+      have), stats and financial (float-domain), `fractionToWords`, and
+      `fromRoman` (range ends at 3999). No new root exports — the pinned
+      surface is still 51 functions; the additions are types and widened
+      parameters. Smoke fixtures assert the `bigint` path on the packed
+      ES2018 bundle (format/parse round trip of a 19-digit value,
+      `typeof ... === 'bigint'`) and the three type fixtures pin the
+      overloads, including a `@ts-expect-error` that `number` does not
+      accept the `'bigint'` overload's result. Suite 977 → 1599 tests across
+      56 files at the time of writing (still growing as the last test files
+      landed — the commit has the final figure), 100% per-file coverage
+      held.)
 - [ ] Roman numerals above 3999 (vinculum notation) — currently out of scope.
       Note roman numerals are locale-independent and stay outside the locale system.
 
@@ -708,7 +770,15 @@ classic `0.1 + 0.2 !== 0.3` floating-point traps. Landed 2026-09-06.
 - [ ] Decide precision limits and failure mode (throw vs. silently lose
       precision) for inputs beyond safe-integer range; document the tradeoff
       vs. a real decimal/bignum library the package deliberately isn't taking
-      as a dependency.
+      as a dependency. (2026-09-06: half-answered by the BigInt item in §4
+      above — for the *integer* domain the answer is "accept a `bigint` and
+      be exact; a parser that would have to round a `number` throws and
+      points at `output: 'bigint'`", and that is now the shipped behaviour of
+      `parseLongNotation`/`fromBase`. Still open for the five arithmetic
+      functions themselves, which take `number` only by design: `add(2 **
+      53, 1)` reads its operands at their shortest decimal string like any
+      other input, so the question of whether an operand already past the
+      safe range should throw remains to be decided here.)
 
 ### New: statistics (`src/stats/`)
 
@@ -1134,7 +1204,12 @@ New domain from the vision doc.
       just by reading the config. 2026-09-06: the `index` limit went 6 → 7 KB
       when the precise-arithmetic functions landed — the `BigInt` decimal
       core took the measured size 5.57 → 6.11 kB, the first time it crossed
-      the old limit; the other budgets are unchanged and still met.)
+      the old limit; the other budgets are unchanged and still met. Later the
+      same day the BigInt input/output support took it 7 → 8 KB (measured
+      6.11 → 7.23 kB: the `shared/bigint.ts` helpers plus a `bigint` branch
+      in every integer-domain function and parser); `locale/az` and
+      `locale/en-gb` grew too (2.28 → 2.43 kB and 1.85 → 2.1 kB, because they
+      import `numberToWords`) but stay inside their budgets.)
 - [x] First publish to npm. (2026-08-21: `0.2.0-alpha.0` published by hand
       from the laptop, which reserved the name; npm's `latest` and `alpha`
       dist-tags both pointed at it. `0.2.0-alpha.1` was versioned but never

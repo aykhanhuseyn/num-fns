@@ -1,3 +1,4 @@
+import { resolveOutput, scaleBigInt, scaledBigInt } from '../shared/bigint'
 import type { ByteSizeOptions, ByteSizeParseOptions } from '../shared/types'
 import { parseNumber } from './format'
 
@@ -46,13 +47,24 @@ function correctFloatingPointNoise(value: number): number {
  * `base: 1000` for decimal SI units instead. Either way the labels themselves
  * (`KB`, `MB`, ...) stay the same — only the magnitude they represent changes.
  *
+ * A `bigint` is accepted directly — `fs.statSync(path, { bigint: true }).size`
+ * is one, and so is any byte count summed past `Number.MAX_SAFE_INTEGER` —
+ * and is scaled exactly: divided by the threshold in integer arithmetic and
+ * rounded half up on the true remainder, where a `number` goes through
+ * `toFixed`. The two paths agree wherever both are exact
+ * (`toByteSize(BigInt(1536))` is `"1.5 KB"`), and a `bigint` past the
+ * largest scale keeps every digit (`"1500 PB"`, never `"1.5e3 PB"`). A
+ * negative `bigint` is refused like a negative `number`, and `decimals`
+ * must be a non-negative integer (`RangeError` otherwise).
+ *
  * @example
  * toByteSize(1536); // "1.5 KB"
  * toByteSize(1500, { base: 1000 }); // "1.5 KB"
  * toByteSize(500); // "500 B"
+ * toByteSize(BigInt(1536)); // "1.5 KB"
  */
-export function toByteSize(bytes: number, options: ByteSizeOptions = {}): string {
-  if (!Number.isFinite(bytes)) {
+export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}): string {
+  if (typeof bytes === 'number' && !Number.isFinite(bytes)) {
     throw new RangeError(`toByteSize: bytes must be finite, received ${bytes}`)
   }
   if (bytes < 0) {
@@ -60,24 +72,36 @@ export function toByteSize(bytes: number, options: ByteSizeOptions = {}): string
   }
 
   const { decimals = 2, base = 1024, decimalSeparator = '.' } = options
+  if (typeof bytes === 'bigint' && (!Number.isInteger(decimals) || decimals < 0)) {
+    throw new RangeError(
+      `toByteSize: decimals must be a non-negative integer, received ${decimals}`,
+    )
+  }
 
   for (const [exponent, label] of BYTE_SCALES) {
     const threshold = base ** exponent
     if (bytes >= threshold) {
-      const scaled = trimTrailingZeros((bytes / threshold).toFixed(decimals)).replace(
-        '.',
-        decimalSeparator,
-      )
+      const fixed =
+        typeof bytes === 'bigint'
+          ? scaleBigInt(bytes, BigInt(threshold), decimals)
+          : (bytes / threshold).toFixed(decimals)
+      const scaled = trimTrailingZeros(fixed).replace('.', decimalSeparator)
       return `${scaled} ${label}`
     }
   }
 
-  return `${bytes.toFixed(0)} B`
+  return `${typeof bytes === 'bigint' ? bytes : bytes.toFixed(0)} B`
 }
 
 /**
  * Parses a string produced by {@link toByteSize} (or an equivalent format,
- * with or without a space before the unit) back into a byte count.
+ * with or without a space before the unit) back into a byte count — or, with
+ * `{ output: 'bigint' }`, into an exact `bigint`: the size is multiplied by
+ * the unit's threshold in decimal, so `"1.5 KB"` is `1536n` and `"2.5 KB"`
+ * at `base: 1000` is `2500n`, while a size that is not a whole number of
+ * bytes (`"1.7 KB"`, 1740.8 bytes) throws `RangeError` rather than being
+ * truncated. The plain-byte forms (`"500 B"`, `"500"`) go through
+ * {@link parseNumber} with the same `output`.
  *
  * `options.base` must match the base the string was formatted with —
  * `toByteSize`'s output doesn't disambiguate binary from decimal units, so
@@ -87,9 +111,20 @@ export function toByteSize(bytes: number, options: ByteSizeOptions = {}): string
  * parseByteSize("1.5 KB"); // 1536
  * parseByteSize("1.5KB", { base: 1000 }); // 1500
  * parseByteSize("500 B"); // 500
+ * parseByteSize("1.5 KB", { output: 'bigint' }); // 1536n
  */
-export function parseByteSize(value: string, options: ByteSizeParseOptions = {}): number {
+export function parseByteSize(
+  value: string,
+  options: ByteSizeParseOptions & { output: 'bigint' },
+): bigint
+export function parseByteSize(
+  value: string,
+  options?: ByteSizeParseOptions & { output?: 'number' },
+): number
+export function parseByteSize(value: string, options: ByteSizeParseOptions): number | bigint
+export function parseByteSize(value: string, options: ByteSizeParseOptions = {}): number | bigint {
   const { base = 1024, decimalSeparator = '.' } = options
+  const output = resolveOutput(options.output, 'parseByteSize')
 
   const trimmed = value.trim()
   if (trimmed === '') {
@@ -102,6 +137,9 @@ export function parseByteSize(value: string, options: ByteSizeParseOptions = {})
     const lowerLabel = label.toLowerCase()
     if (lowerTrimmed.endsWith(lowerLabel)) {
       const numericPart = trimmed.slice(0, trimmed.length - label.length).trim()
+      if (output === 'bigint') {
+        return scaledBigInt(numericPart, base ** exponent, decimalSeparator, 'parseByteSize')
+      }
       const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
       return correctFloatingPointNoise(numeric * base ** exponent)
     }
@@ -109,8 +147,8 @@ export function parseByteSize(value: string, options: ByteSizeParseOptions = {})
 
   if (lowerTrimmed.endsWith('b')) {
     const numericPart = trimmed.slice(0, trimmed.length - 1).trim()
-    return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
+    return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator, output })
   }
 
-  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator })
+  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
 }

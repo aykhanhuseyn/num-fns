@@ -17,7 +17,7 @@ export const hero = {
   title: 'num-fns',
   tagline: 'Number utilities for JavaScript & TypeScript — like date-fns, but for numbers.',
   description:
-    'Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Pure, immutable, tree-shakeable, written in TypeScript.',
+    "Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Every integer-domain function also takes a bigint and every parser can return one ({ output: 'bigint' }), exact past Number.MAX_SAFE_INTEGER. Pure, immutable, tree-shakeable, written in TypeScript.",
   statusNote:
     'Pre-release: the locale system is implemented — az, en, ru, and es are all wired into numberToWords, ordinals, notation, and money/percentage formatting. The default locale is en; pass { locale: az } (or ru/es) on any function card below to see it live. The engine below calls the real, published source in this repo — nothing on this page is mocked.',
 }
@@ -27,7 +27,7 @@ export const install = {
   npm: 'npm install num-fns',
 }
 
-export const usageSnippet = `import { formatNumber, numberToWords, formatMoney, toRoman } from 'num-fns'
+export const usageSnippet = `import { formatNumber, numberToWords, formatMoney, parseNumber, toRoman } from 'num-fns'
 import { az } from 'num-fns/locale'
 
 formatNumber(1234567.89, { decimals: 2 }); // "1,234,567.89"
@@ -39,6 +39,16 @@ toRoman(1994); // "MCMXCIV"
 // pass a locale for anything locale-dependent — az remains fully supported
 numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
 formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
-formatMoney(1234.5, { locale: az, currency: 'USD' }); // "1 234,50 $"`
+formatMoney(1234.5, { locale: az, currency: 'USD' }); // "1 234,50 $"
 
-export const badges = ['MIT licensed', 'Bun + TypeScript', 'ESM & CJS', 'Zero dependencies']
+// bigint in, bigint out — exact past Number.MAX_SAFE_INTEGER
+formatNumber(1234567890123456789n); // "1,234,567,890,123,456,789"
+parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123456789n`
+
+export const badges = [
+  'MIT licensed',
+  'Bun + TypeScript',
+  'ESM & CJS',
+  'Zero dependencies',
+  'bigint in & out',
+]

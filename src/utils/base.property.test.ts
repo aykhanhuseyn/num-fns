@@ -5,6 +5,13 @@ import { fromBase, toBase } from './base'
 const RADIX = { min: 2, max: 36 }
 /** Safe-integer bound: `toBase` rejects anything `Number.isSafeInteger` does. */
 const SAFE_INTEGERS = { min: -Number.MAX_SAFE_INTEGER, max: Number.MAX_SAFE_INTEGER }
+/** `bigint`s far past the safe range — the values only the `bigint` paths can carry exactly. */
+const BIG_INTEGERS = {
+  min: BigInt('-1000000000000000000000000000000000000000'),
+  max: BigInt('1000000000000000000000000000000000000000'),
+}
+/** The first magnitude a `number` cannot hold exactly: `2^53 = MAX_SAFE_INTEGER + 1`. */
+const FIRST_UNSAFE = BigInt(Number.MAX_SAFE_INTEGER) + BigInt(1)
 
 describe('toBase/fromBase', () => {
   it('round-trips every safe integer in every radix', () => {
@@ -48,6 +55,43 @@ describe('toBase/fromBase', () => {
         expect(fromBase(toBase(value, 16), 16)).toBe(Number.parseInt(value.toString(16), 16))
       }),
     )
+  })
+
+  describe('bigint', () => {
+    it('round-trips every bigint in every radix through output: "bigint"', () => {
+      fc.assert(
+        fc.property(fc.bigInt(BIG_INTEGERS), fc.integer(RADIX), (value, radix) => {
+          expect(fromBase(toBase(value, radix), radix, { output: 'bigint' })).toBe(value)
+        }),
+      )
+    })
+
+    it('agrees with the number path on every safe integer', () => {
+      fc.assert(
+        fc.property(fc.integer(SAFE_INTEGERS), fc.integer(RADIX), (value, radix) => {
+          const digits = toBase(BigInt(value), radix)
+          expect(digits).toBe(toBase(value, radix))
+          expect(fromBase(digits, radix, { output: 'bigint' })).toBe(BigInt(value))
+          expect(fromBase(digits, radix)).toBe(value)
+        }),
+      )
+    })
+
+    it('refuses to return a rounded number past the safe range, in every radix', () => {
+      fc.assert(
+        fc.property(
+          fc.bigInt({ min: FIRST_UNSAFE, max: BIG_INTEGERS.max }),
+          fc.integer(RADIX),
+          fc.boolean(),
+          (magnitude, radix, negative) => {
+            const value = negative ? -magnitude : magnitude
+            const digits = toBase(value, radix)
+            expect(() => fromBase(digits, radix)).toThrow(RangeError)
+            expect(fromBase(digits, radix, { output: 'bigint' })).toBe(value)
+          },
+        ),
+      )
+    })
   })
 
   it('rejects radices outside 2-36 and non-integer values', () => {

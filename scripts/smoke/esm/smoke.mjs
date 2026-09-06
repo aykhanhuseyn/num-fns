@@ -9,8 +9,10 @@ import {
   formatNumber,
   mean,
   numberToWords,
+  parseLongNotation,
   parseNumber,
   round,
+  toLongNotation,
   toRoman,
 } from 'num-fns'
 import { en, ru } from 'num-fns/locale'
@@ -35,6 +37,25 @@ assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 // shipped bundle actually does the exact arithmetic on this Node.
 assert.strictEqual(add(0.1, 0.2), 0.3)
 assert.strictEqual(round(1.005, 2), 1.01)
+
+// BigInt in and out: a 19-digit value is past Number.MAX_SAFE_INTEGER, so
+// these only pass if the shipped bundle really keeps a `bigint` exact end to
+// end (again via `BigInt()`, never a literal) and the `output` option reaches
+// the parsers.
+const wei = BigInt('1234567890123456789')
+assert.strictEqual(formatNumber(wei), '1,234,567,890,123,456,789')
+const parsedWei = parseNumber('1,234,567,890,123,456,789', { output: 'bigint' })
+assert.strictEqual(typeof parsedWei, 'bigint')
+assert.strictEqual(parsedWei, wei)
+assert.strictEqual(typeof parseNumber('1,234', { output: 'bigint' }), 'bigint')
+assert.strictEqual(parseNumber('1,234', { output: 'bigint' }), BigInt(1234))
+assert.strictEqual(typeof parseNumber('1,234'), 'number')
+assert.strictEqual(numberToWords(BigInt(1234)), numberToWords(1234))
+const longBig = BigInt('999999999999999')
+assert.strictEqual(toLongNotation(longBig), '999 trillion 999 billion 999 million 999 thousand 999')
+assert.strictEqual(parseLongNotation(toLongNotation(longBig), { output: 'bigint' }), longBig)
+// A `bigint` result must be a whole number — the fraction is refused, not truncated.
+assert.throws(() => parseNumber('1.5', { output: 'bigint' }), RangeError)
 
 // Locale objects must be the same shape whether they came from the barrel or
 // the per-locale subpath — the two are separate Vite entries, so a bad build

@@ -138,6 +138,61 @@ function localeDefaultTextField(
   }
 }
 
+/** Id shared by every "as bigint" toggle and referenced by the value field it switches (`FieldDef.bigIntToggle`). */
+const AS_BIGINT = 'asBigInt'
+
+/**
+ * The playground-only "as bigint" checkbox for functions that accept
+ * `number | bigint` (`formatNumber`, `numberToWords`, `toLongNotation`,
+ * `toShortNotation`, `toByteSize`, `toBase`, `toOrdinal`, ...). It is a
+ * `'meta'` field — never passed to the function — that makes the paired
+ * positional field ({@link bigIntValueField}) coerce its text with
+ * `BigInt(...)` instead of `Number(...)`, so the same control can show the
+ * exact path for a value past `Number.MAX_SAFE_INTEGER` (each card's
+ * description names a value worth pasting). One toggle instead of a second
+ * card per function keeps the "N functions live" count honest.
+ */
+function bigIntToggleField(): FieldDef {
+  return {
+    id: AS_BIGINT,
+    label: 'as bigint',
+    kind: 'boolean',
+    valueType: 'boolean',
+    default: false,
+    arg: { kind: 'meta' },
+  }
+}
+
+/** A positional `'number'` field wired to {@link bigIntToggleField}: `Number(text)` by default, `BigInt(text)` while the toggle is ticked. */
+function bigIntValueField(
+  field: Pick<FieldDef, 'id' | 'label' | 'default' | 'step' | 'arg'>,
+): FieldDef {
+  return { kind: 'number', valueType: 'number', bigIntToggle: AS_BIGINT, ...field }
+}
+
+/**
+ * The `output` option every parser accepts (`ParseOutput` in
+ * `src/shared/types.ts`): `'number'` (the real default, omitted from the
+ * call/snippet) or `'bigint'`, which returns an exact `bigint` — rendered
+ * as `1234n` in the result box — and throws `RangeError` when the parsed
+ * value is not a whole number.
+ */
+function outputField(): FieldDef {
+  return {
+    id: 'output',
+    label: 'output',
+    kind: 'select',
+    valueType: 'string',
+    default: 'number',
+    omitWhenDefault: true,
+    selectOptions: [
+      { value: 'number', label: 'number (default)' },
+      { value: 'bigint', label: 'bigint' },
+    ],
+    arg: { kind: 'option', key: 'output' },
+  }
+}
+
 const numberCategory: Category = {
   id: 'number-format',
   title: 'Number formatting & parsing',
@@ -147,21 +202,20 @@ const numberCategory: Category = {
     {
       id: 'formatNumber',
       name: 'formatNumber',
-      signature: '(value: number, options?: NumberFormatOptions): string',
+      signature: '(value: number | bigint, options?: NumberFormatOptions): string',
       description:
-        "Formats a number using the locale's own conventions, defaulting to en. Throws RangeError if value is not finite.",
+        "Formats a number using the locale's own conventions, defaulting to en. Throws RangeError if value is not finite. Tick 'as bigint' and paste a whole number past Number.MAX_SAFE_INTEGER (1234567890123456789) to see every digit grouped exactly — decimals then only pads.",
       sourceFile: 'src/number/format.ts',
       fn: fn(formatNumber),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 1234567.891,
           step: 'any',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -196,9 +250,9 @@ const numberCategory: Category = {
     {
       id: 'parseNumber',
       name: 'parseNumber',
-      signature: '(value: string, options?: NumberParseOptions): number',
+      signature: '(value: string, options?: NumberParseOptions): number | bigint',
       description:
-        'Parses a string produced by formatNumber (or an equivalent format) back into a JavaScript number. Throws SyntaxError on unparseable input.',
+        'Parses a string produced by formatNumber (or an equivalent format) back into a JavaScript number — or, with output: bigint, into an exact bigint (the string must then be a whole number: "1,234.00" is fine, "1.5" throws RangeError). Throws SyntaxError on unparseable input.',
       sourceFile: 'src/number/format.ts',
       fn: fn(parseNumber),
       fields: [
@@ -221,6 +275,7 @@ const numberCategory: Category = {
           label: 'decimalSeparator',
           arg: { kind: 'option', key: 'decimalSeparator' },
         }),
+        outputField(),
       ],
     },
   ],
@@ -235,28 +290,27 @@ const wordsCategory: Category = {
     {
       id: 'numberToWords',
       name: 'numberToWords',
-      signature: '(value: number, options?: NumberWordsOptions): string',
+      signature: '(value: number | bigint, options?: NumberWordsOptions): string',
       description:
-        "Spells out a number as cardinal words, per the locale's own vocabulary and composition rules (defaults to en). Supports integers up to the trillion range, negative numbers, and up to two decimal digits.",
+        "Spells out a number as cardinal words, per the locale's own vocabulary and composition rules (defaults to en). Supports integers up to the trillion range, negative numbers, and up to two decimal digits. A bigint is read exactly, up to the locale's largest scale word (en: 999999999999999, just under a quadrillion) — tick 'as bigint' and paste 123456789012345; anything larger throws RangeError instead of being rounded.",
       sourceFile: 'src/number/words.ts',
       fn: fn(numberToWords),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 1234,
           step: 'any',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         localeField(),
       ],
     },
     {
       id: 'numberToDigitWords',
       name: 'numberToDigitWords',
-      signature: '(value: number | string, options?: DigitWordsOptions): string',
+      signature: '(value: number | string | bigint, options?: DigitWordsOptions): string',
       description:
         'Reads a number or numeric string digit by digit, the way phone numbers and codes are read aloud, per the locale\'s own digit words (defaults to en, e.g. "055" -> "zero five five"). Punctuation like spaces, "-", "()", "." and a leading "+" is ignored.',
       sourceFile: 'src/number/digits.ts',
@@ -323,7 +377,7 @@ const ordinalCategory: Category = {
     {
       id: 'getOrdinalSuffix',
       name: 'getOrdinalSuffix',
-      signature: '(value: number, options?: OrdinalOptions): string',
+      signature: '(value: number | bigint, options?: OrdinalOptions): string',
       description:
         'Returns just the ordinal suffix for a non-negative integer, per the locale (defaults to en, e.g. 9 -> "th"; az: 9 -> "cu").',
       sourceFile: 'src/number/suffix.ts',
@@ -344,21 +398,20 @@ const ordinalCategory: Category = {
     {
       id: 'toOrdinal',
       name: 'toOrdinal',
-      signature: '(value: number, options?: ToOrdinalOptions): string',
+      signature: '(value: number | bigint, options?: ToOrdinalOptions): string',
       description:
-        'Formats a non-negative integer as a short ordinal, e.g. 3 -> "3rd" (defaults to en; az: 3 -> "3-cü"). Before 2026-08-18 separator was a positional second argument — it now lives on the options object alongside locale.',
+        'Formats a non-negative integer as a short ordinal, e.g. 3 -> "3-rd" (defaults to en; az: 3 -> "3-cü"). Accepts a bigint up to Number.MAX_SAFE_INTEGER (the locale ordinal hooks take a number; larger throws RangeError). Before 2026-08-18 separator was a positional second argument — it now lives on the options object alongside locale.',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(toOrdinal),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 3,
           step: '1',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         localeField(),
         {
           id: 'separator',
@@ -373,7 +426,7 @@ const ordinalCategory: Category = {
     {
       id: 'ordinalToWords',
       name: 'ordinalToWords',
-      signature: '(value: number, options?: OrdinalOptions): string',
+      signature: '(value: number | bigint, options?: OrdinalOptions): string',
       description:
         'Spells out a non-negative integer as a full ordinal word, per the locale (defaults to en, e.g. 21 -> "twenty-first"; az: 21 -> "iyirmi birinci").',
       sourceFile: 'src/number/suffix.ts',
@@ -414,7 +467,8 @@ const ordinalCategory: Category = {
     {
       id: 'withSuffix',
       name: 'withSuffix',
-      signature: '(value: number | string, suffix: string, options?: SuffixOptions): string',
+      signature:
+        '(value: number | string | bigint, suffix: string, options?: SuffixOptions): string',
       description: 'Attaches an arbitrary suffix to a value, e.g. a unit or label.',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(withSuffix),
@@ -457,21 +511,20 @@ const notationCategory: Category = {
     {
       id: 'toShortNotation',
       name: 'toShortNotation',
-      signature: '(value: number, options?: ShortNotationOptions): string',
+      signature: '(value: number | bigint, options?: ShortNotationOptions): string',
       description:
-        "Abbreviates a large number to a short scaled form, per locale.notation.scales — en uses K/M/B/T, az uses min/mln/mlrd/trln. Before 2026-08-18 locale was a bare 'az' | 'en' string unrelated to the Locale objects; it now takes a full Locale.",
+        "Abbreviates a large number to a short scaled form, per locale.notation.scales — en uses K/M/B/T, az uses min/mln/mlrd/trln. A bigint is divided by the scale threshold in exact integer arithmetic (tick 'as bigint' and paste 1234567890123456789 for \"1234567.9T\"). Before 2026-08-18 locale was a bare 'az' | 'en' string unrelated to the Locale objects; it now takes a full Locale.",
       sourceFile: 'src/number/notation.ts',
       fn: fn(toShortNotation),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 2500000,
           step: 'any',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -487,8 +540,9 @@ const notationCategory: Category = {
     {
       id: 'parseShortNotation',
       name: 'parseShortNotation',
-      signature: '(value: string, options?: ShortNotationParseOptions): number',
-      description: 'Parses a string produced by toShortNotation back into a JavaScript number.',
+      signature: '(value: string, options?: ShortNotationParseOptions): number | bigint',
+      description:
+        'Parses a string produced by toShortNotation back into a JavaScript number — or, with output: bigint, into an exact bigint ("2.5M" is 2500000n).',
       sourceFile: 'src/number/notation.ts',
       fn: fn(parseShortNotation),
       fields: [
@@ -501,26 +555,26 @@ const notationCategory: Category = {
           arg: { kind: 'positional', index: 0 },
         },
         localeField(),
+        outputField(),
       ],
     },
     {
       id: 'toLongNotation',
       name: 'toLongNotation',
-      signature: '(value: number, options?: LongNotationOptions): string',
+      signature: '(value: number | bigint, options?: LongNotationOptions): string',
       description:
-        'Expands an integer into digit groups paired with their scale word (locale.words.scales), without spelling every number out. Throws TypeError if value is not an integer.',
+        "Expands an integer into digit groups paired with their scale word (locale.words.scales), without spelling every number out. Throws TypeError if value is not an integer. A bigint is expanded exactly, up to the locale's largest scale word (en: 999999999999999) — tick 'as bigint' and paste 123456789012345 for \"123 trillion 456 billion …\"; larger values throw RangeError.",
       sourceFile: 'src/number/notation.ts',
       fn: fn(toLongNotation),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 1234567,
           step: '1',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         localeField(),
         {
           id: 'groupSeparator',
@@ -535,8 +589,9 @@ const notationCategory: Category = {
     {
       id: 'parseLongNotation',
       name: 'parseLongNotation',
-      signature: '(value: string, options?: LongNotationOptions): number',
-      description: 'Parses a string produced by toLongNotation back into a JavaScript number.',
+      signature: '(value: string, options?: LongNotationParseOptions): number | bigint',
+      description:
+        'Parses a string produced by toLongNotation back into a JavaScript number — or, with output: bigint, into an exact bigint. The total is accumulated exactly either way, so a result past Number.MAX_SAFE_INTEGER throws RangeError as a number and points at output: bigint.',
       sourceFile: 'src/number/notation.ts',
       fn: fn(parseLongNotation),
       fields: [
@@ -557,6 +612,7 @@ const notationCategory: Category = {
           default: ' ',
           arg: { kind: 'option', key: 'groupSeparator' },
         },
+        outputField(),
       ],
     },
   ],
@@ -571,7 +627,7 @@ const romanCategory: Category = {
     {
       id: 'toRoman',
       name: 'toRoman',
-      signature: '(value: number): string',
+      signature: '(value: number | bigint): string',
       description: 'Converts an integer between 1 and 3999 into a roman numeral.',
       sourceFile: 'src/number/roman.ts',
       fn: fn(toRoman),
@@ -617,20 +673,20 @@ const byteSizeCategory: Category = {
     {
       id: 'toByteSize',
       name: 'toByteSize',
-      signature: '(bytes: number, options?: ByteSizeOptions): string',
-      description: 'Formats a byte count into a human-readable size string, e.g. 1536 -> "1.5 KB".',
+      signature: '(bytes: number | bigint, options?: ByteSizeOptions): string',
+      description:
+        'Formats a byte count into a human-readable size string, e.g. 1536 -> "1.5 KB". A bigint byte count is scaled exactly — tick \'as bigint\' and paste 1234567890123456789 (about 1096.52 PB).',
       sourceFile: 'src/number/byte-size.ts',
       fn: fn(toByteSize),
       fields: [
-        {
+        bigIntValueField({
           id: 'bytes',
           label: 'bytes',
-          kind: 'number',
-          valueType: 'number',
           default: 1536,
           step: '1',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         {
           id: 'decimals',
           label: 'decimals',
@@ -657,9 +713,9 @@ const byteSizeCategory: Category = {
     {
       id: 'parseByteSize',
       name: 'parseByteSize',
-      signature: '(value: string, options?: ByteSizeParseOptions): number',
+      signature: '(value: string, options?: ByteSizeParseOptions): number | bigint',
       description:
-        'Parses a string produced by toByteSize back into a byte count. options.base must match the base the string was formatted with.',
+        'Parses a string produced by toByteSize back into a byte count. options.base must match the base the string was formatted with. With output: bigint the byte count comes back exact ("1.5 KB" is 1536n); a size that is not a whole number of bytes then throws RangeError.',
       sourceFile: 'src/number/byte-size.ts',
       fn: fn(parseByteSize),
       fields: [
@@ -683,6 +739,7 @@ const byteSizeCategory: Category = {
           ],
           arg: { kind: 'option', key: 'base' },
         },
+        outputField(),
       ],
     },
   ],
@@ -697,7 +754,7 @@ const moneyCategory: Category = {
     {
       id: 'formatMoney',
       name: 'formatMoney',
-      signature: '(value: number, options?: MoneyFormatOptions): string',
+      signature: '(value: number | bigint, options?: MoneyFormatOptions): string',
       description:
         "Formats a monetary amount in the locale's default currency (en: USD) or the ISO 4217 code you pass — the symbol comes from the registry, its placement from the locale, so { locale: az, currency: 'USD' } gives \"9,99 $\".",
       sourceFile: 'src/money/format.ts',
@@ -747,9 +804,9 @@ const moneyCategory: Category = {
     {
       id: 'parseMoney',
       name: 'parseMoney',
-      signature: '(value: string, options?: MoneyParseOptions): number',
+      signature: '(value: string, options?: MoneyParseOptions): number | bigint',
       description:
-        "Parses a string produced by formatMoney back into a JavaScript number, stripping the symbol of the locale's default currency (en: $) or of the ISO 4217 code you pass.",
+        'Parses a string produced by formatMoney back into a JavaScript number, stripping the symbol of the locale\'s default currency (en: $) or of the ISO 4217 code you pass. output: bigint returns an exact bigint for whole amounts ("$ 1,234.00" is 1234n).',
       sourceFile: 'src/money/format.ts',
       fn: fn(parseMoney),
       fields: [
@@ -768,12 +825,13 @@ const moneyCategory: Category = {
           label: 'symbol',
           arg: { kind: 'option', key: 'symbol' },
         }),
+        outputField(),
       ],
     },
     {
       id: 'moneyToWords',
       name: 'moneyToWords',
-      signature: '(value: number, options?: MoneyWordsOptions): string',
+      signature: '(value: number | bigint, options?: MoneyWordsOptions): string',
       description:
         'Spells out a monetary amount as words, pairing the integer part with a major currency unit word and the rounded fractional part with a minor unit word, in the locale\'s own words for the locale\'s default currency (en: dollars/cents) or the ISO 4217 code you pass (en + GBP: "one pound fifty pence"). Unit words inflect by the amount\'s plural category and gender where the locale needs it — ru: "один рубль"/"два рубля"/"пять рублей", ru + USD: "два доллара", es + GBP: "una libra".',
       sourceFile: 'src/money/words.ts',
@@ -842,7 +900,7 @@ const percentageCategory: Category = {
     {
       id: 'formatPercentage',
       name: 'formatPercentage',
-      signature: '(value: number, options?: PercentageFormatOptions): string',
+      signature: '(value: number | bigint, options?: PercentageFormatOptions): string',
       description:
         "Formats a number as a percentage (or permille/basis-point) string, using the locale's own separators (defaults to en).",
       sourceFile: 'src/percentage/format.ts',
@@ -901,9 +959,9 @@ const percentageCategory: Category = {
     {
       id: 'parsePercentage',
       name: 'parsePercentage',
-      signature: '(value: string, options?: PercentageParseOptions): number',
+      signature: '(value: string, options?: PercentageParseOptions): number | bigint',
       description:
-        "Parses a percentage (or permille/basis-point) string back into a JavaScript number, using the locale's own separators (defaults to en). Pass asRatio to divide the result by the unit’s scale factor.",
+        'Parses a percentage (or permille/basis-point) string back into a JavaScript number, using the locale\'s own separators (defaults to en). Pass asRatio to divide the result by the unit’s scale factor. output: bigint returns an exact bigint when the result is a whole number ("200%" as a ratio is 2n; "45.5%" throws RangeError).',
       sourceFile: 'src/percentage/format.ts',
       fn: fn(parsePercentage),
       fields: [
@@ -937,6 +995,7 @@ const percentageCategory: Category = {
           ],
           arg: { kind: 'option', key: 'unit' },
         },
+        outputField(),
       ],
     },
   ],
@@ -1664,21 +1723,20 @@ const utilsCategory: Category = {
     {
       id: 'toBase',
       name: 'toBase',
-      signature: '(value: number, radix: number): string',
+      signature: '(value: number | bigint, radix: number): string',
       description:
-        'Converts an integer from base 10 into its string representation in an arbitrary radix between 2 and 36 (binary, octal, hex, base36, etc.).',
+        "Converts an integer from base 10 into its string representation in an arbitrary radix between 2 and 36 (binary, octal, hex, base36, etc.). A bigint converts exactly at any length — tick 'as bigint' and paste 1234567890123456789 for its full 64-bit hex form.",
       sourceFile: 'src/utils/base.ts',
       fn: fn(toBase),
       fields: [
-        {
+        bigIntValueField({
           id: 'value',
           label: 'value',
-          kind: 'number',
-          valueType: 'number',
           default: 255,
           step: '1',
           arg: { kind: 'positional', index: 0 },
-        },
+        }),
+        bigIntToggleField(),
         {
           id: 'radix',
           label: 'radix',
@@ -1693,9 +1751,9 @@ const utilsCategory: Category = {
     {
       id: 'fromBase',
       name: 'fromBase',
-      signature: '(value: string, radix: number): number',
+      signature: '(value: string, radix: number, options?: BaseParseOptions): number | bigint',
       description:
-        'Parses a string in an arbitrary radix between 2 and 36 back into a base-10 integer. Inverse of toBase.',
+        'Parses a string in an arbitrary radix between 2 and 36 back into a base-10 integer. Inverse of toBase. With output: bigint the result is exact at any length, so a 64-bit hex value round-trips.',
       sourceFile: 'src/utils/base.ts',
       fn: fn(fromBase),
       fields: [
@@ -1716,12 +1774,13 @@ const utilsCategory: Category = {
           step: '1',
           arg: { kind: 'positional', index: 1 },
         },
+        outputField(),
       ],
     },
     {
       id: 'isEven',
       name: 'isEven',
-      signature: '(value: number): boolean',
+      signature: '(value: number | bigint): boolean',
       description: 'Checks whether an integer is even. Throws for non-integers.',
       sourceFile: 'src/utils/predicates.ts',
       fn: fn(isEven),
@@ -1740,7 +1799,7 @@ const utilsCategory: Category = {
     {
       id: 'isOdd',
       name: 'isOdd',
-      signature: '(value: number): boolean',
+      signature: '(value: number | bigint): boolean',
       description: 'Checks whether an integer is odd. Throws for non-integers.',
       sourceFile: 'src/utils/predicates.ts',
       fn: fn(isOdd),

@@ -44,6 +44,30 @@ export function normalizeZero(value: number): number {
   return value === 0 ? 0 : value
 }
 
+/**
+ * Every integer a `bigint` can hold within `±maxDigits` decimal digits —
+ * written as `BigInt(...)` products rather than `10n` literals, since the
+ * build targets ES2018 (see `shared/bigint.ts`). Defaults to 30 digits, well
+ * past `Number.MAX_SAFE_INTEGER`'s 16, so the `bigint` paths are exercised
+ * where a `number` would already have lost digits. `fast-check`'s
+ * `fc.bigInt` biases toward the extremes and toward zero, so both small and
+ * huge values show up in every run.
+ */
+export function bigIntArb(maxDigits = 30): fc.Arbitrary<bigint> {
+  const max = BigInt(10) ** BigInt(maxDigits) - BigInt(1)
+  return fc.bigInt({ min: -max, max })
+}
+
+/**
+ * A `bigint` within `±Number.MAX_SAFE_INTEGER` — the range where the `bigint`
+ * and `number` paths of every function must agree exactly, which is what the
+ * "bigint agrees with number" properties assert.
+ */
+export function safeBigIntArb(): fc.Arbitrary<bigint> {
+  const max = BigInt(Number.MAX_SAFE_INTEGER)
+  return fc.bigInt({ min: -max, max })
+}
+
 describe('decimalNumber', () => {
   it('generates values that round-trip through String() unchanged', () => {
     fc.assert(
@@ -65,6 +89,35 @@ describe('decimalNumber', () => {
       fc.property(decimalNumber(3), (value) => {
         const [, fraction = ''] = String(Math.abs(value)).split('.')
         expect(fraction.length).toBeLessThanOrEqual(3)
+      }),
+    )
+  })
+})
+
+describe('bigIntArb', () => {
+  it('stays within the requested digit count and produces bigints', () => {
+    fc.assert(
+      fc.property(bigIntArb(30), (value) => {
+        expect(typeof value).toBe('bigint')
+        const digits = (value < BigInt(0) ? -value : value).toString()
+        expect(digits.length).toBeLessThanOrEqual(30)
+      }),
+    )
+  })
+
+  it('reaches past Number.MAX_SAFE_INTEGER', () => {
+    const max = BigInt(Number.MAX_SAFE_INTEGER)
+    const sample = fc.sample(bigIntArb(), 200)
+    expect(sample.some((value) => value > max || value < -max)).toBe(true)
+  })
+})
+
+describe('safeBigIntArb', () => {
+  it('only produces values a number holds exactly', () => {
+    fc.assert(
+      fc.property(safeBigIntArb(), (value) => {
+        expect(Number.isSafeInteger(Number(value))).toBe(true)
+        expect(BigInt(Number(value))).toBe(value)
       }),
     )
   })
