@@ -42,6 +42,32 @@ describe('formatPercentage', () => {
   it('supports a locale for the decimal separator', () => {
     expect(formatPercentage(45.5, { decimals: 1, locale: az })).toBe('45,5%')
   })
+
+  describe('decimal-safe scaling and rounding', () => {
+    it('scales a ratio exactly before rounding', () => {
+      // 1.005 * 100 is 100.49999999999999, which used to round down to "100%".
+      expect(formatPercentage(1.005, { multiplyBy100: true })).toBe('101%')
+      expect(formatPercentage(0.07, { decimals: 0, multiplyBy100: true })).toBe('7%')
+      // 0.0455 * 1000 is 45.49999999999999, which used to round down to "45‰".
+      expect(formatPercentage(0.0455, { multiplyBy100: true, unit: 'permille' })).toBe('46‰')
+      expect(formatPercentage(0.0455, { decimals: 1, multiplyBy100: true, unit: 'permille' })).toBe(
+        '45.5‰',
+      )
+      // 1.005 * 10000 is 10049.999999999998.
+      expect(formatPercentage(1.005, { multiplyBy100: true, unit: 'basisPoint' })).toBe('10,050‱')
+    })
+
+    it('rounds an exact decimal tie per roundingMode', () => {
+      expect(formatPercentage(1.005, { decimals: 2 })).toBe('1.01%')
+      expect(formatPercentage(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('1.00%')
+      expect(formatPercentage(1.005, { decimals: 2, roundingMode: 'halfDown' })).toBe('1.00%')
+      expect(formatPercentage(0.01005, { decimals: 2, multiplyBy100: true })).toBe('1.01%')
+    })
+
+    it('throws RangeError for a non-integer decimals', () => {
+      expect(() => formatPercentage(45.5, { decimals: 0.5 })).toThrow(RangeError)
+    })
+  })
 })
 
 describe('parsePercentage', () => {
@@ -65,6 +91,17 @@ describe('parsePercentage', () => {
 
   it('supports a locale', () => {
     expect(parsePercentage('45,5%', { locale: az })).toBeCloseTo(45.5)
+  })
+
+  it('divides by the scale exactly in decimal when asRatio is set', () => {
+    expect(parsePercentage('7%', { asRatio: true })).toBe(0.07)
+    // 1.1 / 100 is 0.011000000000000001 in floating point.
+    expect(parsePercentage('1.1%', { asRatio: true })).toBe(0.011)
+    expect(parsePercentage('0.7‰', { unit: 'permille', asRatio: true })).toBe(0.0007)
+    expect(parsePercentage('1.1‱', { unit: 'basisPoint', asRatio: true })).toBe(0.00011)
+    expect(
+      parsePercentage(formatPercentage(1.005, { multiplyBy100: true }), { asRatio: true }),
+    ).toBe(1.01)
   })
 })
 

@@ -11,8 +11,13 @@ import { getCurrency } from './currency'
  * same locale: the symbol comes from `getCurrency(code)`, its placement from
  * the locale, so `{ locale: az, currency: 'USD' }` gives `"9,99 $"`.
  *
+ * Rounding to `decimals` is decimal-safe (it goes through `formatNumber`,
+ * hence `round`): `formatMoney(1.005)` is `"$ 1.01"`, not the `"$ 1.00"`
+ * that `toFixed(2)` would produce.
+ *
  * @example
  * formatMoney(1234.5); // "$ 1,234.50"
+ * formatMoney(1.005); // "$ 1.01"
  * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
  * formatMoney(1234.5, { currency: 'EUR' }); // "€ 1,234.50"
  * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"

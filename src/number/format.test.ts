@@ -47,6 +47,36 @@ describe('formatNumber', () => {
     expect(formatNumber(-0.001, { decimals: 2 })).toBe('0.00')
   })
 
+  describe('decimal-safe rounding', () => {
+    it('rounds the value as written, not as the binary float is stored', () => {
+      // (1.005).toFixed(2) is "1.00" because 1.005 * 100 is 100.49999999999999.
+      expect(formatNumber(1.005, { decimals: 2 })).toBe('1.01')
+      expect(formatNumber(2.675, { decimals: 2 })).toBe('2.68')
+      expect(formatNumber(-1.005, { decimals: 2 })).toBe('-1.01')
+      expect(formatNumber(1.255, { decimals: 2 })).toBe('1.26')
+      expect(formatNumber(8.345, { decimals: 2 })).toBe('8.35')
+    })
+
+    it('pads with zeros once the value has fewer digits than requested', () => {
+      expect(formatNumber(1.005, { decimals: 4 })).toBe('1.0050')
+      expect(formatNumber(0.1, { decimals: 3 })).toBe('0.100')
+    })
+
+    it('keeps large values exact after rounding', () => {
+      expect(formatNumber(268435456.47635, { decimals: 4 })).toBe('268,435,456.4764')
+      expect(formatNumber(-268435456.47635, { decimals: 4 })).toBe('-268,435,456.4764')
+    })
+
+    it('throws RangeError for a non-integer decimals', () => {
+      expect(() => formatNumber(1.234, { decimals: 1.5 })).toThrow(RangeError)
+      expect(() => formatNumber(1.234, { decimals: NaN })).toThrow(RangeError)
+    })
+
+    it('throws RangeError for a negative decimals', () => {
+      expect(() => formatNumber(1234, { decimals: -1 })).toThrow(RangeError)
+    })
+  })
+
   describe('roundingMode', () => {
     it('defaults to halfUp (rounds half away from zero)', () => {
       expect(formatNumber(2.5, { decimals: 0 })).toBe('3')
@@ -75,6 +105,37 @@ describe('formatNumber', () => {
 
     it('has no effect when decimals is omitted', () => {
       expect(formatNumber(1.9, { roundingMode: 'floor' })).toBe('1.9')
+    })
+
+    describe('on an exact decimal tie that toFixed would miss', () => {
+      // 2.675 is stored as 2.67499999999999982236431605997495353221893310546875,
+      // so (2.675).toFixed(2) is "2.67"; decimal-safe rounding sees the tie.
+      it('halfUp rounds the tie away from zero', () => {
+        expect(formatNumber(2.675, { decimals: 2, roundingMode: 'halfUp' })).toBe('2.68')
+        expect(formatNumber(-2.675, { decimals: 2, roundingMode: 'halfUp' })).toBe('-2.68')
+      })
+
+      it('halfDown rounds the tie toward zero', () => {
+        expect(formatNumber(2.675, { decimals: 2, roundingMode: 'halfDown' })).toBe('2.67')
+        expect(formatNumber(-2.675, { decimals: 2, roundingMode: 'halfDown' })).toBe('-2.67')
+      })
+
+      it('halfEven rounds the tie to the even digit', () => {
+        expect(formatNumber(2.675, { decimals: 2, roundingMode: 'halfEven' })).toBe('2.68')
+        expect(formatNumber(2.665, { decimals: 2, roundingMode: 'halfEven' })).toBe('2.66')
+        expect(formatNumber(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('1.00')
+      })
+
+      it('ceil and floor are unaffected by the tie but still see the exact digits', () => {
+        expect(formatNumber(2.675, { decimals: 2, roundingMode: 'ceil' })).toBe('2.68')
+        expect(formatNumber(2.675, { decimals: 2, roundingMode: 'floor' })).toBe('2.67')
+        expect(formatNumber(-2.675, { decimals: 2, roundingMode: 'ceil' })).toBe('-2.67')
+        expect(formatNumber(-2.675, { decimals: 2, roundingMode: 'floor' })).toBe('-2.68')
+        // 1.1 * 100 is 110.00000000000001, which Math.ceil would push to 111;
+        // 4.35 * 100 is 434.99999999999994, which Math.floor would drop to 434.
+        expect(formatNumber(1.1, { decimals: 2, roundingMode: 'ceil' })).toBe('1.10')
+        expect(formatNumber(4.35, { decimals: 2, roundingMode: 'floor' })).toBe('4.35')
+      })
     })
   })
 

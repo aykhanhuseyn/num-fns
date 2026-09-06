@@ -1,8 +1,10 @@
 import {
+  add,
   amortizationSchedule,
   cardinalToOrdinalWords,
   clamp,
   compoundInterest,
+  divide,
   formatMoney,
   formatNumber,
   formatPercentage,
@@ -22,6 +24,7 @@ import {
   min,
   mode,
   moneyToWords,
+  multiply,
   numberToDigitWords,
   numberToWords,
   ordinalToWords,
@@ -34,8 +37,10 @@ import {
   percentile,
   presentValue,
   quantile,
+  round,
   simpleInterest,
   standardDeviation,
+  subtract,
   sum,
   toBase,
   toByteSize,
@@ -54,6 +59,7 @@ function fn(value: (...args: never[]) => unknown): PlaygroundFn {
   return value as unknown as PlaygroundFn
 }
 
+/** Every `RoundingMode` (`src/arithmetic/round.ts`), shared by `formatNumber`'s `roundingMode` option and `round`'s positional `mode`. */
 const ROUNDING_MODES = [
   { value: 'halfUp', label: 'halfUp (default)' },
   { value: 'halfDown', label: 'halfDown' },
@@ -940,8 +946,162 @@ const arithmeticCategory: Category = {
   id: 'arithmetic',
   title: 'Arithmetic',
   description:
-    'Self-contained helpers with no locale dependency. Both inclusive on [min, max], both throw RangeError on non-finite input or min > max.',
+    'Self-contained helpers with no locale dependency. add/subtract/multiply/divide/round work exactly in decimal, so the classic floating-point traps do not apply: 0.1 + 0.2 is 0.3, 0.3 − 0.1 is 0.2, 1.1 × 1.1 is 1.21, and round(1.005, 2) is 1.01 (where Math.round gives 1). clamp and inRange are inclusive on [min, max]. All throw RangeError on bad input — non-finite numbers, a zero divisor, a non-integer precision, or min > max.',
   examples: [
+    {
+      id: 'add',
+      name: 'add',
+      signature: '(a: number, b: number): number',
+      description:
+        'Adds two numbers exactly in decimal, so add(0.1, 0.2) is 0.3, not 0.30000000000000004. Throws RangeError on non-finite input or when the result is too large for a JavaScript number.',
+      sourceFile: 'src/arithmetic/add.ts',
+      fn: fn(add),
+      fields: [
+        {
+          id: 'a',
+          label: 'a',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.1,
+          step: 'any',
+          arg: { kind: 'positional', index: 0 },
+        },
+        {
+          id: 'b',
+          label: 'b',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.2,
+          step: 'any',
+          arg: { kind: 'positional', index: 1 },
+        },
+      ],
+    },
+    {
+      id: 'subtract',
+      name: 'subtract',
+      signature: '(a: number, b: number): number',
+      description:
+        'Subtracts b from a exactly in decimal, so subtract(0.3, 0.1) is 0.2, not 0.19999999999999998. Throws RangeError on non-finite input or when the result is too large for a JavaScript number.',
+      sourceFile: 'src/arithmetic/subtract.ts',
+      fn: fn(subtract),
+      fields: [
+        {
+          id: 'a',
+          label: 'a',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.3,
+          step: 'any',
+          arg: { kind: 'positional', index: 0 },
+        },
+        {
+          id: 'b',
+          label: 'b',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.1,
+          step: 'any',
+          arg: { kind: 'positional', index: 1 },
+        },
+      ],
+    },
+    {
+      id: 'multiply',
+      name: 'multiply',
+      signature: '(a: number, b: number): number',
+      description:
+        'Multiplies two numbers exactly in decimal, so multiply(1.1, 1.1) is 1.21, not 1.2100000000000002. Throws RangeError on non-finite input or when the result is too large for a JavaScript number.',
+      sourceFile: 'src/arithmetic/multiply.ts',
+      fn: fn(multiply),
+      fields: [
+        {
+          id: 'a',
+          label: 'a',
+          kind: 'number',
+          valueType: 'number',
+          default: 1.1,
+          step: 'any',
+          arg: { kind: 'positional', index: 0 },
+        },
+        {
+          id: 'b',
+          label: 'b',
+          kind: 'number',
+          valueType: 'number',
+          default: 1.1,
+          step: 'any',
+          arg: { kind: 'positional', index: 1 },
+        },
+      ],
+    },
+    {
+      id: 'divide',
+      name: 'divide',
+      signature: '(dividend: number, divisor: number): number',
+      description:
+        'Divides dividend by divisor exactly in decimal, so divide(0.3, 0.1) is 3, not 2.9999999999999996; a non-terminating quotient (1 / 3) comes out as the correctly rounded number. Throws RangeError on non-finite input, when divisor is 0, or when the result is too large for a JavaScript number.',
+      sourceFile: 'src/arithmetic/divide.ts',
+      fn: fn(divide),
+      fields: [
+        {
+          id: 'dividend',
+          label: 'dividend',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.3,
+          step: 'any',
+          arg: { kind: 'positional', index: 0 },
+        },
+        {
+          id: 'divisor',
+          label: 'divisor',
+          kind: 'number',
+          valueType: 'number',
+          default: 0.1,
+          step: 'any',
+          arg: { kind: 'positional', index: 1 },
+        },
+      ],
+    },
+    {
+      id: 'round',
+      name: 'round',
+      signature: '(value: number, precision?: number, mode?: RoundingMode): number',
+      description:
+        'Rounds value to precision decimal places exactly in decimal, using mode to break ties (halfUp by default) — the one rounding implementation formatNumber, formatMoney and formatPercentage all delegate to. round(1.005, 2) is 1.01, where Math.round(1.005 * 100) / 100 gives 1. A negative precision rounds to tens, hundreds, … (round(1234, -2) is 1200). Throws RangeError on non-finite input or a non-integer precision.',
+      sourceFile: 'src/arithmetic/round.ts',
+      fn: fn(round),
+      fields: [
+        {
+          id: 'value',
+          label: 'value',
+          kind: 'number',
+          valueType: 'number',
+          default: 1.005,
+          step: 'any',
+          arg: { kind: 'positional', index: 0 },
+        },
+        {
+          id: 'precision',
+          label: 'precision',
+          kind: 'number',
+          valueType: 'number',
+          default: 2,
+          step: '1',
+          arg: { kind: 'positional', index: 1 },
+        },
+        {
+          id: 'mode',
+          label: 'mode',
+          kind: 'select',
+          valueType: 'string',
+          default: 'halfUp',
+          selectOptions: ROUNDING_MODES,
+          arg: { kind: 'positional', index: 2 },
+        },
+      ],
+    },
     {
       id: 'clamp',
       name: 'clamp',

@@ -18,6 +18,19 @@ describe('formatMoney', () => {
     expect(formatMoney(10, { decimals: 0 })).toBe('$ 10')
   })
 
+  it('rounds decimal-safely to the currency minor unit', () => {
+    // (1.005).toFixed(2) is "1.00"; decimal-safe rounding sees the tie.
+    expect(formatMoney(1.005)).toBe('$ 1.01')
+    expect(formatMoney(2.675, { locale: az })).toBe('2,68 ₼')
+    expect(formatMoney(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('$ 1.00')
+    expect(formatMoney(-1.005, { decimals: 2 })).toBe('$ -1.01')
+    expect(formatMoney(1234.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('$ 1,234')
+  })
+
+  it('throws RangeError for a non-integer decimals', () => {
+    expect(() => formatMoney(1, { decimals: 1.5 })).toThrow(RangeError)
+  })
+
   describe('{ currency }', () => {
     it("selects the symbol by ISO 4217 code, keeping the locale's placement", () => {
       expect(formatMoney(1234.5, { currency: 'EUR' })).toBe('€ 1,234.50')

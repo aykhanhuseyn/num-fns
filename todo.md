@@ -182,7 +182,8 @@ objects, `date-fns` style.
       'halfUp']` — floating-point error pushes the round-trip diff
       (`0.000050008...`) a hair past the half-unit tolerance (`0.00005`).
       Reproduced deterministically outside the suite; not fixed here, tracked
-      as a new open bug below since it's unrelated to scale naming.)
+      as a new open bug below since it's unrelated to scale naming. Fixed
+      2026-09-06 — see §5's finding (c) and §4's precise-arithmetic `round`.)
 - [x] **Grammatical gender.** Russian `один`/`одна` and Spanish `un`/`una`
       change with the noun being counted. Decide whether `numberToWords` takes a
       `gender` option or stays masculine-by-default.
@@ -409,8 +410,11 @@ these were landed as new top-level directories while the format/parse question
 was still open, which is why none of them had to wait on it:
 
 - [x] `src/arithmetic/` (see §4). (2026-08-09: created with `clamp`/`inRange`;
-      `add`/`subtract`/`multiply`/`divide`/`round` still pending on the
-      decimal-safe-representation and rounding-mode decisions in §1/§4.)
+      `add`/`subtract`/`multiply`/`divide`/`round` were pending on the
+      decimal-safe-representation and rounding-mode decisions in §1/§4.
+      2026-09-06: all five landed, one file per function plus an internal
+      `decimal.ts` they share — see §4's precise-arithmetic items for the
+      design. The directory now holds seven modules, none locale-aware.)
 - [x] `src/stats/` (see §4). (2026-08-10: created with `sum`/`mean`/`median`/
       `mode`/`min`/`max`/`variance`/`standardDeviation`/`percentile`/`quantile`,
       one function per file. `variance`/`standardDeviation` default to
@@ -577,7 +581,13 @@ The API-surface question the layout decisions above did not resolve:
       forwards it. Not decimal-safe — shares `toFixed`'s floating-point
       representation quirks for every mode except the `halfUp` fast path; the
       decimal-safe version is still `arithmetic/round`, tracked separately
-      below.)
+      below. 2026-09-06: now decimal-safe — `formatNumber` no longer rounds
+      on its own; every mode delegates to `arithmetic/round`, so
+      `formatNumber(1.005, { decimals: 2 })` is
+      `"1.01"` where `toFixed` gave `"1.00"`, and a non-integer `decimals`
+      throws `RangeError` instead of being passed to `toFixed`. `toFixed` is
+      only used afterwards to zero-pad the already-rounded value, which is
+      lossless. See the precise-arithmetic `round` item below.)
 - [x] Permille (‰) and basis-point support in `formatPercentage`.
       (2026-08-10: `unit?: 'percent' | 'permille' | 'basisPoint'` on
       `PercentageFormatOptions`/`PercentageParseOptions`, defaulting to
@@ -640,13 +650,57 @@ The API-surface question the layout decisions above did not resolve:
 ### New: precise arithmetic (`src/arithmetic/`)
 
 Explicitly called out in the project vision as a launch pillar — avoiding the
-classic `0.1 + 0.2 !== 0.3` floating-point traps. Not started.
+classic `0.1 + 0.2 !== 0.3` floating-point traps. Landed 2026-09-06.
 
-- [ ] `add` / `subtract` / `multiply` / `divide` operating on decimal-safe
+- [x] `add` / `subtract` / `multiply` / `divide` operating on decimal-safe
       representations (likely integer-scaled, not naive `Number` math).
-- [ ] `round(value, precision, mode)` — ties into the rounding-mode decision
+      (2026-09-06: `src/arithmetic/add.ts`/`subtract.ts`/`multiply.ts`/
+      `divide.ts`, over a shared internal `src/arithmetic/decimal.ts` that is
+      *not* exported from the root. Representation: every finite number is
+      taken at its shortest decimal string — `String(0.1)` is `"0.1"`, which
+      is what the caller means by the number — and decomposed into an integer
+      `digits` and a power-of-ten `scale` (`value = digits × 10^-scale`).
+      The operation runs exactly on the integers with `BigInt`, and the exact
+      result is converted back with `Number("<digits>e<-scale>")`, which the
+      language guarantees is correctly rounded (dividing floats would round
+      twice). `BigInt` is reached only through the `BigInt(...)` constructor,
+      never `10n` literals — the build targets ES2018, where the literal is a
+      parse error but the global is a plain runtime value on every supported
+      Node. `divide` shifts the dividend so the integer quotient carries 25
+      significant digits (`QUOTIENT_DIGITS`) before conversion: exact when
+      the quotient terminates (`divide(0.3, 0.1)` is `3`), otherwise the same
+      as correctly rounding the true quotient (`divide(1, 3)` is
+      `0.3333333333333333`). `add(0.1, 0.2)` is `0.3`, `subtract(0.3, 0.1)`
+      is `0.2`, `multiply(1.1, 1.1)` is `1.21`. All take and return plain
+      numbers per the "raw numbers" decision — no decimal type, no bignum
+      dependency — and throw `RangeError` on non-finite input, a zero
+      divisor, or a result outside the range of a JS number; none ever
+      returns `-0`. Pinned root surface 46 → 51, all still functions.)
+- [x] `round(value, precision, mode)` — ties into the rounding-mode decision
       above; should be the one rounding implementation the rest of the package
       (money, percentage, stats) delegates to rather than reimplementing.
+      (2026-09-06: `src/arithmetic/round.ts` — `round(value, precision = 0,
+      mode: RoundingMode = 'halfUp')`, on the same exact-decimal plumbing as
+      the four operations, so the value is rounded as written rather than as
+      the binary float is stored: `round(1.005, 2)` is `1.01` where
+      `Math.round(1.005 * 100) / 100` and `(1.005).toFixed(2)` both give `1`.
+      Tie modes compare the exact dropped digits against the exact half
+      (`round(2.5, 0, 'halfEven')` → `2`, `round(-2.5, 0, 'halfDown')` →
+      `-2`); `ceil`/`floor` keep their directional meaning for negatives
+      (`round(-1.21, 1, 'floor')` → `-1.3`); a negative `precision` rounds to
+      tens, hundreds, … (`round(1234, -2)` → `1200`). Throws `RangeError` on
+      a non-integer `precision`. `RoundingMode` stays in `shared/types.ts`,
+      shared by the formatters' option and this parameter. **It is now the
+      one rounding implementation:** `formatNumber` (hence `formatMoney`)
+      delegates to it for every mode, and `formatPercentage`'s
+      `multiplyBy100`/`asRatio` scaling goes through `multiply`/`divide`.
+      Consequences, shipped as breaking in the changeset: `formatNumber(1.005,
+      { decimals: 2 })` is `"1.01"` (was `"1.00"`), `formatPercentage(1.005,
+      { multiplyBy100: true })` is `"101%"` (was `"100%"`, since `1.005 * 100`
+      is `100.49999999999999`), and `formatNumber` throws on a non-integer
+      `decimals`. It also closes §5's `halfUp` property-test flake (c), whose
+      property now measures the round-trip diff with the exact `subtract`.
+      `stats` does not round its output and so has nothing to delegate.)
 - [x] `clamp` / `inRange` — cheap, currently-unimplemented wins. (2026-08-09:
       `src/arithmetic/clamp.ts` and `src/arithmetic/in-range.ts`, both
       inclusive-range, both throwing `RangeError` on non-finite input or
@@ -769,7 +823,13 @@ New domain from the vision doc.
       logic bug in the rounding itself. Not fixed here (out of scope for scale
       naming); needs its own pass, likely either a slightly looser tolerance
       for large-magnitude values or a decimal-safe rounding path (ties into
-      the `arithmetic`/`round` decision in §1).)
+      the `arithmetic`/`round` decision in §1).
+      **Fixed 2026-09-06** — the second option, not the first: `formatNumber`
+      now rounds through the decimal-safe `arithmetic/round` (§4), and the
+      property measures the round-trip diff with the exact `subtract` instead
+      of float `-`, so the `0.000050008...` was never the rounding being
+      wrong, only the float subtraction in the assertion. No tolerance was
+      loosened.)
 - [ ] Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
       locales — catches separator mistakes no human reviewer will spot.
 - [ ] Native-speaker review of the `ru` and `es` word lists before publishing —
@@ -1071,7 +1131,10 @@ New domain from the vision doc.
       trips it. New `bun run size` script; `ci.yml` runs it after `bun run
       build` (size-limit needs the built `dist/` output, not source).
       Verified with a real `bunx size-limit` run against a fresh build, not
-      just by reading the config.)
+      just by reading the config. 2026-09-06: the `index` limit went 6 → 7 KB
+      when the precise-arithmetic functions landed — the `BigInt` decimal
+      core took the measured size 5.57 → 6.11 kB, the first time it crossed
+      the old limit; the other budgets are unchanged and still met.)
 - [x] First publish to npm. (2026-08-21: `0.2.0-alpha.0` published by hand
       from the laptop, which reserved the name; npm's `latest` and `alpha`
       dist-tags both pointed at it. `0.2.0-alpha.1` was versioned but never

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
+import { divide } from '../arithmetic/divide'
+import { round } from '../arithmetic/round'
+import { subtract } from '../arithmetic/subtract'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
 import { enGB } from '../locale/en-gb'
@@ -26,16 +29,10 @@ const UNIT_SCALE: Record<PercentageUnit, number> = {
   basisPoint: 10000,
 }
 
-/**
- * Ratios in [-10, 10] with four decimals. A ratio is scaled *up* by 100-10000
- * before formatting, so unlike the other arbitraries here it has to stay small:
- * at `1e9` the scaled value's own floating-point error already exceeds the
- * rounding error the property is trying to bound.
- */
-const ratioNumber = fc.integer({ min: -100_000, max: 100_000 }).map((scaled) => scaled / 10_000)
-
 describe.each(LOCALES)('formatPercentage/parsePercentage round trip (%s)', (_code, locale) => {
-  it('preserves the value for every unit, decimal count and spacing', () => {
+  it('preserves the value, rounded decimal-safely, for every unit, decimal count and spacing', () => {
+    // The oracle is `round`, not `toFixed`: rounding goes through
+    // `formatNumber` and is decimal-safe (`1.005` at two decimals is `1.01`).
     fc.assert(
       fc.property(
         decimalNumber(4),
@@ -45,25 +42,45 @@ describe.each(LOCALES)('formatPercentage/parsePercentage round trip (%s)', (_cod
         (value, decimals, unit, space) => {
           const options = { locale, decimals, unit, space }
           const roundTrip = parsePercentage(formatPercentage(value, options), options)
-          expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(decimals))))
+          expect(normalizeZero(roundTrip)).toBe(round(value, decimals))
         },
       ),
     )
   })
 
   it('round-trips a ratio through multiplyBy100 and back through asRatio', () => {
+    // The ratio is scaled up with `multiply` and back down with `divide`, both
+    // exact in decimal, so the only thing that can move it is the rounding to
+    // `decimals` in between: at most half a unit of the last kept digit,
+    // divided by the scale. Both the distance and the bound are computed
+    // exactly, with no floating-point slack.
     fc.assert(
       fc.property(
-        ratioNumber,
+        decimalNumber(4),
+        fc.constantFrom(...UNITS),
+        fc.integer({ min: 0, max: 6 }),
+        (ratio, unit, decimals) => {
+          const formatted = formatPercentage(ratio, { locale, unit, decimals, multiplyBy100: true })
+          const roundTrip = parsePercentage(formatted, { locale, unit, asRatio: true })
+          const tolerance = divide(Number(`5e-${decimals + 1}`), UNIT_SCALE[unit])
+          expect(Math.abs(subtract(roundTrip, ratio))).toBeLessThanOrEqual(tolerance)
+        },
+      ),
+    )
+  })
+
+  it('round-trips a ratio exactly when no digits are dropped', () => {
+    // A four-decimal ratio scaled by 100-10000 has at most two fraction
+    // digits, so with two or more `decimals` nothing is rounded and the ratio
+    // comes back bit-for-bit — the payoff of exact scaling over `value * scale`.
+    fc.assert(
+      fc.property(
+        decimalNumber(4),
         fc.constantFrom(...UNITS),
         fc.integer({ min: 2, max: 6 }),
         (ratio, unit, decimals) => {
           const formatted = formatPercentage(ratio, { locale, unit, decimals, multiplyBy100: true })
-          const roundTrip = parsePercentage(formatted, { locale, unit, asRatio: true })
-          // Scaling up, rounding to `decimals`, then scaling back down leaves
-          // at most half a unit of the last kept digit, divided by the scale.
-          const tolerance = (0.5 * 10 ** -decimals) / UNIT_SCALE[unit] + 1e-9
-          expect(Math.abs(roundTrip - ratio)).toBeLessThanOrEqual(tolerance)
+          expect(parsePercentage(formatted, { locale, unit, asRatio: true })).toBe(ratio)
         },
       ),
     )

@@ -17,7 +17,7 @@ export const hero = {
   title: 'num-fns',
   tagline: 'Number utilities for JavaScript & TypeScript — like date-fns, but for numbers.',
   description:
-    'Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, arithmetic, statistics and financial helpers. Pure, immutable, tree-shakeable, written in TypeScript.',
+    'Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Pure, immutable, tree-shakeable, written in TypeScript.',
   statusNote:
     'Pre-release: the locale system is implemented — az, en, ru, and es are all wired into numberToWords, ordinals, notation, and money/percentage formatting. The default locale is en; pass { locale: az } (or ru/es) on any function card below to see it live. The engine below calls the real, published source in this repo — nothing on this page is mocked.',
 }

@@ -2,33 +2,35 @@ import type { GrammaticalGender, Locale } from '../locale/types'
 import type { CurrencyCode } from '../money/currency'
 
 /**
- * How `formatNumber` (and anything that delegates to it) rounds a value to
- * `decimals` fractional digits:
+ * How a value is rounded to a number of fractional digits — the `mode`
+ * argument of `round` and the `roundingMode` option of `formatNumber`,
+ * `formatMoney` and `formatPercentage`:
  * - `'halfUp'` — round half away from zero (`2.5` -> `3`, `-2.5` -> `-3`).
- *   The default; matches the platform's `toFixed` for the vast majority of
- *   inputs.
+ *   The default.
  * - `'halfDown'` — round half toward zero (`2.5` -> `2`, `-2.5` -> `-2`).
  * - `'halfEven'` — banker's rounding: a tie rounds to the nearest even digit
  *   (`2.5` -> `2`, `3.5` -> `4`).
  * - `'ceil'` — always toward positive infinity (`-1.5` -> `-1`).
  * - `'floor'` — always toward negative infinity (`-1.5` -> `-2`).
  *
- * All modes multiply by `10 ** decimals` and operate on the result as a
- * plain JS number, so they share `toFixed`'s well-known floating-point
- * representation quirks (e.g. `1.005` isn't exactly representable) for
- * every mode except `'halfUp'`'s `toFixed` fast path. A decimal-safe
- * implementation is tracked separately for `arithmetic/round`.
+ * The modes are implemented once, decimal-safely, by `round` in
+ * `src/arithmetic/round.ts`, which the three formatters delegate to. A value
+ * is rounded as written — its shortest decimal representation — not as the
+ * binary float happens to be stored, so `1.005` rounds to `1.01` at two
+ * decimals where `toFixed` and `Math.round(x * 100) / 100` both give `1`.
+ * Ties are therefore exact decimal ties: `2.675` is a tie at two decimals,
+ * and `'halfEven'` sends it to `2.68`.
  */
 export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
 
 export interface NumberFormatOptions {
-  /** Number of fractional digits to keep. Omit to keep the value's natural precision. */
+  /** Number of fractional digits to keep (a non-negative integer, `RangeError` otherwise). Omit to keep the value's natural precision. */
   decimals?: number
   /** Separator inserted between groups of three integer digits. Defaults to `locale.formatDefaults.thousandsSeparator`. */
   thousandsSeparator?: string
   /** Separator between the integer and fractional part. Defaults to `locale.formatDefaults.decimalSeparator`. */
   decimalSeparator?: string
-  /** How to round to `decimals` fractional digits. Defaults to `'halfUp'`. Has no effect when `decimals` is omitted. */
+  /** How to round to `decimals` fractional digits — decimal-safely, via `round`. Defaults to `'halfUp'`. Has no effect when `decimals` is omitted. */
   roundingMode?: RoundingMode
   /** Locale supplying the default separators. Defaults to `en` — pass `{ locale: az }` for the pre-refactor default. */
   locale?: Locale

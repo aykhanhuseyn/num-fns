@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
+import { round } from '../arithmetic/round'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
 import { enGB } from '../locale/en-gb'
@@ -26,11 +27,12 @@ const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
 ]
 
 describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale) => {
-  it('preserves the amount rounded to the default two decimals', () => {
+  it('preserves the amount rounded decimal-safely to the default two decimals', () => {
+    // The oracle is `round`, not `toFixed`: `formatMoney(1.005)` is `"$ 1.01"`.
     fc.assert(
       fc.property(decimalNumber(4), (value) => {
         const roundTrip = parseMoney(formatMoney(value, { locale }), { locale })
-        expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(2))))
+        expect(normalizeZero(roundTrip)).toBe(round(value, 2))
       }),
     )
   })
@@ -45,7 +47,7 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
         (value, decimals, symbolPosition, symbol) => {
           const options = { locale, decimals, symbolPosition, symbol }
           const roundTrip = parseMoney(formatMoney(value, options), options)
-          expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(decimals))))
+          expect(normalizeZero(roundTrip)).toBe(round(value, decimals))
         },
       ),
     )
@@ -59,7 +61,7 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
         (value, currency) => {
           const options = { locale, currency }
           const roundTrip = parseMoney(formatMoney(value, options), options)
-          expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(2))))
+          expect(normalizeZero(roundTrip)).toBe(round(value, 2))
         },
       ),
     )

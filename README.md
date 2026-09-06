@@ -17,9 +17,9 @@ Modern internationalized number utility library for JavaScript — like
 `date-fns`, but for numbers.
 
 Format and parse numbers, money and percentages; spell numbers out in words;
-ordinals, short/long notation and roman numerals. Written in TypeScript, built
-as dual ESM/CJS with type declarations, so it works in modern and older
-projects alike.
+ordinals, short/long notation and roman numerals; decimal-safe arithmetic and
+rounding. Written in TypeScript, built as dual ESM/CJS with type declarations,
+so it works in modern and older projects alike.
 
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
@@ -87,6 +87,11 @@ import {
   getCurrency,
   formatPercentage,
   parsePercentage,
+  add,
+  subtract,
+  multiply,
+  divide,
+  round,
 } from 'num-fns';
 ```
 
@@ -121,6 +126,13 @@ getCurrency('EUR'); // { code: 'EUR', symbol: '€', decimals: 2 }
 
 formatPercentage(45.5, { decimals: 1 }); // "45.5%"
 parsePercentage('45.5%', { asRatio: true }); // 0.455
+
+add(0.1, 0.2); // 0.3
+subtract(0.3, 0.1); // 0.2
+multiply(1.1, 1.1); // 1.21
+divide(0.3, 0.1); // 3
+round(1.005, 2); // 1.01
+round(2.5, 0, 'halfEven'); // 2
 ```
 
 Every formatter accepts an options object for overriding separators, decimals,
@@ -162,6 +174,49 @@ throws `RangeError` — `moneyToWords` never borrows another language's words.
 An explicit `symbol`, `symbolPosition`, `majorUnit` or `minorUnit` option still
 overrides whatever the code and locale resolve to, so a custom currency remains
 possible without registering it.
+
+### Arithmetic
+
+`add`, `subtract`, `multiply`, `divide` and `round` do decimal arithmetic on
+plain numbers, so the classic floating-point traps don't apply: `0.1 + 0.2`
+is `0.30000000000000004` in JavaScript, `add(0.1, 0.2)` is `0.3`. Each operand
+is taken at its shortest decimal reading — the string `String(0.1)` gives you,
+which is what you meant by the number — the operation runs exactly on
+integers, and the result is the closest JavaScript number to the exact
+answer. Everything goes in and comes out as a plain `number`; there is no
+decimal type to wrap and unwrap, and no dependency.
+
+```ts
+import { add, subtract, multiply, divide, round } from 'num-fns';
+
+add(0.1, 0.2); // 0.3   (0.1 + 0.2 is 0.30000000000000004)
+subtract(0.3, 0.1); // 0.2   (0.3 - 0.1 is 0.19999999999999998)
+multiply(1.1, 1.1); // 1.21  (1.1 * 1.1 is 1.2100000000000002)
+divide(0.3, 0.1); // 3     (0.3 / 0.1 is 2.9999999999999996)
+divide(1, 3); // 0.3333333333333333
+
+round(1.005, 2); // 1.01  ((1.005).toFixed(2) is "1.00")
+round(2.5, 0, 'halfEven'); // 2
+round(-2.5, 0, 'halfDown'); // -2
+round(-1.21, 1, 'floor'); // -1.3
+round(1234, -2); // 1200
+```
+
+`round(value, precision, mode)` rounds the value as written rather than as the
+binary float happens to be stored, takes a negative `precision` to round to
+tens, hundreds and so on, and supports `'halfUp'` (the default, half away from
+zero), `'halfDown'`, `'halfEven'`, `'ceil'` and `'floor'`. It is the one
+rounding implementation in the package: `formatNumber`, `formatMoney` and
+`formatPercentage` all delegate to it, so `formatNumber(1.005, { decimals: 2 })`
+is `"1.01"` and the `roundingMode` option behaves identically everywhere.
+`divide` carries the quotient to 25 significant digits before converting it
+back, which is exact when the quotient terminates and otherwise the same as
+correctly rounding the true quotient.
+
+Like the rest of the package, these throw `RangeError` rather than returning
+`NaN` or `Infinity`: on non-finite input, on division by zero, on a
+non-integer `precision`, or when a result is too large for a JavaScript
+number. None of them ever returns `-0`.
 
 ## Locale support
 

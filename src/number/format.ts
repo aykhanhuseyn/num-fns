@@ -1,5 +1,6 @@
+import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
-import type { NumberFormatOptions, NumberParseOptions, RoundingMode } from '../shared/types'
+import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 import { assertDistinctSeparators } from '../shared/validation'
 
 /**
@@ -10,9 +11,17 @@ import { assertDistinctSeparators } from '../shared/validation'
  * locale's default; the two must differ, since a string written with one
  * character for both cannot be parsed back (`RangeError`).
  *
+ * Rounding to `decimals` is decimal-safe: it delegates to
+ * {@link round} (`arithmetic/round`), which rounds the value as written
+ * rather than as the binary float happens to be stored, so
+ * `formatNumber(1.005, { decimals: 2 })` is `"1.01"` where `toFixed` gives
+ * `"1.00"`. Every `roundingMode` goes through the same implementation.
+ * `decimals` must therefore be an integer (`RangeError` otherwise).
+ *
  * @example
  * formatNumber(1234567.891, { decimals: 2 }); // "1,234,567.89"
  * formatNumber(1234567.891, { decimals: 2, locale: az }); // "1 234 567,89"
+ * formatNumber(1.005, { decimals: 2 }); // "1.01"
  * formatNumber(-1.5, { decimals: 0, roundingMode: 'ceil' }); // "-1"
  */
 export function formatNumber(value: number, options: NumberFormatOptions = {}): string {
@@ -30,9 +39,14 @@ export function formatNumber(value: number, options: NumberFormatOptions = {}): 
 
   assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'formatNumber')
 
-  const rounded = decimals === undefined ? value : roundToDecimals(value, decimals, roundingMode)
-  const isNegative = rounded < 0 && rounded !== 0
+  // `round` never returns -0, so a value that rounds to zero formats as "0".
+  const rounded = decimals === undefined ? value : round(value, decimals, roundingMode)
+  const isNegative = rounded < 0
   const absolute = Math.abs(rounded)
+  // `toFixed` is safe here only because the value has already been rounded:
+  // once its shortest decimal form has at most `decimals` fraction digits,
+  // `toFixed(decimals)` reproduces that form exactly (padding with zeros) —
+  // the "1.005 -> 1.00" trap only bites when toFixed has to drop digits.
   const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals)
   const [integerDigits, fractionDigits] = fixed.split('.')
 
@@ -79,44 +93,6 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
   }
 
   return numeric
-}
-
-/**
- * Rounds `value` to `decimals` fractional digits per `mode`. Operates on the
- * signed value (not its absolute value) so `'ceil'`/`'floor'` have their
- * standard directional meaning for negative inputs.
- */
-function roundToDecimals(value: number, decimals: number, mode: RoundingMode): number {
-  if (mode === 'halfUp') {
-    // toFixed already implements round-half-away-from-zero for the vast
-    // majority of inputs; reusing it keeps this the default, zero-risk path.
-    return Number(value.toFixed(decimals))
-  }
-
-  const factor = 10 ** decimals
-  const scaled = value * factor
-
-  if (mode === 'ceil') return Math.ceil(scaled) / factor
-  if (mode === 'floor') return Math.floor(scaled) / factor
-
-  const sign = scaled < 0 ? -1 : 1
-  const magnitude = Math.abs(scaled)
-  const roundedMagnitude = roundTieMagnitude(magnitude, mode)
-
-  return (sign * roundedMagnitude) / factor
-}
-
-/** Rounds a non-negative magnitude for the two tie-breaking modes: half-down (toward zero) and half-even (banker's rounding). */
-function roundTieMagnitude(magnitude: number, mode: 'halfDown' | 'halfEven'): number {
-  const flooredMagnitude = Math.floor(magnitude)
-  const fraction = magnitude - flooredMagnitude
-
-  if (fraction > 0.5) return flooredMagnitude + 1
-  if (fraction < 0.5) return flooredMagnitude
-  if (mode === 'halfDown') return flooredMagnitude
-
-  // halfEven: an exact tie rounds to the nearest even digit.
-  return flooredMagnitude % 2 === 0 ? flooredMagnitude : flooredMagnitude + 1
 }
 
 function groupDigits(digits: string, separator: string): string {

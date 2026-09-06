@@ -3,7 +3,16 @@
 // the `.cjs` build outputs exist for, and the half a bundler-only test would
 // never touch.
 const assert = require('node:assert')
-const { formatMoney, formatNumber, mean, numberToWords, parseNumber, toRoman } = require('num-fns')
+const {
+  add,
+  formatMoney,
+  formatNumber,
+  mean,
+  numberToWords,
+  parseNumber,
+  round,
+  toRoman,
+} = require('num-fns')
 const { az } = require('num-fns/locale/az')
 const { en, ru } = require('num-fns/locale')
 const { enGB } = require('num-fns/locale/en-gb')
@@ -21,6 +30,11 @@ assert.strictEqual(
 assert.strictEqual(formatMoney(1234.5), '$ 1,234.50')
 assert.strictEqual(toRoman(2026), 'MMXXVI')
 assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
+// The decimal-safe arithmetic runs on BigInt reached through the `BigInt()`
+// constructor (the ES2018 build can't carry `10n` literals) — check that the
+// shipped bundle actually does the exact arithmetic on this Node.
+assert.strictEqual(add(0.1, 0.2), 0.3)
+assert.strictEqual(round(1.005, 2), 1.01)
 
 assert.strictEqual(en.code, 'en')
 assert.strictEqual(az.code, 'az')

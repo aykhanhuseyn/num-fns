@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
+import { round } from '../arithmetic/round'
+import { subtract } from '../arithmetic/subtract'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
 import { enGB } from '../locale/en-gb'
@@ -38,11 +40,14 @@ describe.each(LOCALES)('formatNumber/parseNumber round trip (%s)', (_code, local
     )
   })
 
-  it('preserves the value rounded to the requested number of decimals', () => {
+  it('preserves the value rounded decimal-safely to the requested number of decimals', () => {
+    // The oracle is `round`, not `toFixed`: `formatNumber` rounds the value's
+    // shortest decimal form, so `1.005` at two decimals is `1.01`, where
+    // `(1.005).toFixed(2)` is `"1.00"`.
     fc.assert(
       fc.property(decimalNumber(6), fc.integer({ min: 0, max: 6 }), (value, decimals) => {
         const roundTrip = parseNumber(formatNumber(value, { decimals, locale }), { locale })
-        expect(normalizeZero(roundTrip)).toBe(normalizeZero(Number(value.toFixed(decimals))))
+        expect(normalizeZero(roundTrip)).toBe(round(value, decimals))
       }),
     )
   })
@@ -67,9 +72,11 @@ describe.each(LOCALES)('formatNumber/parseNumber round trip (%s)', (_code, local
 })
 
 describe('formatNumber rounding modes', () => {
-  // All the bounds below carry a 1e-9 slack: `roundToDecimals` scales by
-  // `10 ** decimals` and divides back down, which is not exact in binary
-  // floating point.
+  // The distances below are measured with the library's own exact `subtract`
+  // and compared against exact decimal bounds (`5e-3`, `1e-2`, …) with no
+  // slack: rounding is decimal-safe now, and a plain float `rounded - value`
+  // would carry representation error of its own into the comparison (e.g.
+  // `-268435456.4764 - -268435456.47635` is not `-0.00005`).
   it('moves a value by at most half a unit of the last kept digit when rounding to nearest', () => {
     fc.assert(
       fc.property(
@@ -77,8 +84,9 @@ describe('formatNumber rounding modes', () => {
         fc.integer({ min: 0, max: 4 }),
         fc.constantFrom(...HALF_ROUNDING_MODES),
         (value, decimals, roundingMode) => {
+          const halfUnit = Number(`5e-${decimals + 1}`)
           const rounded = parseNumber(formatNumber(value, { decimals, roundingMode }))
-          expect(Math.abs(rounded - value)).toBeLessThanOrEqual(0.5 * 10 ** -decimals + 1e-9)
+          expect(Math.abs(subtract(rounded, value))).toBeLessThanOrEqual(halfUnit)
         },
       ),
     )
@@ -87,15 +95,31 @@ describe('formatNumber rounding modes', () => {
   it('rounds ceil upward and floor downward, bracketing the value within one unit', () => {
     fc.assert(
       fc.property(decimalNumber(6), fc.integer({ min: 0, max: 4 }), (value, decimals) => {
-        const unit = 10 ** -decimals
+        const unit = Number(`1e-${decimals}`)
         const ceil = parseNumber(formatNumber(value, { decimals, roundingMode: 'ceil' }))
         const floor = parseNumber(formatNumber(value, { decimals, roundingMode: 'floor' }))
-        expect(ceil).toBeGreaterThanOrEqual(value - 1e-9)
-        expect(floor).toBeLessThanOrEqual(value + 1e-9)
-        expect(ceil - value).toBeLessThanOrEqual(unit + 1e-9)
-        expect(value - floor).toBeLessThanOrEqual(unit + 1e-9)
+        const aboveByCeil = subtract(ceil, value)
+        const belowByFloor = subtract(value, floor)
+        expect(aboveByCeil).toBeGreaterThanOrEqual(0)
+        expect(belowByFloor).toBeGreaterThanOrEqual(0)
+        expect(aboveByCeil).toBeLessThan(unit)
+        expect(belowByFloor).toBeLessThan(unit)
         expect(ceil).toBeGreaterThanOrEqual(floor)
       }),
+    )
+  })
+
+  it('agrees with round for every mode', () => {
+    fc.assert(
+      fc.property(
+        decimalNumber(6),
+        fc.integer({ min: 0, max: 4 }),
+        fc.constantFrom<RoundingMode>('halfUp', 'halfDown', 'halfEven', 'ceil', 'floor'),
+        (value, decimals, roundingMode) => {
+          const formatted = parseNumber(formatNumber(value, { decimals, roundingMode }))
+          expect(normalizeZero(formatted)).toBe(round(value, decimals, roundingMode))
+        },
+      ),
     )
   })
 })
