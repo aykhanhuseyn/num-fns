@@ -654,7 +654,9 @@ The API-surface question the layout decisions above did not resolve:
       `getOrdinalSuffix`/`toOrdinal`/`ordinalToWords`/`withSuffix`, `toRoman`,
       `toBase`, `isEven`/`isOdd`. A `bigint` is handled exactly at any
       magnitude — chunked (`toThousandGroups`), scaled (`scaleBigInt`, the
-      exact half-up stand-in for `(value / threshold).toFixed(decimals)`) and
+      exact half-up stand-in for `(value / threshold).toFixed(decimals)`;
+      generalised to both input types as `scaleToFixed` on 2026-09-08, see
+      the `round` item's 2026-09-08 note) and
       grouped in integer arithmetic, never `Number()`-converted on the way
       through; `decimals` zero-pads it (nothing to round, so `roundingMode`
       is ignored but still validated); `moneyToWords(bigint)` is a whole
@@ -762,7 +764,30 @@ classic `0.1 + 0.2 !== 0.3` floating-point traps. Landed 2026-09-06.
       is `100.49999999999999`), and `formatNumber` throws on a non-integer
       `decimals`. It also closes §5's `halfUp` property-test flake (c), whose
       property now measures the round-trip diff with the exact `subtract`.
-      `stats` does not round its output and so has nothing to delegate.)
+      `stats` does not round its output and so has nothing to delegate.
+      2026-09-08: the last holdouts joined — `numberToWords`/`moneyToWords`
+      rounded their fraction with `Math.round((abs - floor) * 100)` and
+      `toShortNotation`/`toByteSize` scaled a `number` with
+      `(value / threshold).toFixed(decimals)`, both float-scaled, so
+      `numberToWords(2.675)` read "sixty-seven", `moneyToWords(2.675)` was
+      sixty-seven cents and `toShortNotation(2675000, { decimals: 2 })` was
+      `"2.67M"` while the `bigint` path (exact) said `"2.68M"` — the one
+      place a `number` and the equal `bigint` could disagree on the last
+      digit. Now `shared/bigint.ts`'s `splitFixed` rounds the fraction with
+      `round` and hands back an exact `bigint` whole part (so the words
+      functions share the `bigint` path from there, and the magnitude cap is
+      checked after the carry), and `scaleToFixed` divides either input type
+      exactly on its shortest-decimal reading. No `Math.round`/`toFixed`
+      rounding is left in `src/` (`toFixed` survives only as a lossless
+      padder after `round` in `formatNumber`; the parsers' `Math.round`-based
+      `correctFloatingPointNoise` snaps a float product, it doesn't round
+      output). Side effects, all shipped as a `patch`: `decimals` is
+      validated on the `number` path of `toShortNotation`/`toByteSize` (was
+      silently truncated by `toFixed`), a negative value that rounds to zero
+      is `"0"`/"zero", never `"-0"`/"negative zero", and a `number` whose scaled
+      value is past 1e21 keeps every digit instead of `toFixed`'s `"1e+288T"`. The notation
+      property test that *allowed* the one-unit disagreement now asserts
+      string equality.)
 - [x] `clamp` / `inRange` — cheap, currently-unimplemented wins. (2026-08-09:
       `src/arithmetic/clamp.ts` and `src/arithmetic/in-range.ts`, both
       inclusive-range, both throwing `RangeError` on non-finite input or
@@ -1209,7 +1234,13 @@ New domain from the vision doc.
       6.11 → 7.23 kB: the `shared/bigint.ts` helpers plus a `bigint` branch
       in every integer-domain function and parser); `locale/az` and
       `locale/en-gb` grew too (2.28 → 2.43 kB and 1.85 → 2.1 kB, because they
-      import `numberToWords`) but stay inside their budgets.)
+      import `numberToWords`) but stay inside their budgets. 2026-09-08: the
+      rounding unification (`numberToWords`/`moneyToWords`/`toShortNotation`/
+      `toByteSize` off `Math.round`/`toFixed`, onto `arithmetic/round` and
+      exact division) took `locale/az` 2.5 → 3 KB (measures 2.9 kB) and
+      `locale/en-gb` 2.3 → 2.75 KB (2.57 kB): both import `numberToWords`,
+      which now pulls in `round` and the decimal core. `index` barely moved
+      (7.23 → 7.26 kB) because it already had them.)
 - [x] First publish to npm. (2026-08-21: `0.2.0-alpha.0` published by hand
       from the laptop, which reserved the name; npm's `latest` and `alpha`
       dist-tags both pointed at it. `0.2.0-alpha.1` was versioned but never

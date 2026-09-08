@@ -4,8 +4,8 @@ import {
   absBigInt,
   maxSupportedBigInt,
   resolveOutput,
-  scaleBigInt,
   scaledBigInt,
+  scaleToFixed,
   THOUSAND,
   toOutput,
   toThousandGroups,
@@ -30,15 +30,22 @@ import { resolveScaleWord } from './words'
  * note on this). It's now folded into the full `Locale` system per the
  * `todo.md` §1 plan.
  *
- * A `bigint` is scaled exactly — divided by the threshold in integer
- * arithmetic and rounded half up on the true remainder — where a `number`
- * goes through `toFixed`, so `toShortNotation(1500n)` is `"1.5K"` and a
- * value past the largest scale keeps every digit (`"1500T"`, not `"1.5e15"`).
+ * The scaled value is rounded half up to `decimals` places exactly in
+ * decimal (`shared/bigint.ts`'s `scaleToFixed`, on the same shortest-decimal
+ * reading `arithmetic/round` uses), for a `number` and a `bigint` alike:
+ * `toShortNotation(2675000, { decimals: 2 })` is `"2.68M"` as the value is
+ * written, where `(2675000 / 1e6).toFixed(2)` gave `"2.67"` because the
+ * double is stored just below the tie — and the equal `bigint` formats to
+ * the same string, every digit. A value past the largest scale keeps every
+ * digit (`"1500T"`, never `"1.5e15"`), and a value that rounds to zero
+ * (`-0.4`) is `"0"`, not `"-0"`. `decimals` must be a non-negative integer
+ * (`RangeError` otherwise).
  *
  * @example
  * toShortNotation(1500); // "1.5K"
  * toShortNotation(1500, { locale: az }); // "1,5 min"
  * toShortNotation(1500n); // "1.5K"
+ * toShortNotation(2675000, { decimals: 2 }); // "2.68M"
  */
 export function toShortNotation(
   value: number | bigint,
@@ -53,38 +60,28 @@ export function toShortNotation(
     locale = en,
     decimalSeparator = locale.formatDefaults.decimalSeparator,
   } = options
-  if (typeof value === 'bigint' && (!Number.isInteger(decimals) || decimals < 0)) {
+  if (!Number.isInteger(decimals) || decimals < 0) {
     throw new RangeError(
       `toShortNotation: decimals must be a non-negative integer, received ${decimals}`,
     )
   }
-  const sign = value < 0 ? '-' : ''
   const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
 
   for (const { threshold, short } of locale.notation.scales) {
     if (absolute >= threshold) {
-      const scaled = trimTrailingZeros(scaleFixed(absolute, threshold, decimals)).replace(
-        '.',
-        decimalSeparator,
-      )
+      const scaled = trimTrailingZeros(scaleToFixed(absolute, threshold, decimals))
       const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
-      return `${sign}${scaled}${spacer}${short}`
+      return `${signFor(value, scaled)}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
     }
   }
 
-  return `${sign}${typeof absolute === 'bigint' ? absolute : absolute.toFixed(0)}`
+  const whole = scaleToFixed(absolute, 1, 0)
+  return `${signFor(value, whole)}${whole}`
 }
 
-/**
- * `absolute / threshold` rendered with exactly `decimals` fraction digits:
- * `toFixed` on the float path, exact integer division rounded half up on
- * the `bigint` path (`scaleBigInt`), so a value past the largest scale
- * keeps every digit instead of collapsing to `1.5e15`.
- */
-function scaleFixed(absolute: number | bigint, threshold: number, decimals: number): string {
-  return typeof absolute === 'bigint'
-    ? scaleBigInt(absolute, BigInt(threshold), decimals)
-    : (absolute / threshold).toFixed(decimals)
+/** `"-"` for a negative value whose rendered magnitude is not zero — `-0.4` formats as `"0"`, never `"-0"`. */
+function signFor(value: number | bigint, magnitude: string): string {
+  return value < 0 && magnitude !== '0' ? '-' : ''
 }
 
 /** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */

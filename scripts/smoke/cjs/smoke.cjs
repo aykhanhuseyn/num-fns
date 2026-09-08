@@ -8,12 +8,14 @@ const {
   formatMoney,
   formatNumber,
   mean,
+  moneyToWords,
   numberToWords,
   parseLongNotation,
   parseNumber,
   round,
   toLongNotation,
   toRoman,
+  toShortNotation,
 } = require('num-fns')
 const { az } = require('num-fns/locale/az')
 const { en, ru } = require('num-fns/locale')
@@ -37,6 +39,16 @@ assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 // shipped bundle actually does the exact arithmetic on this Node.
 assert.strictEqual(add(0.1, 0.2), 0.3)
 assert.strictEqual(round(1.005, 2), 1.01)
+// The word and scaled formatters round through the same exact path, so a
+// tie is decided on the value as written and the number and bigint inputs
+// agree on the last digit (`Math.round`/`toFixed` gave 67 / "2.67M" here).
+assert.strictEqual(numberToWords(2.675), 'two point sixty-eight')
+assert.strictEqual(moneyToWords(2.675), 'two dollars sixty-eight cents')
+assert.strictEqual(toShortNotation(2675000, { decimals: 2 }), '2.68M')
+assert.strictEqual(
+  toShortNotation(2675000, { decimals: 2 }),
+  toShortNotation(BigInt(2675000), { decimals: 2 }),
+)
 
 // BigInt in and out: a 19-digit value is past Number.MAX_SAFE_INTEGER, so
 // these only pass if the shipped bundle really keeps a `bigint` exact end to

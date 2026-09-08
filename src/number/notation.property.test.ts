@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
+import { round } from '../arithmetic/round'
 import { az } from '../locale/az'
 import { en } from '../locale/en'
 import { enGB } from '../locale/en-gb'
@@ -120,25 +121,40 @@ function bigIntWithin(max: bigint): fc.Arbitrary<bigint> {
 describe.each(LOCALES)(
   'toShortNotation/parseShortNotation bigint round trip (%s)',
   (_code, locale) => {
-    it('agrees with the number path for every safe integer the locale can scale', () => {
+    it('formats identically to the number path for every safe integer the locale can scale', () => {
+      // Both paths round the exact quotient half up (`scaleToFixed`), so the
+      // strings agree on every digit — including true ties like `1005 / 1000`
+      // that the double stores just below 1.005 and `toFixed` used to round down.
       fc.assert(
         fc.property(
           fc.integer({ min: -999_999_999_999_999, max: 999_999_999_999_999 }),
           fc.integer({ min: 0, max: 6 }),
           (value, decimals) => {
-            // `toFixed` on the number path and exact half-up rounding on the
-            // bigint path can differ by one unit in the last kept digit when
-            // the true quotient is a tie the double does not represent exactly
-            // (`1005 / 1000` is stored below 1.005) — so parse both back and
-            // allow that one unit, rather than comparing the strings.
             const options = { locale, decimals }
-            const fromNumber = parseShortNotation(toShortNotation(value, options), options)
-            const fromBigInt = parseShortNotation(toShortNotation(BigInt(value), options), options)
-            const magnitude = Math.abs(value)
+            expect(toShortNotation(value, options)).toBe(toShortNotation(BigInt(value), options))
+          },
+        ),
+      )
+    })
+
+    it('rounds the mantissa exactly as `round` does at the matching negative precision', () => {
+      // Every launch locale's thresholds are powers of ten, so the exact
+      // quotient rounded to `decimals` is `round(value, decimals - log10(threshold))`
+      // scaled back — an oracle with no float division in it.
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 1000, max: 999_999_999_999_999 }),
+          fc.integer({ min: 0, max: 6 }),
+          (value, decimals) => {
             const threshold =
-              locale.notation.scales.find((scale) => magnitude >= scale.threshold)?.threshold ?? 1
-            const unit = threshold * 10 ** -decimals
-            expect(Math.abs(fromBigInt - fromNumber)).toBeLessThanOrEqual(unit + 1e-9 * magnitude)
+              locale.notation.scales.find((scale) => value >= scale.threshold)?.threshold ?? 1
+            const exponent = Math.round(Math.log10(threshold))
+            fc.pre(10 ** exponent === threshold)
+            const options = { locale, decimals }
+            const expected = BigInt(round(value, decimals - exponent))
+            expect(
+              parseShortNotation(toShortNotation(value, options), { ...options, output: 'bigint' }),
+            ).toBe(expected)
           },
         ),
       )

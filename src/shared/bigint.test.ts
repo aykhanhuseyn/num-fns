@@ -8,8 +8,9 @@ import {
   pluralOperand,
   pow10,
   resolveOutput,
-  scaleBigInt,
   scaledBigInt,
+  scaleToFixed,
+  splitFixed,
   THOUSAND,
   toOutput,
   toSafeNumber,
@@ -108,39 +109,110 @@ describe('maxSupportedBigInt', () => {
   })
 })
 
-describe('scaleBigInt', () => {
+describe('scaleToFixed', () => {
   it('divides and renders exactly `decimals` fractional digits', () => {
-    expect(scaleBigInt(BigInt(1536), BigInt(1024), 2)).toBe('1.50')
-    expect(scaleBigInt(BigInt(1500), BigInt(1000), 1)).toBe('1.5')
-    expect(scaleBigInt(BigInt(1500), BigInt(1000), 3)).toBe('1.500')
-    expect(scaleBigInt(BigInt(2500000), BigInt(1000000), 1)).toBe('2.5')
+    expect(scaleToFixed(BigInt(1536), 1024, 2)).toBe('1.50')
+    expect(scaleToFixed(BigInt(1500), 1000, 1)).toBe('1.5')
+    expect(scaleToFixed(BigInt(1500), 1000, 3)).toBe('1.500')
+    expect(scaleToFixed(BigInt(2500000), 1000000, 1)).toBe('2.5')
+    expect(scaleToFixed(1536, 1024, 2)).toBe('1.50')
+    expect(scaleToFixed(1500, 1000, 3)).toBe('1.500')
   })
 
   it('rounds half up on the exact remainder', () => {
-    expect(scaleBigInt(BigInt(15), BigInt(10), 0)).toBe('2')
-    expect(scaleBigInt(BigInt(25), BigInt(10), 0)).toBe('3')
-    expect(scaleBigInt(BigInt(14), BigInt(10), 0)).toBe('1')
-    expect(scaleBigInt(BigInt(1005), BigInt(1000), 2)).toBe('1.01')
-    expect(scaleBigInt(BigInt(1004), BigInt(1000), 2)).toBe('1.00')
-    expect(scaleBigInt(BigInt(1999), BigInt(1000), 0)).toBe('2')
+    expect(scaleToFixed(BigInt(15), 10, 0)).toBe('2')
+    expect(scaleToFixed(BigInt(25), 10, 0)).toBe('3')
+    expect(scaleToFixed(BigInt(14), 10, 0)).toBe('1')
+    expect(scaleToFixed(BigInt(1005), 1000, 2)).toBe('1.01')
+    expect(scaleToFixed(BigInt(1004), 1000, 2)).toBe('1.00')
+    expect(scaleToFixed(BigInt(1999), 1000, 0)).toBe('2')
+  })
+
+  it('reads a number at its shortest decimal, so ties round as written', () => {
+    // `2675000 / 1e6` and `1005 / 1000` are stored just below 2.675 and
+    // 1.005, so `toFixed(2)` on the quotient gives "2.67" and "1.00".
+    expect(scaleToFixed(2675000, 1e6, 2)).toBe('2.68')
+    expect(scaleToFixed(1005, 1000, 2)).toBe('1.01')
+    expect(scaleToFixed(1005, 1000, 2)).toBe(scaleToFixed(BigInt(1005), 1000, 2))
+    expect((2675000 / 1e6).toFixed(2)).toBe('2.67') // the trap this replaces
+  })
+
+  it('takes a fractional dividend or divisor exactly', () => {
+    expect(scaleToFixed(2.675, 1, 2)).toBe('2.68')
+    expect(scaleToFixed(0.5, 1, 0)).toBe('1')
+    expect(scaleToFixed(1.5, 0.5, 0)).toBe('3')
+    expect(scaleToFixed(1, 0.25, 1)).toBe('4.0')
+    expect(scaleToFixed(1e21, 1e12, 0)).toBe('1000000000')
+    expect(scaleToFixed(1.5e-7, 1e-9, 0)).toBe('150')
   })
 
   it('renders an integer with no decimal point when decimals is 0', () => {
-    expect(scaleBigInt(BigInt(1000), BigInt(1000), 0)).toBe('1')
-    expect(scaleBigInt(BigInt(0), BigInt(1000), 0)).toBe('0')
-    expect(scaleBigInt(BigInt(1000), BigInt(1000), 0)).not.toContain('.')
+    expect(scaleToFixed(BigInt(1000), 1000, 0)).toBe('1')
+    expect(scaleToFixed(BigInt(0), 1000, 0)).toBe('0')
+    expect(scaleToFixed(0, 1, 0)).toBe('0')
+    expect(scaleToFixed(BigInt(1000), 1000, 0)).not.toContain('.')
   })
 
   it('pads a quotient smaller than one so the fraction keeps its digits', () => {
-    expect(scaleBigInt(BigInt(5), BigInt(1000), 2)).toBe('0.01')
-    expect(scaleBigInt(BigInt(5), BigInt(1000), 3)).toBe('0.005')
-    expect(scaleBigInt(BigInt(0), BigInt(1000), 2)).toBe('0.00')
-    expect(scaleBigInt(BigInt(1), BigInt(1000), 1)).toBe('0.0')
+    expect(scaleToFixed(BigInt(5), 1000, 2)).toBe('0.01')
+    expect(scaleToFixed(BigInt(5), 1000, 3)).toBe('0.005')
+    expect(scaleToFixed(BigInt(0), 1000, 2)).toBe('0.00')
+    expect(scaleToFixed(BigInt(1), 1000, 1)).toBe('0.0')
+    expect(scaleToFixed(5, 1000, 3)).toBe('0.005')
   })
 
   it('handles a value far past the range of a number without loss', () => {
-    expect(scaleBigInt(BigInt('1234567890123456789'), BigInt(1e12), 1)).toBe('1234567.9')
-    expect(scaleBigInt(BigInt('1234567890123456789'), BigInt(1e12), 6)).toBe('1234567.890123')
+    expect(scaleToFixed(BigInt('1234567890123456789'), 1e12, 1)).toBe('1234567.9')
+    expect(scaleToFixed(BigInt('1234567890123456789'), 1e12, 6)).toBe('1234567.890123')
+    // A number past 1e21 keeps every digit too, where `toFixed` would return "1e+288".
+    expect(scaleToFixed(1e300, 1e12, 1)).toBe(`1${'0'.repeat(288)}.0`)
+  })
+
+  it('agrees with the number path for every safe integer and power-of-ten factor', () => {
+    for (const value of [0, 1, 5, 999, 1005, 1500, 2675000, 123456789, 999999999999999]) {
+      for (const factor of [1, 1000, 1e6, 1e9, 1e12]) {
+        for (const decimals of [0, 1, 2, 3, 6]) {
+          expect(scaleToFixed(value, factor, decimals)).toBe(
+            scaleToFixed(BigInt(value), factor, decimals),
+          )
+        }
+      }
+    }
+  })
+})
+
+describe('splitFixed', () => {
+  it('splits a number into its whole part and fraction digits', () => {
+    expect(splitFixed(1234.5, 2)).toEqual({ whole: BigInt(1234), fraction: 50 })
+    expect(splitFixed(0.5, 2)).toEqual({ whole: ZERO, fraction: 50 })
+    expect(splitFixed(7, 2)).toEqual({ whole: BigInt(7), fraction: 0 })
+    expect(splitFixed(0, 2)).toEqual({ whole: ZERO, fraction: 0 })
+    expect(splitFixed(1.01, 2)).toEqual({ whole: ONE, fraction: 1 })
+    expect(splitFixed(2.5, 0)).toEqual({ whole: BigInt(3), fraction: 0 })
+    expect(splitFixed(1.2345, 3)).toEqual({ whole: ONE, fraction: 235 })
+  })
+
+  it('rounds the fraction half up as written, not as the double is stored', () => {
+    expect(splitFixed(2.675, 2)).toEqual({ whole: BigInt(2), fraction: 68 })
+    expect(splitFixed(1.005, 2)).toEqual({ whole: ONE, fraction: 1 })
+    expect(Math.round((2.675 - 2) * 100)).toBe(67) // the trap this replaces
+  })
+
+  it('carries a fraction that rounds up to one into the whole part', () => {
+    expect(splitFixed(1.999, 2)).toEqual({ whole: BigInt(2), fraction: 0 })
+    expect(splitFixed(0.999, 2)).toEqual({ whole: ONE, fraction: 0 })
+    expect(splitFixed(999.995, 2)).toEqual({ whole: BigInt(1000), fraction: 0 })
+  })
+
+  it('keeps every digit of a whole part past 1e21, where String() goes exponential', () => {
+    expect(splitFixed(1e21, 2)).toEqual({ whole: BigInt('1000000000000000000000'), fraction: 0 })
+    expect(splitFixed(1.5e22, 2)).toEqual({ whole: BigInt('15000000000000000000000'), fraction: 0 })
+  })
+
+  it('rounds a tiny value to nothing', () => {
+    expect(splitFixed(0.001, 2)).toEqual({ whole: ZERO, fraction: 0 })
+    expect(splitFixed(1e-9, 2)).toEqual({ whole: ZERO, fraction: 0 })
+    expect(splitFixed(0.005, 2)).toEqual({ whole: ZERO, fraction: 1 })
   })
 })
 

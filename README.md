@@ -213,7 +213,11 @@ tens, hundreds and so on, and supports `'halfUp'` (the default, half away from
 zero), `'halfDown'`, `'halfEven'`, `'ceil'` and `'floor'`. It is the one
 rounding implementation in the package: `formatNumber`, `formatMoney` and
 `formatPercentage` all delegate to it, so `formatNumber(1.005, { decimals: 2 })`
-is `"1.01"` and the `roundingMode` option behaves identically everywhere.
+is `"1.01"` and the `roundingMode` option behaves identically everywhere. The
+same exact-decimal reading drives every other place a value is rounded —
+`numberToWords(2.675)` ends in "sixty-eight", `moneyToWords(2.675)` is
+sixty-eight cents, `toShortNotation(2675000, { decimals: 2 })` is `"2.68M"` —
+so a `number` and the equal `bigint` always format to the same digits.
 `divide` carries the quotient to 25 significant digits before converting it
 back, which is exact when the quotient terminates and otherwise the same as
 correctly rounding the true quotient.

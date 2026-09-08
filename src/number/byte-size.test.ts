@@ -27,6 +27,43 @@ describe('toByteSize', () => {
     expect(toByteSize(1536, { decimalSeparator: ',' })).toBe('1,5 KB')
   })
 
+  it('rounds half up on the exact quotient, not on the double that stores it', () => {
+    // `1005 / 1000` is stored just below 1.005, so `toFixed(2)` gave "1 KB";
+    // the quotient is now rounded exactly in decimal, like the bigint path.
+    expect(toByteSize(1005, { base: 1000 })).toBe('1.01 KB')
+    expect(toByteSize(2675000, { base: 1000 })).toBe('2.68 MB')
+    expect(toByteSize(1005, { base: 1000 })).toBe(toByteSize(BigInt(1005), { base: 1000 }))
+    expect((1005 / 1000).toFixed(2)).toBe('1.00') // the trap this replaces
+    // Binary thresholds divide exactly, so those never disagreed — and still don't.
+    expect(toByteSize(1792, { decimals: 1 })).toBe('1.8 KB')
+    expect(toByteSize(1024 + 512 + 256, { decimals: 1 })).toBe('1.8 KB')
+  })
+
+  it('rounds a fractional byte count below 1 KB to whole bytes', () => {
+    expect(toByteSize(2.5)).toBe('3 B')
+    expect(toByteSize(0.4)).toBe('0 B')
+  })
+
+  it('keeps every digit of a number whose scaled value is past 1e21, like a bigint', () => {
+    expect(toByteSize(1e24, { base: 1000 })).toBe('1000000000 PB')
+    expect(toByteSize(1e24, { base: 1000 })).toBe(
+      toByteSize(BigInt('1000000000000000000000000'), { base: 1000 }),
+    )
+    // `(1e40 / 1e15).toFixed(2)` is "1e+25" — `toFixed` gives up past 1e21.
+    expect(toByteSize(1e40, { base: 1000 })).toBe(`1${'0'.repeat(25)} PB`)
+    expect(toByteSize(1e40, { base: 1000 })).toBe(
+      toByteSize(BigInt(10) ** BigInt(40), { base: 1000 }),
+    )
+  })
+
+  it('throws when decimals is not a non-negative integer', () => {
+    expect(() => toByteSize(1536, { decimals: -1 })).toThrow(RangeError)
+    expect(() => toByteSize(1536, { decimals: NaN })).toThrow(RangeError)
+    expect(() => toByteSize(1536, { decimals: 1.5 })).toThrow(
+      'toByteSize: decimals must be a non-negative integer, received 1.5',
+    )
+  })
+
   it('throws when bytes is not finite', () => {
     expect(() => toByteSize(Number.NaN)).toThrow(RangeError)
     expect(() => toByteSize(Number.POSITIVE_INFINITY)).toThrow(RangeError)

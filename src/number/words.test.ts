@@ -83,6 +83,41 @@ describe('numberToWords', () => {
     it('joins decimals with "point"', () => {
       expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
     })
+
+    it('rounds the fraction to two places as written, not as the double is stored', () => {
+      // `(2.675 - 2) * 100` is 67.49999999999997 in floating point, so
+      // `Math.round` read this as "sixty-seven"; `round` decides the tie on
+      // the decimal the caller wrote.
+      expect(numberToWords(2.675, { locale: en })).toBe('two point sixty-eight')
+      expect(numberToWords(1.005, { locale: en })).toBe('one point one')
+      expect(numberToWords(0.125, { locale: en })).toBe('zero point thirteen')
+      expect(numberToWords(-2.675, { locale: en })).toBe('negative two point sixty-eight')
+    })
+
+    it('carries a fraction that rounds up to one into the whole part', () => {
+      expect(numberToWords(1.999, { locale: en })).toBe('two')
+      expect(numberToWords(999.995, { locale: en })).toBe('one thousand')
+      expect(numberToWords(-0.999, { locale: en })).toBe('negative one')
+    })
+
+    it('reads a value that rounds to zero as plain zero, never "negative zero"', () => {
+      expect(numberToWords(-0.001, { locale: en })).toBe('zero')
+      expect(numberToWords(-0, { locale: en })).toBe('zero')
+      expect(numberToWords(0.004, { locale: en })).toBe('zero')
+    })
+
+    it('checks the magnitude cap after rounding, so a carry cannot slip past it', () => {
+      const fourScales: Locale = {
+        ...en,
+        words: { ...en.words, scales: en.words.scales.slice(0, 4) },
+      }
+      expect(numberToWords(999999999999, { locale: fourScales })).toBe(
+        'nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine',
+      )
+      expect(() => numberToWords(999999999999.999, { locale: fourScales })).toThrow(
+        'numberToWords: value exceeds the maximum supported magnitude of 999999999999',
+      )
+    })
   })
 
   describe('{ locale: az }', () => {

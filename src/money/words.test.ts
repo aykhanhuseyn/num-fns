@@ -37,6 +37,32 @@ describe('moneyToWords', () => {
 
   it('carries a rounded minor unit into the major unit', () => {
     expect(moneyToWords(1.999)).toBe('two dollars')
+    expect(moneyToWords(999.995)).toBe('one thousand dollars')
+  })
+
+  it('rounds the minor unit as written, not as the double is stored', () => {
+    // `(2.675 - 2) * 100` is 67.49999999999997, so `Math.round` made this
+    // sixty-seven cents; the rounding is `round`'s, exact in decimal.
+    expect(moneyToWords(2.675)).toBe('two dollars sixty-eight cents')
+    expect(moneyToWords(1.005)).toBe('one dollar one cent')
+    expect(moneyToWords(-2.675)).toBe('negative two dollars sixty-eight cents')
+    expect(moneyToWords(2.675, { locale: az })).toBe('iki manat altmış səkkiz qəpik')
+    expect(moneyToWords(2.675, { locale: ru })).toBe('два рубля шестьдесят восемь копеек')
+  })
+
+  it('reads an amount that rounds to zero as plain zero, never "negative zero"', () => {
+    expect(moneyToWords(-0.001)).toBe('zero dollars')
+    expect(moneyToWords(-0.004, { includeZeroMinor: true })).toBe('zero dollars zero cents')
+    expect(moneyToWords(-0.005)).toBe('negative zero dollars one cent')
+  })
+
+  it('spells a whole number amount identically as a number and as a bigint', () => {
+    for (const amount of [0, 1, 2, 5, 21, 1001, 1234567, 999999999999999]) {
+      for (const locale of [en, az, ru, es]) {
+        expect(moneyToWords(amount, { locale })).toBe(moneyToWords(BigInt(amount), { locale }))
+        expect(moneyToWords(-amount, { locale })).toBe(moneyToWords(BigInt(-amount), { locale }))
+      }
+    }
   })
 
   it('spells zero', () => {

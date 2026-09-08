@@ -59,6 +59,49 @@ describe('toShortNotation', () => {
     expect(toShortNotation(1234, { decimals: 2 })).toBe('1.23K')
   })
 
+  it('rounds half up on the value as written, not as the scaled double is stored', () => {
+    // `2675000 / 1e6` and `1005 / 1000` are stored just below 2.675 and
+    // 1.005, so `toFixed(2)` gave "2.67M" and "1K"; the quotient is now
+    // rounded exactly in decimal, like `round` and the bigint path.
+    expect(toShortNotation(2675000, { decimals: 2 })).toBe('2.68M')
+    expect(toShortNotation(1005, { decimals: 2 })).toBe('1.01K')
+    expect(toShortNotation(1250, { decimals: 1 })).toBe('1.3K')
+    expect(toShortNotation(1235, { decimals: 2 })).toBe('1.24K')
+    expect(toShortNotation(-2675000, { decimals: 2 })).toBe('-2.68M')
+    expect(toShortNotation(2675000, { decimals: 2 })).toBe(
+      toShortNotation(BigInt(2675000), { decimals: 2 }),
+    )
+    expect((2675000 / 1e6).toFixed(2)).toBe('2.67') // the trap this replaces
+  })
+
+  it('rounds a fractional value below the smallest threshold to a whole number', () => {
+    expect(toShortNotation(999.4)).toBe('999')
+    expect(toShortNotation(2.5)).toBe('3')
+    expect(toShortNotation(0.4)).toBe('0')
+  })
+
+  it('never emits "-0" for a negative value that rounds to zero', () => {
+    expect(toShortNotation(-0.4)).toBe('0')
+    expect(toShortNotation(-0)).toBe('0')
+    expect(toShortNotation(-0.5)).toBe('-1')
+  })
+
+  it('keeps every digit of a number whose scaled value is past 1e21, like a bigint', () => {
+    expect(toShortNotation(1e24)).toBe('1000000000000T')
+    expect(toShortNotation(1e24)).toBe(toShortNotation(BigInt('1000000000000000000000000')))
+    // `(1e36 / 1e12).toFixed(1)` is "1e+24" — `toFixed` gives up past 1e21.
+    expect(toShortNotation(1e36)).toBe(`1${'0'.repeat(24)}T`)
+    expect(toShortNotation(1e36)).toBe(toShortNotation(BigInt(10) ** BigInt(36)))
+  })
+
+  it('throws RangeError for a decimals that is not a non-negative integer, on the number path too', () => {
+    expect(() => toShortNotation(1500, { decimals: -1 })).toThrow(RangeError)
+    expect(() => toShortNotation(1500, { decimals: NaN })).toThrow(RangeError)
+    expect(() => toShortNotation(1500, { decimals: 1.5 })).toThrow(
+      'toShortNotation: decimals must be a non-negative integer, received 1.5',
+    )
+  })
+
   it('throws for non-finite values', () => {
     expect(() => toShortNotation(Infinity)).toThrow(RangeError)
   })
@@ -76,7 +119,7 @@ describe('toShortNotation', () => {
       'agrees with the number path for whole scaled values (%s)',
       (_code, locale) => {
         for (const value of [
-          0, 1, 999, 1000, 1500, 2500, 999999, 1000000, 1234567, 999999999999999,
+          0, 1, 999, 1000, 1005, 1500, 2500, 999999, 1000000, 1234567, 2675000, 999999999999999,
         ]) {
           for (const decimals of [0, 1, 2, 3]) {
             expect(toShortNotation(BigInt(value), { locale, decimals })).toBe(

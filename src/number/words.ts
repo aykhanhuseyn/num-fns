@@ -1,6 +1,13 @@
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
-import { maxSupportedBigInt, toThousandGroups, ZERO } from '../shared/bigint'
+import {
+  absBigInt,
+  type FixedParts,
+  maxSupportedBigInt,
+  splitFixed,
+  toThousandGroups,
+  ZERO,
+} from '../shared/bigint'
 import type { NumberWordsOptions } from '../shared/types'
 
 /**
@@ -77,17 +84,21 @@ export function resolveScaleWord(
  *
  * Supports integers from 0 up to `1000 ** locale.words.scales.length - 1`
  * (999 trillion range for every launch locale), negative numbers (prefixed
- * with `locale.words.negative`), and up to two decimal digits, read as a
- * whole number joined by `locale.words.decimalConnector` when the locale
- * defines one (only `az`, today — see `decimalConnector`'s doc comment in
- * `locale/types.ts` for the `en`/`ru`/`es` gap this leaves, tracked in
- * `todo.md` §2).
+ * with `locale.words.negative`), and a fraction rounded to two decimal
+ * digits, read as a whole number joined by `locale.words.decimalConnector`
+ * when the locale defines one (see `decimalConnector`'s doc comment in
+ * `locale/types.ts`). The rounding is `arithmetic/round`'s, exact in
+ * decimal: `numberToWords(2.675)` ends in "sixty-eight" as the value is
+ * written, where `Math.round((2.675 - 2) * 100)` gives `67` because the
+ * double is stored just below the tie; `1.999` carries into "two".
  *
  * A `bigint` is read exactly at any magnitude (`todo.md` §4's BigInt input
- * path): it is chunked with integer arithmetic rather than `Math.floor`, so
- * a custom locale that names scales beyond `Number.MAX_SAFE_INTEGER`
- * (quadrillion and up) gets every digit right. The same
- * `1000 ** scales.length - 1` cap applies, computed exactly.
+ * path), and so is a `number`'s whole part: both are chunked with integer
+ * arithmetic rather than `Math.floor`, so a custom locale that names scales
+ * beyond `Number.MAX_SAFE_INTEGER` (quadrillion and up) gets every digit
+ * right, and the `1000 ** scales.length - 1` cap is checked exactly, after
+ * rounding (`999999999999.999` does not slip past a 999-billion cap on a
+ * carry).
  *
  * For locales whose number words inflect by grammatical gender (`ru`, `es`),
  * `options.gender` selects the agreement forms for the noun being counted
@@ -106,62 +117,39 @@ export function resolveScaleWord(
  * numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion ..."
  */
 export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
-  if (typeof value === 'bigint') return bigIntToWords(value, options)
-
-  if (!Number.isFinite(value)) {
+  if (typeof value === 'number' && !Number.isFinite(value)) {
     throw new RangeError(`numberToWords: value must be finite, received ${value}`)
   }
 
   const { locale = en } = options
   const gender = resolveGender(options.gender, locale)
-  const maxSupportedInteger = 1000 ** locale.words.scales.length - 1
 
-  const isNegative = value < 0 && value !== 0
-  const absolute = Math.abs(value)
-  let integerPart = Math.floor(absolute)
-
-  if (integerPart > maxSupportedInteger) {
-    throw new RangeError(
-      `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedInteger}`,
-    )
-  }
-
-  let fractionDigits = Math.round((absolute - integerPart) * 100)
-  if (fractionDigits === 100) {
-    fractionDigits = 0
-    integerPart += 1
-  }
-
-  let words = integerToWords(toThousandGroups(integerPart), locale, gender)
-  if (fractionDigits > 0) {
-    const fractionWords = locale.words.renderGroup(fractionDigits, gender)
-    words = locale.words.decimalConnector
-      ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
-      : `${words} ${fractionWords}`
-  }
-
-  return isNegative ? `${locale.words.negative} ${words}` : words
-}
-
-/**
- * The `bigint` path of {@link numberToWords}: no fraction to read, and the
- * magnitude cap is checked exactly (`maxSupportedBigInt`) instead of through
- * a `number` that could not hold a custom locale's larger scales.
- */
-function bigIntToWords(value: bigint, options: NumberWordsOptions): string {
-  const { locale = en } = options
-  const gender = resolveGender(options.gender, locale)
-
-  const isNegative = value < ZERO
-  const groups = toThousandGroups(isNegative ? -value : value)
+  const { whole, fraction } =
+    typeof value === 'bigint'
+      ? { whole: absBigInt(value), fraction: 0 }
+      : splitFixed(Math.abs(value), 2)
+  const groups = toThousandGroups(whole)
   if (groups.length > locale.words.scales.length) {
     throw new RangeError(
       `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length)}`,
     )
   }
 
-  const words = integerToWords(groups, locale, gender)
-  return isNegative ? `${locale.words.negative} ${words}` : words
+  let words = integerToWords(groups, locale, gender)
+  if (fraction > 0) {
+    const fractionWords = locale.words.renderGroup(fraction, gender)
+    words = locale.words.decimalConnector
+      ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
+      : `${words} ${fractionWords}`
+  }
+
+  // A value that rounds to zero (`-0.001`) reads as plain "zero", like `round` never returning `-0`.
+  return isNegative(value, { whole, fraction }) ? `${locale.words.negative} ${words}` : words
+}
+
+/** Whether the spelled value carries the negative word: the input is negative and did not round away to zero. */
+function isNegative(value: number | bigint, { whole, fraction }: FixedParts): boolean {
+  return value < 0 && (whole !== ZERO || fraction !== 0)
 }
 
 /** Renders base-1000 `groups` (least significant first, as `toThousandGroups` returns them; `[]` is zero). */

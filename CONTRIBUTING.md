@@ -122,7 +122,7 @@ Linting and formatting are both handled by [Biome](https://biomejs.dev)
      (`RangeError` otherwise), and a parser that computes exactly must not
      return a `number` past `Number.MAX_SAFE_INTEGER` — throw and point at
      `output: 'bigint'`. The helpers for all of this (`toThousandGroups`,
-     `scaleBigInt`, `decimalToBigInt`, `toOutput`, `toSafeNumber`, …) live
+     `scaleToFixed`, `splitFixed`, `decimalToBigInt`, `toOutput`, `toSafeNumber`, …) live
      in `src/shared/bigint.ts`; read its doc comment and reuse them rather
      than re-deriving the arithmetic. **Never write a BigInt literal**
      (`10n`) — the build targets ES2018, where it is a parse error; go

@@ -1128,7 +1128,7 @@ const arithmeticCategory: Category = {
       name: 'round',
       signature: '(value: number, precision?: number, mode?: RoundingMode): number',
       description:
-        'Rounds value to precision decimal places exactly in decimal, using mode to break ties (halfUp by default) — the one rounding implementation formatNumber, formatMoney and formatPercentage all delegate to. round(1.005, 2) is 1.01, where Math.round(1.005 * 100) / 100 gives 1. A negative precision rounds to tens, hundreds, … (round(1234, -2) is 1200). Throws RangeError on non-finite input or a non-integer precision.',
+        'Rounds value to precision decimal places exactly in decimal, using mode to break ties (halfUp by default) — the one rounding implementation formatNumber, formatMoney, formatPercentage, numberToWords and moneyToWords all delegate to (toShortNotation and toByteSize scale on the same exact-decimal reading). round(1.005, 2) is 1.01, where Math.round(1.005 * 100) / 100 gives 1. A negative precision rounds to tens, hundreds, … (round(1234, -2) is 1200). Throws RangeError on non-finite input or a non-integer precision.',
       sourceFile: 'src/arithmetic/round.ts',
       fn: fn(round),
       fields: [

@@ -1,4 +1,4 @@
-import { resolveOutput, scaleBigInt, scaledBigInt } from '../shared/bigint'
+import { resolveOutput, scaledBigInt, scaleToFixed } from '../shared/bigint'
 import type { ByteSizeOptions, ByteSizeParseOptions } from '../shared/types'
 import { parseNumber } from './format'
 
@@ -48,14 +48,17 @@ function correctFloatingPointNoise(value: number): number {
  * (`KB`, `MB`, ...) stay the same — only the magnitude they represent changes.
  *
  * A `bigint` is accepted directly — `fs.statSync(path, { bigint: true }).size`
- * is one, and so is any byte count summed past `Number.MAX_SAFE_INTEGER` —
- * and is scaled exactly: divided by the threshold in integer arithmetic and
- * rounded half up on the true remainder, where a `number` goes through
- * `toFixed`. The two paths agree wherever both are exact
- * (`toByteSize(BigInt(1536))` is `"1.5 KB"`), and a `bigint` past the
- * largest scale keeps every digit (`"1500 PB"`, never `"1.5e3 PB"`). A
- * negative `bigint` is refused like a negative `number`, and `decimals`
- * must be a non-negative integer (`RangeError` otherwise).
+ * is one, and so is any byte count summed past `Number.MAX_SAFE_INTEGER`.
+ * Either type is scaled exactly (`shared/bigint.ts`'s `scaleToFixed`):
+ * divided by the threshold in integer arithmetic and rounded half up on the
+ * true remainder, on the same shortest-decimal reading `arithmetic/round`
+ * gives a `number`. So the two paths agree on every digit, ties included —
+ * `toByteSize(1005, { base: 1000 })` and `toByteSize(BigInt(1005), { base:
+ * 1000 })` are both `"1.01 KB"`, where `(1005 / 1000).toFixed(2)` gave
+ * `"1.00"` — and a value past the largest scale keeps every digit
+ * (`"1500 PB"`, never `"1.5e3 PB"`). A negative `bigint` is refused like a
+ * negative `number`, and `decimals` must be a non-negative integer
+ * (`RangeError` otherwise).
  *
  * @example
  * toByteSize(1536); // "1.5 KB"
@@ -72,7 +75,7 @@ export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}
   }
 
   const { decimals = 2, base = 1024, decimalSeparator = '.' } = options
-  if (typeof bytes === 'bigint' && (!Number.isInteger(decimals) || decimals < 0)) {
+  if (!Number.isInteger(decimals) || decimals < 0) {
     throw new RangeError(
       `toByteSize: decimals must be a non-negative integer, received ${decimals}`,
     )
@@ -81,16 +84,12 @@ export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}
   for (const [exponent, label] of BYTE_SCALES) {
     const threshold = base ** exponent
     if (bytes >= threshold) {
-      const fixed =
-        typeof bytes === 'bigint'
-          ? scaleBigInt(bytes, BigInt(threshold), decimals)
-          : (bytes / threshold).toFixed(decimals)
-      const scaled = trimTrailingZeros(fixed).replace('.', decimalSeparator)
-      return `${scaled} ${label}`
+      const scaled = trimTrailingZeros(scaleToFixed(bytes, threshold, decimals))
+      return `${scaled.replace('.', decimalSeparator)} ${label}`
     }
   }
 
-  return `${typeof bytes === 'bigint' ? bytes : bytes.toFixed(0)} B`
+  return `${scaleToFixed(bytes, 1, 0)} B`
 }
 
 /**
