@@ -1,6 +1,6 @@
 {
   "name": "num-fns",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Modern internationalized number utility library for JavaScript — format and parse numbers, money and percentages, spell numbers out in words, ordinals, short/long notation and roman numerals. Like date-fns, but for numbers.",
   "type": "module",
   "main": "./dist/index.cjs",
