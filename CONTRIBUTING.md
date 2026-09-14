@@ -404,7 +404,10 @@ entries.
 3. On merge to `main`, a bot opens (or updates) a `chore: version packages`
    PR that runs `changeset version` — bumping `package.json` and rewriting
    `CHANGELOG.md` from the accumulated changesets, consuming those files in
-   the process. You don't need to do anything for this step.
+   the process — then `scripts/sync-readme-version.ts`, which rewrites the
+   version in README.md's status callout to match (`bun run check:readme`
+   fails CI and `prepublishOnly` if the two ever drift). You don't need to
+   do anything for this step.
 4. Merging *that* PR triggers the actual release: `bun run build` followed
    by `changeset publish`, which publishes to npm, tags the commit, and
    creates a GitHub release. See `.github/workflows/release.yml`.

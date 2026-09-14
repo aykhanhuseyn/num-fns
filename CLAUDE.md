@@ -30,6 +30,7 @@ bun run format:check        # biome format .
 bun run check                # biome check . (lint + format in one pass)
 bun run check:pack           # attw + publint against a packed tarball (run after build)
 bun run check:smoke          # install the tarball into real ESM/CJS consumers and run them
+bun run check:readme         # README.md status callout names package.json's version (synced by `bun run version`)
 bun run build               # vite build -> dist/ (ESM + CJS + per-module .d.ts/.d.cts)
 bun run dev                 # vite build --watch
 ```

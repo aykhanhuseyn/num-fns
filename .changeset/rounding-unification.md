@@ -1,5 +1,5 @@
 ---
-"num-fns": patch
+"num-fns": minor
 ---
 
 `numberToWords`, `moneyToWords`, `toShortNotation` and `toByteSize` now round through the same exact-decimal path as everything else — the last four places that still used `Math.round`/`toFixed` on a float-scaled magnitude.

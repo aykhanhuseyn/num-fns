@@ -24,7 +24,7 @@ modern and older projects alike.
 
 **[Live docs & playground →](https://aykhanhuseyn.github.io/num-fns/)**
 
-> **Status: 0.3.0** — the alpha line ended with `0.2.0`, the first stable
+> **Status: 0.4.0** — the alpha line ended with `0.2.0`, the first stable
 > release (npm's `latest` previously pointed at `0.2.0-alpha.0`). Still `0.x`,
 > so the API can change in a minor bump until 1.0; see [`todo.md`](./todo.md)
 > for what's queued before then. The locale system is implemented: `az`, `en`, `en-GB`,
