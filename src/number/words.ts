@@ -18,6 +18,13 @@ import type { NumberWordsOptions } from '../shared/types'
 const GRAMMATICAL_GENDERS: readonly GrammaticalGender[] = ['masculine', 'feminine', 'neuter']
 
 /**
+ * How many fraction digits `numberToWords` rounds a `number` to before
+ * reading its fractional part, and the width that part is padded back to
+ * when it is spoken (see {@link renderFraction}).
+ */
+const FRACTION_DIGITS = 2
+
+/**
  * Validates `options.gender` against `GrammaticalGender` and against the
  * genders `locale` actually distinguishes, then resolves the gender to
  * render with: the requested one, or `locale.words.defaultGender` when the
@@ -85,12 +92,15 @@ export function resolveScaleWord(
  * Supports integers from 0 up to `1000 ** locale.words.scales.length - 1`
  * (999 trillion range for every launch locale), negative numbers (prefixed
  * with `locale.words.negative`), and a fraction rounded to two decimal
- * digits, read as a whole number joined by `locale.words.decimalConnector`
- * when the locale defines one (see `decimalConnector`'s doc comment in
- * `locale/types.ts`). The rounding is `arithmetic/round`'s, exact in
- * decimal: `numberToWords(2.675)` ends in "sixty-eight" as the value is
- * written, where `Math.round((2.675 - 2) * 100)` gives `67` because the
- * double is stored just below the tie; `1.999` carries into "two".
+ * digits, read as a whole number of hundredths joined by
+ * `locale.words.decimalConnector` when the locale defines one (see
+ * `decimalConnector`'s doc comment in `locale/types.ts`), with a leading
+ * zero spoken rather than dropped so `1.01` ("one point zero one") stays
+ * distinct from `1.1` ("one point ten") — see {@link renderFraction}.
+ * The rounding is `arithmetic/round`'s, exact in decimal:
+ * `numberToWords(2.675)` ends in "sixty-eight" as the value is written,
+ * where `Math.round((2.675 - 2) * 100)` gives `67` because the double is
+ * stored just below the tie; `1.999` carries into "two".
  *
  * A `bigint` is read exactly at any magnitude (`todo.md` §4's BigInt input
  * path), and so is a `number`'s whole part: both are chunked with integer
@@ -127,7 +137,7 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
   const { whole, fraction } =
     typeof value === 'bigint'
       ? { whole: absBigInt(value), fraction: 0 }
-      : splitFixed(Math.abs(value), 2)
+      : splitFixed(Math.abs(value), FRACTION_DIGITS)
   const groups = toThousandGroups(whole)
   if (groups.length > locale.words.scales.length) {
     throw new RangeError(
@@ -137,7 +147,7 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
 
   let words = integerToWords(groups, locale, gender)
   if (fraction > 0) {
-    const fractionWords = locale.words.renderGroup(fraction, gender)
+    const fractionWords = renderFraction(fraction, locale, gender)
     words = locale.words.decimalConnector
       ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
       : `${words} ${fractionWords}`
@@ -145,6 +155,37 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
 
   // A value that rounds to zero (`-0.001`) reads as plain "zero", like `round` never returning `-0`.
   return isNegative(value, { whole, fraction }) ? `${locale.words.negative} ${words}` : words
+}
+
+/**
+ * Reads the already-rounded fraction digits as words.
+ *
+ * `splitFixed` hands the fractional part back as a plain integer, so `.01`
+ * and `.1` arrive as `1` and `10`. Rendering that integer on its own drops
+ * the leading zero: `1.01` read as "one point one" is exactly how a speaker
+ * says `1.1`, so the two values become indistinguishable in words. Padding
+ * the integer back out to {@link FRACTION_DIGITS} and speaking one
+ * `locale.words.zero` per leading zero restores the distinction — "one point
+ * zero one" against "one point ten" — and it does so in the generic engine,
+ * so no locale has to know about it (`az` "bir tam sıfır bir", `ru` "ноль
+ * запятая ноль одна", `es` "cero coma cero uno").
+ *
+ * `fraction` is always non-zero here (the caller checks), so the padded
+ * string always has at least one non-zero digit left for `renderGroup`.
+ */
+function renderFraction(
+  fraction: number,
+  locale: Locale,
+  gender: GrammaticalGender | undefined,
+): string {
+  const digits = String(fraction).padStart(FRACTION_DIGITS, '0')
+  const spoken: string[] = []
+  for (const digit of digits) {
+    if (digit !== '0') break
+    spoken.push(locale.words.zero)
+  }
+  spoken.push(locale.words.renderGroup(fraction, gender))
+  return spoken.join(' ')
 }
 
 /** Whether the spelled value carries the negative word: the input is negative and did not round away to zero. */

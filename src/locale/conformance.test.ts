@@ -143,6 +143,21 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       assertCleanWords(numberToWords(max, { locale }), `numberToWords(${max})`)
       expect(() => numberToWords(max + BigInt(1), { locale })).toThrow(RangeError)
     })
+
+    it('keeps a hundredths fraction distinct from a tenths one (leading zero spoken)', () => {
+      // The fraction arrives as a plain integer, so `.01` and `.1` are `1`
+      // and `10`; dropping the leading zero made 1.01 read as a speaker reads
+      // 1.1. Locale-generic, so every locale gets it without its own hook.
+      for (const [hundredths, tenths] of [
+        [1.01, 1.1],
+        [0.09, 0.9],
+      ] as const) {
+        const spokenHundredths = numberToWords(hundredths, { locale })
+        assertCleanWords(spokenHundredths, `numberToWords(${hundredths})`)
+        expect(spokenHundredths).not.toBe(numberToWords(tenths, { locale }))
+        expect(spokenHundredths).toContain(locale.words.zero)
+      }
+    })
   })
 
   describe('ordinals', () => {

@@ -89,9 +89,24 @@ describe('numberToWords', () => {
       // `Math.round` read this as "sixty-seven"; `round` decides the tie on
       // the decimal the caller wrote.
       expect(numberToWords(2.675, { locale: en })).toBe('two point sixty-eight')
-      expect(numberToWords(1.005, { locale: en })).toBe('one point one')
+      expect(numberToWords(1.005, { locale: en })).toBe('one point zero one')
       expect(numberToWords(0.125, { locale: en })).toBe('zero point thirteen')
       expect(numberToWords(-2.675, { locale: en })).toBe('negative two point sixty-eight')
+    })
+
+    it('speaks a leading zero in the fraction, so .01 is not read as .1', () => {
+      // The fraction reaches the reader as a plain integer (`.01` is `1`,
+      // `.1` is `10`), so rendering it on its own dropped the leading zero
+      // and read 1.01 as "one point one" — how a speaker says 1.1. The two
+      // must stay distinguishable.
+      expect(numberToWords(1.01, { locale: en })).toBe('one point zero one')
+      expect(numberToWords(1.1, { locale: en })).toBe('one point ten')
+      expect(numberToWords(1.01, { locale: en })).not.toBe(numberToWords(1.1, { locale: en }))
+      expect(numberToWords(0.09, { locale: en })).toBe('zero point zero nine')
+      expect(numberToWords(-0.05, { locale: en })).toBe('negative zero point zero five')
+      // A fraction with no leading zero is untouched.
+      expect(numberToWords(0.5, { locale: en })).toBe('zero point fifty')
+      expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
     })
 
     it('carries a fraction that rounds up to one into the whole part', () => {
@@ -145,6 +160,7 @@ describe('numberToWords', () => {
       expect(numberToWords(-1234, { locale: az })).toBe('mənfi min iki yüz otuz dörd')
       expect(numberToWords(12.34, { locale: az })).toBe('on iki tam otuz dörd')
       expect(numberToWords(0.5, { locale: az })).toBe('sıfır tam əlli')
+      expect(numberToWords(1.01, { locale: az })).toBe('bir tam sıfır bir')
       expect(numberToWords(0.999, { locale: az })).toBe('bir')
     })
 
@@ -203,6 +219,7 @@ describe('numberToWords', () => {
     it('joins decimal parts with "coma", RAE\'s standard decimal reading (todo.md §2)', () => {
       expect(numberToWords(12.34, { locale: es })).toBe('doce coma treinta y cuatro')
       expect(numberToWords(0.5, { locale: es })).toBe('cero coma cincuenta')
+      expect(numberToWords(1.01, { locale: es })).toBe('uno coma cero uno')
       expect(numberToWords(-3.5, { locale: es })).toBe('menos tres coma cincuenta')
     })
   })
@@ -273,7 +290,7 @@ describe('numberToWords', () => {
       // 'coma'` (`todo.md` §2), so both join with their named connector
       // rather than a plain space — the fraction group's gender agreement
       // is unaffected by the connector.
-      expect(numberToWords(0.01, { locale: ru, gender: 'feminine' })).toBe('ноль запятая одна')
+      expect(numberToWords(0.01, { locale: ru, gender: 'feminine' })).toBe('ноль запятая ноль одна')
       expect(numberToWords(0.21, { locale: es, gender: 'feminine' })).toBe('cero coma veintiuna')
     })
 
