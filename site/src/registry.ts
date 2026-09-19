@@ -292,7 +292,7 @@ const wordsCategory: Category = {
       name: 'numberToWords',
       signature: '(value: number | bigint, options?: NumberWordsOptions): string',
       description:
-        "Spells out a number as cardinal words, per the locale's own vocabulary and composition rules (defaults to en). Supports integers up to the trillion range, negative numbers, and up to two decimal digits. A bigint is read exactly, up to the locale's largest scale word (en: 999999999999999, just under a quadrillion) — tick 'as bigint' and paste 123456789012345; anything larger throws RangeError instead of being rounded.",
+        "Spells out a number as cardinal words, per the locale's own vocabulary and composition rules (defaults to en). Supports integers up to the trillion range, negative numbers, and up to two decimal digits, read as hundredths with any leading zero spoken (1.01 is “one point zero one”, 1.1 is “one point ten”). A bigint is read exactly, up to the locale's largest scale word (en: 999999999999999, just under a quadrillion) — tick 'as bigint' and paste 123456789012345; anything larger throws RangeError instead of being rounded.",
       sourceFile: 'src/number/words.ts',
       fn: fn(numberToWords),
       fields: [

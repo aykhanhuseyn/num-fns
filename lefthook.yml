@@ -8,7 +8,12 @@
 pre-commit:
   commands:
     biome:
-      glob: '*.{js,jsx,ts,tsx,json,jsonc,md}'
+      # `webmanifest` is in the list because Biome formats it as JSON (the
+      # repo-wide `bun run format:check` CI step does catch it), and without
+      # it here `site/public/site.webmanifest` is the one committed file the
+      # hook silently skips — a reformat of it would pass the commit and only
+      # fail in CI.
+      glob: '*.{js,jsx,ts,tsx,json,jsonc,md,webmanifest}'
       run: bun run check:biome -- {staged_files}
       stage_fixed: true
     type:

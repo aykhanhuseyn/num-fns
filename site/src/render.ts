@@ -25,6 +25,17 @@ function renderValue(value: unknown): HTMLElement {
     return el
   }
 
+  // A record returned on its own — `getCurrency`'s `{ code, symbol, decimals }`
+  // is the only one today. It has to be caught before the scalar fall-through
+  // below, whose `formatScalar` ends in `String(value)` and renders any object
+  // as the useless `[object Object]`. Sending it through the same table
+  // renderer the array-of-records case uses (`amortizationSchedule`) as a
+  // single row keeps the two result shapes looking alike, and keeps the
+  // no-`JSON.stringify` rule noted below (it throws on a bigint).
+  if (typeof value === 'object' && value !== null) {
+    return renderTable([value as Record<string, unknown>])
+  }
+
   if (typeof value === 'boolean') {
     const el = document.createElement('span')
     el.className = `playground-bool ${value ? 'is-true' : 'is-false'}`
