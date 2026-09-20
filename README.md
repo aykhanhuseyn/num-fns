@@ -93,6 +93,9 @@ import {
   multiply,
   divide,
   round,
+  getConfig,
+  setConfig,
+  resetConfig,
 } from 'num-fns';
 ```
 
@@ -305,6 +308,75 @@ Deliberately not included: `add`/`subtract`/`multiply`/`divide`/`round` and
 functions; `fractionToWords` and `fromRoman` (range ≤ 3999) are unchanged.
 Custom locales are unaffected: `plural`, `ordinal.*` and `words.renderGroup`
 keep their `number` signatures and never receive a `bigint`.
+
+### Errors, or empty values
+
+Every function validates its input up front and **throws** — `RangeError`,
+`TypeError` or `SyntaxError` — rather than returning `NaN` or `undefined`.
+That covers values (`NaN`, `null`, `undefined`, `Infinity`, an unparseable
+string, a roman numeral outside 1–3999), option combinations (a thousands
+separator equal to the decimal separator) and numeric type (a `bigint` is
+never silently converted through a float).
+
+For code rendering values it did not produce, `noThrow` swaps every throw for
+the return type's empty value:
+
+```ts
+import { setConfig, formatNumber } from 'num-fns';
+
+setConfig({ noThrow: true });
+
+formatNumber(Number.NaN); // ""
+formatNumber(null); // ""
+formatNumber(Number.POSITIVE_INFINITY); // "infinity"
+formatNumber(Number.NEGATIVE_INFINITY, { locale: az }); // "mənfi sonsuzluq"
+formatNumber(1234.5); // "1,234.5" — unchanged
+```
+
+| Returns | Empty value |
+| --- | --- |
+| a string | `''`, or the locale's `words.infinity` for `±Infinity` |
+| a number | `NaN` (including a parser asked for `{ output: 'bigint' }`) |
+| a boolean (`isEven`, `isOdd`, `inRange`) | `false` |
+| a list (`mode`, `amortizationSchedule`) | `[]` |
+| `getCurrency` | `undefined` |
+
+`noThrow` suppresses *everything*, a mistyped option or an unknown currency
+code as readily as bad data, so prefer the per-call option on the calls that
+actually need it and leave the global setting alone:
+
+```ts
+formatNumber(userInput, { noThrow: true }); // "" rather than a thrown error
+formatNumber(userInput); // still throws
+```
+
+Every options object accepts `noThrow`, and it wins over the global setting
+in both directions. Functions whose parameters are all positional — `add`,
+`round`, `clamp`, `isEven`, `toBase`, most of `stats` and `financial` —
+follow the global setting only.
+
+### Negative zero, and the magnitude bounds
+
+`-0` is a value, not a rounding artefact: `formatNumber(-0)` is `"-0"`, a
+negative amount that rounds away to zero keeps its sign
+(`formatNumber(-0.4, { decimals: 0 })` is `"-0"`), `numberToWords(-0.001)` is
+`"negative zero"`, and `add`/`subtract`/`multiply`/`divide`/`round` follow the
+IEEE 754 sign rules (`multiply(-1, 0)` is `-0`, `add(-1.5, 1.5)` is `0`).
+There is no negative zero `bigint`, so the `bigint` paths never produce one.
+
+There is no magnitude limit either. Every finite number formats to its exact
+positional digits — `formatNumber(1e21)` is
+`"1,000,000,000,000,000,000,000"`, not `"1e+21"` — and arithmetic is exact on
+operands of any size, with the single correctly-rounded conversion back to a
+`number` as the only lossy step. What a "precise" function will not do is
+hand back `Infinity`: a result outside the range of a JavaScript number
+throws instead.
+
+### No `Intl`
+
+Nothing in the package touches `Intl`. Separators, rounding modes, grouping
+and magnitude handling are all implemented here, so the output is byte-identical
+on every runtime and every ICU build, and a snapshot test of it stays true.
 
 ## Locale support
 

@@ -17,7 +17,7 @@ export const hero = {
   title: 'num-fns',
   tagline: 'Number utilities for JavaScript & TypeScript — like date-fns, but for numbers.',
   description:
-    "Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Every integer-domain function also takes a bigint and every parser can return one ({ output: 'bigint' }), exact past Number.MAX_SAFE_INTEGER. Pure, immutable, tree-shakeable, written in TypeScript.",
+    "Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Every integer-domain function also takes a bigint and every parser can return one ({ output: 'bigint' }), exact past Number.MAX_SAFE_INTEGER. No Intl anywhere, so the output is identical on every runtime. Bad input throws by default; setConfig({ noThrow: true }) returns an empty value instead. Pure, tree-shakeable, written in TypeScript.",
   statusNote:
     'Pre-release: the locale system is implemented — az, en, ru, and es are all wired into numberToWords, ordinals, notation, and money/percentage formatting. The default locale is en; pass { locale: az } (or ru/es) on any function card below to see it live. The engine below calls the real, published source in this repo — nothing on this page is mocked.',
 }
@@ -43,7 +43,11 @@ formatMoney(1234.5, { locale: az, currency: 'USD' }); // "1 234,50 $"
 
 // bigint in, bigint out — exact past Number.MAX_SAFE_INTEGER
 formatNumber(1234567890123456789n); // "1,234,567,890,123,456,789"
-parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123456789n`
+parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123456789n
+
+// bad input throws; opt out per call, or globally with setConfig
+formatNumber(Number.NaN, { noThrow: true }); // ""
+formatNumber(Number.POSITIVE_INFINITY, { noThrow: true }); // "infinity"`
 
 export const badges = [
   'MIT licensed',
@@ -51,4 +55,5 @@ export const badges = [
   'ESM & CJS',
   'Zero dependencies',
   'bigint in & out',
+  'No Intl',
 ]

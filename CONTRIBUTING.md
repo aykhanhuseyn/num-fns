@@ -187,7 +187,10 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      purely the intra-group tens+ones connector — and should stay unset
      until you've settled your locale's real decimal-reading convention,
      since leaving it unset falls back to a plain space, not a claim of
-     linguistic correctness.
+     linguistic correctness. `infinity` is required: it is the word a
+     renderer emits for `Infinity` under `noThrow` (prefixed with
+     `negative` for `-Infinity`), and it has no default precisely so that no
+     locale can quietly borrow another language's word.
    - **`plural`** — the CLDR-ish plural-category selector (`'one' | 'few' |
      'many' | 'other'`) used to pick the right scale/currency word form.
      Most locales can return `'other'` unconditionally; only implement the
@@ -334,7 +337,23 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
   field optional and a sensible default — see `NumberFormatOptions` in
   `src/shared/types.ts`.
 - **Throw on bad input.** See "How to add a new function" above — this
-  applies package-wide, not just to new code.
+  applies package-wide, not just to new code. Validate the *type* too:
+  `assertNumericValue` in `src/shared/validation.ts` is the first call in
+  every function taking a `number | bigint`, because `typeof value ===
+  'number' && !Number.isFinite(value)` lets `null` through and `Math.abs(null)`
+  is `0`.
+- **Wrap the body in a `noThrow` guard.** Every public function returns
+  `guardText`/`guardNumber`/`guardBoolean`/`guardList`/`guardRecord`
+  (`src/shared/no-throw.ts`, `no-throw-text.ts`) around its body, passing its
+  options object so a per-call `noThrow` is honoured; `guardText` also takes
+  the function's value arguments, so an `Infinity` can be worded rather than
+  blanked. Add the new function to the tables in `src/no-throw.test.ts` —
+  they are checked against the export list, so the suite fails until you do.
+- **`-0` is a value.** Never normalise it away. Read a sign with `isSigned`
+  from `src/shared/sign.ts`, not `value < 0`, which is `false` for `-0`.
+- **No `Intl`.** Not in `src/`, not in tests. `Intl` output depends on the
+  runtime's ICU data, and the package's promise is that it does not
+  (`todo.md` §1, 2026-09-20).
 - **`number | bigint` in, `output` out, no BigInt literals.** Integer-domain
   functions take `number | bigint` and parsers take `{ output: 'bigint' }`
   (see "How to add a new function"). `BigInt` is reached only through the

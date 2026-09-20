@@ -155,12 +155,28 @@ objects, `date-fns` style.
       implicit-`az` behavior, so it should land in the same change that
       threads `locale` through every public function, not silently. `az`
       remains a one-line import (`numberToWords(1234, { locale: az })`).
-- [ ] **Number formatting vs `Intl.NumberFormat`.** The platform already does
+- [x] **Number formatting vs `Intl.NumberFormat`.** The platform already does
       grouping/decimal separators well. Decide whether `formatNumber` delegates
       to `Intl` when available (smaller bundle, correct for every locale) or
       stays self-contained (predictable, works on ancient runtimes, no ICU
       dependency). The genuinely novel surface — words, ordinals, notation,
       roman — has no `Intl` equivalent either way.
+      (2026-09-20: **decided — self-contained, and `Intl` is not used
+      anywhere in the package**, per explicit direction from the project
+      owner. The reasons the option existed cut the other way here: the
+      package's separators, rounding modes and magnitude handling are already
+      exact and predictable across every runtime and ICU build, whereas
+      `Intl` output varies with the platform's ICU data and would make
+      `formatNumber` the one function whose result a consumer could not pin
+      in a test. `Intl` would also only cover the grouping half of one
+      function while the words/ordinal/notation/roman surface stayed
+      hand-written, so the bundle saving is smaller than it looks and the
+      behaviour split larger. This also closes §5's "cross-check
+      `formatNumber` against `Intl.NumberFormat`" item as **rejected**: the
+      per-locale separator conventions are pinned by
+      `locale/conformance.test.ts` and the round-trip property tests
+      instead, which is the same protection without an ICU dependency in the
+      test suite.)
 - [x] **Scale naming.** Decided: a per-locale property of
       `Locale.words.scales`/`Locale.notation.scales`, never a global
       short/long switch — this was already the shape the §1 locale refactor
@@ -792,18 +808,78 @@ classic `0.1 + 0.2 !== 0.3` floating-point traps. Landed 2026-09-06.
       `src/arithmetic/clamp.ts` and `src/arithmetic/in-range.ts`, both
       inclusive-range, both throwing `RangeError` on non-finite input or
       `min > max`.)
-- [ ] Decide precision limits and failure mode (throw vs. silently lose
+- [x] Decide precision limits and failure mode (throw vs. silently lose
       precision) for inputs beyond safe-integer range; document the tradeoff
       vs. a real decimal/bignum library the package deliberately isn't taking
       as a dependency. (2026-09-06: half-answered by the BigInt item in §4
       above — for the *integer* domain the answer is "accept a `bigint` and
       be exact; a parser that would have to round a `number` throws and
       points at `output: 'bigint'`", and that is now the shipped behaviour of
-      `parseLongNotation`/`fromBase`. Still open for the five arithmetic
-      functions themselves, which take `number` only by design: `add(2 **
-      53, 1)` reads its operands at their shortest decimal string like any
-      other input, so the question of whether an operand already past the
-      safe range should throw remains to be decided here.)
+      `parseLongNotation`/`fromBase`.
+      **2026-09-20: closed, per explicit direction from the project owner —
+      "we should not lose precision in operations between large numbers, it
+      should have exact precision, but number export can be lossy" and
+      "min/max values unlimited normally, number export will be lossy".**
+      So: *no operand limit and no operand throw.* An operand past the safe
+      range is read at its shortest decimal string like any other, the
+      operation itself runs exactly on `BigInt`, and the only lossy step is
+      the single correctly-rounded `Number(string)` at the end — which is
+      inherent to returning a `number` and is what "number export can be
+      lossy" licenses. The one thing a "precise" function still refuses to
+      do is return `±Infinity`: an exact result outside the range of a
+      JavaScript number throws `RangeError` rather than overflowing
+      silently, and 2026-09-20's edge-case pass extended that to `sum` and
+      `variance`, which could still overflow. This is also why the five
+      functions keep taking `number` only: a caller who needs exactness
+      *past* the float range wants the integer domain's `bigint` support,
+      not a float API pretending to be exact. The tradeoff vs. a
+      decimal/bignum dependency stands unchanged — exactness where the
+      operands are decimals a human wrote, plain `number` in and out, no
+      dependency, no wrapper type.)
+
+### New: global configuration (`src/config.ts`)
+
+Landed 2026-09-20, from the same round of owner decisions that closed the
+precision and `Intl` questions above.
+
+- [x] **A package-wide `noThrow` (default `false`).** Every public function
+      throws on bad input, which is right for a library and wrong for a UI
+      rendering values it did not produce. `setConfig({ noThrow: true })`
+      swaps every throw for the return type's empty value: `''` for a string,
+      `NaN` for a number, `false` for a boolean, `[]` for `mode` and
+      `amortizationSchedule`, `undefined` for `getCurrency`. Per the owner's
+      decision it suppresses **everything**, option and configuration
+      mistakes included, not just bad values — so the docs push callers
+      toward the per-call `noThrow` option (on every options object, winning
+      over the global setting) rather than the global switch. Functions whose
+      parameters are all positional (`add`, `round`, `clamp`, `isEven`,
+      `toBase`, most of `stats`/`financial`) follow the global setting alone;
+      giving them a trailing options object was rejected as surface area for
+      no gain.
+      Implementation: a wrapper per return type (`shared/no-throw.ts`,
+      `shared/no-throw-text.ts`) applied at the top of each public function,
+      so the bodies still throw and nothing had to thread a flag through
+      every guard. Only the outermost wrapper catches — an inner one would
+      hand `formatMoney` an empty string to hang a currency symbol on
+      (`"$ "`). Exports 51 → 54 (`getConfig`/`setConfig`/`resetConfig`).
+- [x] **`NaN`, `null`, `undefined` and the like throw by default.** They were
+      supposed to already; §5's edge-case pass found they did not, and added
+      `assertNumericValue`. Under `noThrow` they are the empty value.
+- [x] **`Infinity` throws by default, and reads as a word under `noThrow`.**
+      New required `Locale.words.infinity` (`az` `sonsuzluq`, `en`/`enGB`
+      `infinity`, `ru` `бесконечность`, `es` `infinito`), prefixed with
+      `words.negative` for `-Infinity`. A numeric result has no word to give,
+      so it is `NaN` there. Breaking for custom locales — one line.
+- [x] **`-0` is a value.** Reverses 2026-09-08's "never return `-0`".
+      `formatNumber(-0)` is `"-0"`, a negative value that rounds away to zero
+      keeps its sign, `numberToWords(-0.001)` is "negative zero", and
+      `add`/`subtract`/`multiply`/`divide` follow the IEEE 754 sign rules
+      (`multiply(-1, 0)` is `-0`, `add(-1.5, 1.5)` is `0`). The `bigint`
+      paths are unchanged: `-0n` does not exist, so `BigInt(-0)` is `0n` and
+      the two paths differ at exactly that one value, which the agreement
+      tests now say out loud. Internal `shared/sign.ts` holds the three
+      predicates, since `-0 < 0` is `false` and every renderer needs the same
+      reading.
 
 ### New: statistics (`src/stats/`)
 
@@ -880,7 +956,22 @@ New domain from the vision doc.
       other test file is. Exposed no real bugs: every invariant passed
       against `az`, `en`, `en-GB`, `ru`, and `es` unmodified, on the first
       run.)
-- [ ] Edge-case coverage per function: `NaN`, `Infinity`, `-0`, min/max bounds.
+- [x] Edge-case coverage per function: `NaN`, `Infinity`, `-0`, min/max bounds.
+      (2026-09-20: `src/edge-cases.test.ts` sweeps all four across the public
+      surface, beside the per-module tests. It found four real bugs, all
+      fixed in the same change: (a) `null`/`undefined` threw nowhere — the
+      `typeof value === 'number' && !Number.isFinite(value)` guard waved a
+      non-number through and `Math.abs(null)` is `0`, so `formatNumber(null)`
+      was `"0"` and `toOrdinal(null)` was `"null-th"`; there is a shared
+      `assertNumericValue` now. (b) `formatNumber` emitted exponent notation
+      past 1e21 and below 1e-6, because `String()` and `toFixed` both do —
+      the digits come from the exact decimal and are laid out positionally
+      now, so there is no magnitude limit, per §4's decision. (c)
+      `parseNumber("Infinity")` returned `Infinity`, since `Number()` accepts
+      it; every parser refuses a non-finite result now. (d) `sum` and
+      `variance` could return `Infinity`; they throw like `add`/`multiply`.
+      `-0` needed no fix — the same change that made it a value covered it —
+      but the sweep is what pins it.)
 - [x] Round-trip property tests (`fast-check`) for every format/parse pair.
       (2026-08-20: `fast-check@4.9.0` (exact-pinned devDep) plus six
       `*.property.test.ts` files colocated beside the modules they cover —
@@ -925,8 +1016,14 @@ New domain from the vision doc.
       of float `-`, so the `0.000050008...` was never the rounding being
       wrong, only the float subtraction in the assertion. No tolerance was
       loosened.)
-- [ ] Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
-      locales — catches separator mistakes no human reviewer will spot.
+- [x] ~~Cross-check `formatNumber` output against `Intl.NumberFormat` for all four
+      locales — catches separator mistakes no human reviewer will spot.~~
+      (2026-09-20: **rejected** with §1's "no `Intl`" decision — see it for
+      why. `Intl` output depends on the runtime's ICU data, so it is not a
+      stable oracle, and pulling it into the suite would contradict the
+      package's own no-ICU promise. The separator conventions are pinned by
+      `locale/conformance.test.ts` and the format/parse property tests
+      instead.)
 - [ ] Native-speaker review of the `ru` and `es` word lists before publishing —
       including the foreign-currency unit words added 2026-09-06 (§4's
       multi-currency item; es `kopek`/`gapik` and en `gapik` are the least
@@ -984,6 +1081,18 @@ New domain from the vision doc.
       which is the actual evidence for the tree-shaking claim, not just an
       assertion of it.)
 - [ ] Micro-benchmarks for `formatNumber` / `numberToWords` on large inputs.
+      Worth doing now that `formatNumber` lays out digits through
+      `arithmetic/decimal` rather than `String()`/`toFixed` (2026-09-20) — it
+      is exact at every magnitude, but it is `BigInt` work on the hot path.
+- [ ] Decide whether `sum`/`mean`/`variance` should accumulate exactly the way
+      `add`/`divide` do. Today they use float `+`, so `sum([0.1, 0.2])` is
+      `0.30000000000000004` while `add(0.1, 0.2)` is `0.3` — one package, two
+      answers. Noted 2026-09-20 during the edge-case pass; the overflow guard
+      landed then, the exactness question did not.
+- [ ] Bump the `size-limit` budgets when a locale grows. 2026-09-20: `index`
+      8 → 8.5 kB, `locale/az` 3 → 3.3 kB, `locale/en-gb` 2.75 → 3 kB, for
+      `words.infinity` plus the `noThrow` wrappers (measured 7.95 / 3.25 /
+      2.91 kB).
 - [ ] Test coverage for the new arithmetic/stats/financial/utils domains once
       built — same bar as existing modules (default behavior, option override,
       thrown-error cases).
