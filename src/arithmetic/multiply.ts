@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { isSigned } from '../shared/sign'
 import { assertFinite } from '../shared/validation'
 import { fromDecimal, toDecimal } from './decimal'
@@ -19,11 +20,13 @@ import { fromDecimal, toDecimal } from './decimal'
  * multiply(-1, 0); // -0
  */
 export function multiply(a: number, b: number): number {
-  assertFinite(a, 'a', 'multiply')
-  assertFinite(b, 'b', 'multiply')
+  return guardNumber(() => {
+    assertFinite(a, 'a', 'multiply')
+    assertFinite(b, 'b', 'multiply')
 
-  const x = toDecimal(a)
-  const y = toDecimal(b)
-  const negativeZero = isSigned(a) !== isSigned(b)
-  return fromDecimal(x.digits * y.digits, x.scale + y.scale, 'multiply', negativeZero)
+    const x = toDecimal(a)
+    const y = toDecimal(b)
+    const negativeZero = isSigned(a) !== isSigned(b)
+    return fromDecimal(x.digits * y.digits, x.scale + y.scale, 'multiply', negativeZero)
+  })
 }

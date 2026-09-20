@@ -1,4 +1,5 @@
 import { en } from '../locale/en'
+import { guardText } from '../shared/no-throw-text'
 import type { DigitWordsOptions } from '../shared/types'
 
 /**
@@ -40,6 +41,14 @@ const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
 export function numberToDigitWords(
   value: number | string | bigint,
   options: DigitWordsOptions = {},
+): string {
+  return guardText(() => numberToDigitWordsImpl(value, options), [value], options)
+}
+
+/** The body of {@link numberToDigitWords}, extracted so the `noThrow` wrapper does not nest it. */
+function numberToDigitWordsImpl(
+  value: number | string | bigint,
+  options: DigitWordsOptions,
 ): string {
   const { separator = ' ', locale = en } = options
   const raw =

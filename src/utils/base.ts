@@ -1,4 +1,6 @@
 import { resolveOutput, toOutput, ZERO } from '../shared/bigint'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import { isNegativeZero } from '../shared/sign'
 import type { BaseParseOptions } from '../shared/types'
 
@@ -30,17 +32,19 @@ const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
  * toBase(BigInt('123456789012345678901'), 16); // "6b14e9f812f366c35"
  */
 export function toBase(value: number | bigint, radix: number): string {
-  validateRadix(radix, 'toBase')
-  if (typeof value === 'bigint') return value.toString(radix)
+  return guardText(() => {
+    validateRadix(radix, 'toBase')
+    if (typeof value === 'bigint') return value.toString(radix)
 
-  if (!Number.isInteger(value)) {
-    throw new TypeError(`toBase: value must be an integer, received ${value}`)
-  }
-  if (!Number.isSafeInteger(value)) {
-    throw new RangeError(`toBase: value must be a safe integer, received ${value}`)
-  }
+    if (!Number.isInteger(value)) {
+      throw new TypeError(`toBase: value must be an integer, received ${value}`)
+    }
+    if (!Number.isSafeInteger(value)) {
+      throw new RangeError(`toBase: value must be a safe integer, received ${value}`)
+    }
 
-  return isNegativeZero(value) ? '-0' : value.toString(radix)
+    return isNegativeZero(value) ? '-0' : value.toString(radix)
+  }, [value])
 }
 
 /**
@@ -78,31 +82,33 @@ export function fromBase(
   radix: number,
   options: BaseParseOptions = {},
 ): number | bigint {
-  validateRadix(radix, 'fromBase')
-  const output = resolveOutput(options.output, 'fromBase')
+  return guardNumber(() => {
+    validateRadix(radix, 'fromBase')
+    const output = resolveOutput(options.output, 'fromBase')
 
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    throw new SyntaxError('fromBase: cannot parse an empty string')
-  }
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      throw new SyntaxError('fromBase: cannot parse an empty string')
+    }
 
-  const isNegative = trimmed.startsWith('-')
-  const digits = isNegative || trimmed.startsWith('+') ? trimmed.slice(1) : trimmed
-  const alphabet = BASE_DIGIT_CHARS.slice(0, radix)
-  const lowerDigits = digits.toLowerCase()
+    const isNegative = trimmed.startsWith('-')
+    const digits = isNegative || trimmed.startsWith('+') ? trimmed.slice(1) : trimmed
+    const alphabet = BASE_DIGIT_CHARS.slice(0, radix)
+    const lowerDigits = digits.toLowerCase()
 
-  if (digits === '' || ![...lowerDigits].every((char) => alphabet.includes(char))) {
-    throw new SyntaxError(`fromBase: "${value}" is not a valid base-${radix} number`)
-  }
+    if (digits === '' || ![...lowerDigits].every((char) => alphabet.includes(char))) {
+      throw new SyntaxError(`fromBase: "${value}" is not a valid base-${radix} number`)
+    }
 
-  const bigRadix = BigInt(radix)
-  let magnitude = ZERO
-  for (const char of lowerDigits) {
-    magnitude = magnitude * bigRadix + BigInt(alphabet.indexOf(char))
-  }
+    const bigRadix = BigInt(radix)
+    let magnitude = ZERO
+    for (const char of lowerDigits) {
+      magnitude = magnitude * bigRadix + BigInt(alphabet.indexOf(char))
+    }
 
-  if (isNegative && magnitude === ZERO && output === 'number') return -0
-  return toOutput(isNegative ? -magnitude : magnitude, output, 'fromBase')
+    if (isNegative && magnitude === ZERO && output === 'number') return -0
+    return toOutput(isNegative ? -magnitude : magnitude, output, 'fromBase')
+  }, options)
 }
 
 function validateRadix(radix: number, fnName: string): void {

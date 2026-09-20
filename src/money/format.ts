@@ -1,5 +1,7 @@
 import { en } from '../locale/en'
 import { formatNumber, parseNumber } from '../number/format'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import type { MoneyFormatOptions, MoneyParseOptions } from '../shared/types'
 import { getCurrency } from './currency'
 
@@ -31,26 +33,32 @@ import { getCurrency } from './currency'
  * formatMoney(1234567890123456789n); // "$ 1,234,567,890,123,456,789.00"
  */
 export function formatMoney(value: number | bigint, options: MoneyFormatOptions = {}): string {
-  const { locale = en, currency: code = locale.currency.code } = options
-  const currency = getCurrency(code)
-  const {
-    decimals = currency.decimals,
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-    roundingMode,
-    symbol = currency.symbol,
-    symbolPosition = locale.currency.symbolPosition,
-  } = options
+  return guardText(
+    () => {
+      const { locale = en, currency: code = locale.currency.code } = options
+      const currency = getCurrency(code)
+      const {
+        decimals = currency.decimals,
+        thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+        decimalSeparator = locale.formatDefaults.decimalSeparator,
+        roundingMode,
+        symbol = currency.symbol,
+        symbolPosition = locale.currency.symbolPosition,
+      } = options
 
-  const formattedNumber = formatNumber(value, {
-    decimals,
-    thousandsSeparator,
-    decimalSeparator,
-    roundingMode,
-  })
-  return symbolPosition === 'before'
-    ? `${symbol} ${formattedNumber}`
-    : `${formattedNumber} ${symbol}`
+      const formattedNumber = formatNumber(value, {
+        decimals,
+        thousandsSeparator,
+        decimalSeparator,
+        roundingMode,
+      })
+      return symbolPosition === 'before'
+        ? `${symbol} ${formattedNumber}`
+        : `${formattedNumber} ${symbol}`
+    },
+    [value],
+    options,
+  )
 }
 
 /**
@@ -78,14 +86,16 @@ export function parseMoney(
 ): number
 export function parseMoney(value: string, options: MoneyParseOptions): number | bigint
 export function parseMoney(value: string, options: MoneyParseOptions = {}): number | bigint {
-  const { locale = en, currency: code = locale.currency.code } = options
-  const {
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-    symbol = getCurrency(code).symbol,
-    output,
-  } = options
+  return guardNumber(() => {
+    const { locale = en, currency: code = locale.currency.code } = options
+    const {
+      thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+      decimalSeparator = locale.formatDefaults.decimalSeparator,
+      symbol = getCurrency(code).symbol,
+      output,
+    } = options
 
-  const withoutSymbol = value.split(symbol).join('').trim()
-  return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator, output })
+    const withoutSymbol = value.split(symbol).join('').trim()
+    return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator, output })
+  }, options)
 }

@@ -89,6 +89,15 @@ export interface LocaleWords {
   /** Word prefixed to the spelled-out form of a negative number, e.g. az `'mənfi'`, en `'negative'`. */
   negative: string
   /**
+   * Word for an infinite value, e.g. az `'sonsuzluq'`, en `'infinity'`, ru
+   * `'бесконечность'`, es `'infinito'`. Only ever reached under
+   * `noThrow` — every function throws `RangeError` on a non-finite value by
+   * default — where it is what a renderer emits for `Infinity`, prefixed
+   * with {@link LocaleWords.negative} for `-Infinity`. Required, so a locale
+   * can never render a placeholder in another language.
+   */
+  infinity: string
+  /**
    * Connector word inserted between a hundreds/tens group and the trailing
    * ones digit within a single 0-999 group, e.g. Spanish `'y'` in `"treinta
    * y cinco"` (35), or (unimplemented here) British English `'and'` in

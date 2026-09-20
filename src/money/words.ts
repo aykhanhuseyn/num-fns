@@ -7,6 +7,7 @@ import type {
 } from '../locale/types'
 import { numberToWords } from '../number/words'
 import { absBigInt, pluralOperand, splitFixed } from '../shared/bigint'
+import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { MoneyWordsOptions } from '../shared/types'
 import { type CurrencyCode, getCurrency } from './currency'
@@ -64,32 +65,38 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * moneyToWords(1000000000000n); // "one trillion dollars"
  */
 export function moneyToWords(value: number | bigint, options: MoneyWordsOptions = {}): string {
-  if (typeof value === 'number' && !Number.isFinite(value)) {
-    throw new RangeError(`moneyToWords: value must be finite, received ${value}`)
-  }
+  return guardText(
+    () => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new RangeError(`moneyToWords: value must be finite, received ${value}`)
+      }
 
-  const { locale = en, currency: code = locale.currency.code } = options
-  const { decimals } = getCurrency(code)
-  const units = resolveUnits(locale, code)
-  const { majorUnit, minorUnit, includeZeroMinor = false } = options
+      const { locale = en, currency: code = locale.currency.code } = options
+      const { decimals } = getCurrency(code)
+      const units = resolveUnits(locale, code)
+      const { majorUnit, minorUnit, includeZeroMinor = false } = options
 
-  const { isNegative, major, minor } =
-    typeof value === 'bigint' ? splitBigIntAmount(value) : splitAmount(value, decimals)
+      const { isNegative, major, minor } =
+        typeof value === 'bigint' ? splitBigIntAmount(value) : splitAmount(value, decimals)
 
-  // `locale.plural` takes a `number`: a major amount beyond the safe range is
-  // folded by `pluralOperand` to a value with the same plural category.
-  const majorUnitWord =
-    majorUnit ?? resolveUnitWord(units.major, locale.plural(pluralOperand(major)))
-  const minorUnitWord = minorUnit ?? resolveUnitWord(units.minor, locale.plural(minor))
+      // `locale.plural` takes a `number`: a major amount beyond the safe range is
+      // folded by `pluralOperand` to a value with the same plural category.
+      const majorUnitWord =
+        majorUnit ?? resolveUnitWord(units.major, locale.plural(pluralOperand(major)))
+      const minorUnitWord = minorUnit ?? resolveUnitWord(units.minor, locale.plural(minor))
 
-  const majorWords = `${numberToWords(major, { locale, gender: units.major.gender })} ${majorUnitWord}`
-  const minorWords =
-    minor > 0 || includeZeroMinor
-      ? ` ${numberToWords(minor, { locale, gender: units.minor.gender })} ${minorUnitWord}`
-      : ''
-  const words = `${majorWords}${minorWords}`
+      const majorWords = `${numberToWords(major, { locale, gender: units.major.gender })} ${majorUnitWord}`
+      const minorWords =
+        minor > 0 || includeZeroMinor
+          ? ` ${numberToWords(minor, { locale, gender: units.minor.gender })} ${minorUnitWord}`
+          : ''
+      const words = `${majorWords}${minorWords}`
 
-  return isNegative ? `${locale.words.negative} ${words}` : words
+      return isNegative ? `${locale.words.negative} ${words}` : words
+    },
+    [value],
+    options,
+  )
 }
 
 /** The sign and the non-negative major/minor unit counts an amount spells out as. */

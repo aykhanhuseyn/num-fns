@@ -396,6 +396,7 @@ export const es: Locale = {
     hundreds: HUNDREDS,
     scales: SCALES,
     negative: 'menos',
+    infinity: 'infinito',
     // Only used between a tens word and a nonzero ones digit within a single
     // 0-999 group ("treinta y cinco"), never between scale groups — consumed
     // by `renderGroup`, not `compose` (see `Locale.words.and`'s doc comment

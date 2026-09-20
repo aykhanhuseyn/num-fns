@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import type { VarianceOptions } from './variance'
 import { variance } from './variance'
 
@@ -13,5 +14,7 @@ export function standardDeviation(
   values: readonly number[],
   options: VarianceOptions = {},
 ): number {
-  return Math.sqrt(variance(values, options))
+  return guardNumber(() => {
+    return Math.sqrt(variance(values, options))
+  }, options)
 }

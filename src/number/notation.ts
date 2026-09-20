@@ -11,6 +11,8 @@ import {
   toThousandGroups,
   ZERO,
 } from '../shared/bigint'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type {
   LongNotationOptions,
@@ -52,6 +54,11 @@ export function toShortNotation(
   value: number | bigint,
   options: ShortNotationOptions = {},
 ): string {
+  return guardText(() => toShortNotationImpl(value, options), [value], options)
+}
+
+/** The body of {@link toShortNotation}, extracted so the `noThrow` wrapper does not nest it. */
+function toShortNotationImpl(value: number | bigint, options: ShortNotationOptions): string {
   if (typeof value === 'number' && !Number.isFinite(value)) {
     throw new RangeError(`toShortNotation: value must be finite, received ${value}`)
   }
@@ -135,31 +142,33 @@ export function parseShortNotation(
   value: string,
   options: ShortNotationParseOptions = {},
 ): number | bigint {
-  const { locale = en, decimalSeparator = locale.formatDefaults.decimalSeparator } = options
-  const output = resolveOutput(options.output, 'parseShortNotation')
+  return guardNumber(() => {
+    const { locale = en, decimalSeparator = locale.formatDefaults.decimalSeparator } = options
+    const output = resolveOutput(options.output, 'parseShortNotation')
 
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    throw new SyntaxError('parseShortNotation: cannot parse an empty string')
-  }
-
-  const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
-  const lowerTrimmed = trimmed.toLowerCase()
-
-  for (const { threshold, short } of locale.notation.scales) {
-    const suffixToken = `${spacer}${short}`
-    const lowerSuffixToken = suffixToken.toLowerCase()
-    if (lowerTrimmed.endsWith(lowerSuffixToken)) {
-      const numericPart = trimmed.slice(0, trimmed.length - suffixToken.length).trim()
-      if (output === 'bigint') {
-        return scaledBigInt(numericPart, threshold, decimalSeparator, 'parseShortNotation')
-      }
-      const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
-      return correctFloatingPointNoise(numeric * threshold)
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      throw new SyntaxError('parseShortNotation: cannot parse an empty string')
     }
-  }
 
-  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
+    const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
+    const lowerTrimmed = trimmed.toLowerCase()
+
+    for (const { threshold, short } of locale.notation.scales) {
+      const suffixToken = `${spacer}${short}`
+      const lowerSuffixToken = suffixToken.toLowerCase()
+      if (lowerTrimmed.endsWith(lowerSuffixToken)) {
+        const numericPart = trimmed.slice(0, trimmed.length - suffixToken.length).trim()
+        if (output === 'bigint') {
+          return scaledBigInt(numericPart, threshold, decimalSeparator, 'parseShortNotation')
+        }
+        const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
+        return correctFloatingPointNoise(numeric * threshold)
+      }
+    }
+
+    return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
+  }, options)
 }
 
 /**
@@ -182,6 +191,11 @@ export function parseShortNotation(
  * string {@link parseLongNotation} cannot read back.
  */
 export function toLongNotation(value: number | bigint, options: LongNotationOptions = {}): string {
+  return guardText(() => toLongNotationImpl(value, options), [value], options)
+}
+
+/** The body of {@link toLongNotation}, extracted so the `noThrow` wrapper does not nest it. */
+function toLongNotationImpl(value: number | bigint, options: LongNotationOptions): string {
   assertLongNotationInput(value)
 
   const { groupSeparator = ' ', locale = en } = options
@@ -282,6 +296,11 @@ export function parseLongNotation(
   value: string,
   options: LongNotationParseOptions = {},
 ): number | bigint {
+  return guardNumber(() => parseLongNotationImpl(value, options), options)
+}
+
+/** The body of {@link parseLongNotation}, extracted so the `noThrow` wrapper does not nest it. */
+function parseLongNotationImpl(value: string, options: LongNotationParseOptions): number | bigint {
   const { groupSeparator = ' ', locale = en } = options
   const output = resolveOutput(options.output, 'parseLongNotation')
 

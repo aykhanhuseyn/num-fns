@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { assertFinite, assertNonNegative } from '../shared/validation'
 
 /**
@@ -16,9 +17,11 @@ import { assertFinite, assertNonNegative } from '../shared/validation'
  * simpleInterest(1000, 0.05, 3); // 150 (1000 * 0.05 * 3)
  */
 export function simpleInterest(principal: number, rate: number, time: number): number {
-  assertFinite(principal, 'principal', 'simpleInterest')
-  assertFinite(rate, 'rate', 'simpleInterest')
-  assertNonNegative(time, 'time', 'simpleInterest')
+  return guardNumber(() => {
+    assertFinite(principal, 'principal', 'simpleInterest')
+    assertFinite(rate, 'rate', 'simpleInterest')
+    assertNonNegative(time, 'time', 'simpleInterest')
 
-  return principal * rate * time
+    return principal * rate * time
+  })
 }

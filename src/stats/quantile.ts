@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { percentile } from './percentile'
 
 /**
@@ -8,9 +9,11 @@ import { percentile } from './percentile'
  * quantile([1, 2, 3, 4, 5], 0.5); // 3
  */
 export function quantile(values: readonly number[], q: number): number {
-  if (!Number.isFinite(q) || q < 0 || q > 1) {
-    throw new RangeError(`quantile: q must be between 0 and 1, received ${q}`)
-  }
+  return guardNumber(() => {
+    if (!Number.isFinite(q) || q < 0 || q > 1) {
+      throw new RangeError(`quantile: q must be between 0 and 1, received ${q}`)
+    }
 
-  return percentile(values, q * 100)
+    return percentile(values, q * 100)
+  })
 }

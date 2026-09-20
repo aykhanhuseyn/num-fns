@@ -36,6 +36,9 @@ const ZERO_WORD = 'sıfır'
 /** Word prefixed to the spelled-out form of a negative number. */
 const NEGATIVE_WORD = 'mənfi'
 
+/** Word for an infinite value, emitted under `noThrow` in place of a thrown `RangeError`. */
+const INFINITY_WORD = 'sonsuzluq'
+
 /** Connector joining the integer and fractional part when spelling decimals. */
 const DECIMAL_WORD = 'tam'
 
@@ -230,6 +233,7 @@ export const az: Locale = {
     hundreds: HUNDRED_WORD,
     scales: SCALE_WORDS,
     negative: NEGATIVE_WORD,
+    infinity: INFINITY_WORD,
     // Azerbaijani never uses a connector between a group's tens and ones
     // digit ("otuz dörd", not "otuz tam dörd") — `and` stays unset here;
     // `decimalConnector` (below) is the unrelated integer/fraction joiner.

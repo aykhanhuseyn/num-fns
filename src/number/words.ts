@@ -1,6 +1,7 @@
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
 import { absBigInt, maxSupportedBigInt, splitFixed, toThousandGroups } from '../shared/bigint'
+import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { NumberWordsOptions } from '../shared/types'
 
@@ -121,35 +122,41 @@ export function resolveScaleWord(
  * numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion ..."
  */
 export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
-  if (typeof value === 'number' && !Number.isFinite(value)) {
-    throw new RangeError(`numberToWords: value must be finite, received ${value}`)
-  }
+  return guardText(
+    () => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new RangeError(`numberToWords: value must be finite, received ${value}`)
+      }
 
-  const { locale = en } = options
-  const gender = resolveGender(options.gender, locale)
+      const { locale = en } = options
+      const gender = resolveGender(options.gender, locale)
 
-  const { whole, fraction } =
-    typeof value === 'bigint'
-      ? { whole: absBigInt(value), fraction: 0 }
-      : splitFixed(Math.abs(value), FRACTION_DIGITS)
-  const groups = toThousandGroups(whole)
-  if (groups.length > locale.words.scales.length) {
-    throw new RangeError(
-      `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length)}`,
-    )
-  }
+      const { whole, fraction } =
+        typeof value === 'bigint'
+          ? { whole: absBigInt(value), fraction: 0 }
+          : splitFixed(Math.abs(value), FRACTION_DIGITS)
+      const groups = toThousandGroups(whole)
+      if (groups.length > locale.words.scales.length) {
+        throw new RangeError(
+          `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length)}`,
+        )
+      }
 
-  let words = integerToWords(groups, locale, gender)
-  if (fraction > 0) {
-    const fractionWords = renderFraction(fraction, locale, gender)
-    words = locale.words.decimalConnector
-      ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
-      : `${words} ${fractionWords}`
-  }
+      let words = integerToWords(groups, locale, gender)
+      if (fraction > 0) {
+        const fractionWords = renderFraction(fraction, locale, gender)
+        words = locale.words.decimalConnector
+          ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
+          : `${words} ${fractionWords}`
+      }
 
-  // The sign survives a value that rounds away to zero: `-0.001` reads
-  // "negative zero", matching `round` keeping the sign of such a value.
-  return isSigned(value) ? `${locale.words.negative} ${words}` : words
+      // The sign survives a value that rounds away to zero: `-0.001` reads
+      // "negative zero", matching `round` keeping the sign of such a value.
+      return isSigned(value) ? `${locale.words.negative} ${words}` : words
+    },
+    [value],
+    options,
+  )
 }
 
 /**

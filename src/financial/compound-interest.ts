@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import type { CompoundInterestOptions } from '../shared/types'
 import {
   assertFinite,
@@ -29,13 +30,15 @@ export function compoundInterest(
   time: number,
   options: CompoundInterestOptions = {},
 ): number {
-  assertFinite(principal, 'principal', 'compoundInterest')
-  assertFiniteRate(rate, 'compoundInterest')
-  assertNonNegative(time, 'time', 'compoundInterest')
+  return guardNumber(() => {
+    assertFinite(principal, 'principal', 'compoundInterest')
+    assertFiniteRate(rate, 'compoundInterest')
+    assertNonNegative(time, 'time', 'compoundInterest')
 
-  const { compoundsPerPeriod = 1 } = options
-  assertPositive(compoundsPerPeriod, 'compoundsPerPeriod', 'compoundInterest')
+    const { compoundsPerPeriod = 1 } = options
+    assertPositive(compoundsPerPeriod, 'compoundsPerPeriod', 'compoundInterest')
 
-  const amount = principal * (1 + rate / compoundsPerPeriod) ** (compoundsPerPeriod * time)
-  return amount - principal
+    const amount = principal * (1 + rate / compoundsPerPeriod) ** (compoundsPerPeriod * time)
+    return amount - principal
+  }, options)
 }

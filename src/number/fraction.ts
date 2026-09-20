@@ -1,4 +1,5 @@
 import { en } from '../locale/en'
+import { guardText } from '../shared/no-throw-text'
 import type { FractionWordsOptions } from '../shared/types'
 import { ordinalToWords } from './suffix'
 import { numberToWords } from './words'
@@ -60,6 +61,19 @@ export function fractionToWords(
   numerator: number,
   denominator: number,
   options: FractionWordsOptions = {},
+): string {
+  return guardText(
+    () => fractionToWordsImpl(numerator, denominator, options),
+    [numerator, denominator],
+    options,
+  )
+}
+
+/** The body of {@link fractionToWords}, extracted so the `noThrow` wrapper does not nest it. */
+function fractionToWordsImpl(
+  numerator: number,
+  denominator: number,
+  options: FractionWordsOptions,
 ): string {
   if (!Number.isInteger(denominator) || denominator < 2) {
     throw new RangeError(

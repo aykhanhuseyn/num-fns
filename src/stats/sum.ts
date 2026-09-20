@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 /**
  * Sums an array of numbers.
  *
@@ -5,17 +6,19 @@
  * sum([1, 2, 3]); // 6
  */
 export function sum(values: readonly number[]): number {
-  if (values.length === 0) {
-    throw new RangeError('sum: values must not be empty')
-  }
-
-  let total = 0
-  for (const value of values) {
-    if (!Number.isFinite(value)) {
-      throw new RangeError(`sum: all values must be finite, received ${value}`)
+  return guardNumber(() => {
+    if (values.length === 0) {
+      throw new RangeError('sum: values must not be empty')
     }
-    total += value
-  }
 
-  return total
+    let total = 0
+    for (const value of values) {
+      if (!Number.isFinite(value)) {
+        throw new RangeError(`sum: all values must be finite, received ${value}`)
+      }
+      total += value
+    }
+
+    return total
+  })
 }

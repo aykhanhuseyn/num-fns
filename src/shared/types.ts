@@ -1,3 +1,4 @@
+import type { NoThrowOptions } from '../config'
 import type { GrammaticalGender, Locale } from '../locale/types'
 import type { CurrencyCode } from '../money/currency'
 
@@ -47,12 +48,12 @@ export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
 export type ParseOutput = 'number' | 'bigint'
 
 /** The `output` option every parser accepts — see {@link ParseOutput}. */
-export interface ParseOutputOptions {
+export interface ParseOutputOptions extends NoThrowOptions {
   /** Return a `bigint` instead of a `number`. Defaults to `'number'`. Any other value throws `RangeError`. */
   output?: ParseOutput
 }
 
-export interface NumberFormatOptions {
+export interface NumberFormatOptions extends NoThrowOptions {
   /** Number of fractional digits to keep (a non-negative integer, `RangeError` otherwise). Omit to keep the value's natural precision. */
   decimals?: number
   /** Separator inserted between groups of three integer digits. Defaults to `locale.formatDefaults.thousandsSeparator`. */
@@ -91,7 +92,7 @@ export interface MoneyParseOptions extends NumberParseOptions {
   symbol?: string
 }
 
-export interface MoneyWordsOptions {
+export interface MoneyWordsOptions extends NoThrowOptions {
   /**
    * ISO 4217 code of the currency to spell, e.g. `'EUR'`. Defaults to
    * `locale.currency.code`. Selects the unit words (and their plural forms
@@ -141,7 +142,7 @@ export interface PercentageParseOptions extends NumberParseOptions {
   unit?: PercentageUnit
 }
 
-export interface ShortNotationOptions {
+export interface ShortNotationOptions extends NoThrowOptions {
   /** Number of fractional digits to keep. Defaults to `1`. */
   decimals?: number
   /**
@@ -164,7 +165,7 @@ export interface ShortNotationParseOptions
   extends Pick<ShortNotationOptions, 'locale' | 'decimalSeparator'>,
     ParseOutputOptions {}
 
-export interface LongNotationOptions {
+export interface LongNotationOptions extends NoThrowOptions {
   /**
    * Separator inserted between each scale group. Defaults to `' '`. Must be a
    * non-empty string containing no digits, so that the scale words stay
@@ -179,13 +180,13 @@ export interface LongNotationOptions {
 /** `parseLongNotation`'s options: {@link LongNotationOptions} plus the `output` type. */
 export interface LongNotationParseOptions extends LongNotationOptions, ParseOutputOptions {}
 
-export interface SuffixOptions {
+export interface SuffixOptions extends NoThrowOptions {
   /** String inserted between the value and the suffix. Defaults to `' '`. */
   separator?: string
 }
 
 /** Shared shape for the ordinal-family options (`getOrdinalSuffix`, `ordinalToWords`). */
-export interface OrdinalOptions {
+export interface OrdinalOptions extends NoThrowOptions {
   /** Locale supplying the ordinal suffix/word rules (`locale.ordinal`). Defaults to `en`. */
   locale?: Locale
 }
@@ -195,7 +196,7 @@ export interface ToOrdinalOptions extends OrdinalOptions {
   separator?: string
 }
 
-export interface NumberWordsOptions {
+export interface NumberWordsOptions extends NoThrowOptions {
   /** Locale supplying the cardinal word data (`locale.words`). Defaults to `en`. */
   locale?: Locale
   /**
@@ -214,7 +215,7 @@ export interface NumberWordsOptions {
   gender?: GrammaticalGender
 }
 
-export interface FractionWordsOptions {
+export interface FractionWordsOptions extends NoThrowOptions {
   /**
    * Locale supplying the fraction-word composition. Defaults to `en`.
    * Currently only `az` and `en` are implemented — see `number/fraction.ts`'s
@@ -223,7 +224,7 @@ export interface FractionWordsOptions {
   locale?: Locale
 }
 
-export interface ByteSizeOptions {
+export interface ByteSizeOptions extends NoThrowOptions {
   /** Number of fractional digits to keep. Defaults to `2`. */
   decimals?: number
   /**
@@ -243,14 +244,14 @@ export interface ByteSizeParseOptions
 /** `fromBase`'s trailing options: only the `output` type — see {@link ParseOutput}. */
 export type BaseParseOptions = ParseOutputOptions
 
-export interface DigitWordsOptions {
+export interface DigitWordsOptions extends NoThrowOptions {
   /** String inserted between each spoken digit. Defaults to `' '`. */
   separator?: string
   /** Locale supplying the spoken digit words (`locale.words.zero`/`ones`/`negative`). Defaults to `en`. */
   locale?: Locale
 }
 
-export interface CompoundInterestOptions {
+export interface CompoundInterestOptions extends NoThrowOptions {
   /**
    * Number of times interest compounds within each unit of `time` (e.g. `12`
    * for monthly compounding when `time` is in years). Defaults to `1`

@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { isNegativeZero, isPositiveZero } from '../shared/sign'
 import { assertFinite } from '../shared/validation'
 import { alignScales, fromDecimal, toDecimal } from './decimal'
@@ -19,10 +20,12 @@ import { alignScales, fromDecimal, toDecimal } from './decimal'
  * subtract(-0, 0); // -0
  */
 export function subtract(a: number, b: number): number {
-  assertFinite(a, 'a', 'subtract')
-  assertFinite(b, 'b', 'subtract')
+  return guardNumber(() => {
+    assertFinite(a, 'a', 'subtract')
+    assertFinite(b, 'b', 'subtract')
 
-  const aligned = alignScales(toDecimal(a), toDecimal(b))
-  const negativeZero = isNegativeZero(a) && isPositiveZero(b)
-  return fromDecimal(aligned.a - aligned.b, aligned.scale, 'subtract', negativeZero)
+    const aligned = alignScales(toDecimal(a), toDecimal(b))
+    const negativeZero = isNegativeZero(a) && isPositiveZero(b)
+    return fromDecimal(aligned.a - aligned.b, aligned.scale, 'subtract', negativeZero)
+  })
 }

@@ -1,3 +1,4 @@
+import { guardRecord } from '../shared/no-throw'
 /**
  * ISO 4217 codes `num-fns` ships symbol data for, and that every launch
  * locale carries unit words for (`Locale.currency.units`). A closed union
@@ -52,14 +53,16 @@ const CURRENCIES: Readonly<Record<CurrencyCode, Currency>> = {
  * getCurrency('XYZ'); // throws RangeError
  */
 export function getCurrency(code: CurrencyCode): Currency {
-  // An own-key check rather than a bare index (or `in`) so a JavaScript
-  // caller passing 'constructor' or 'toString' gets the RangeError, not
-  // `Object.prototype`. Not `Object.hasOwn`: the build targets ES2018.
-  const known = Object.keys(CURRENCIES)
-  if (!known.includes(code)) {
-    throw new RangeError(
-      `getCurrency: unknown currency code "${code}" — expected one of ${known.join(', ')}`,
-    )
-  }
-  return CURRENCIES[code]
+  return guardRecord(() => {
+    // An own-key check rather than a bare index (or `in`) so a JavaScript
+    // caller passing 'constructor' or 'toString' gets the RangeError, not
+    // `Object.prototype`. Not `Object.hasOwn`: the build targets ES2018.
+    const known = Object.keys(CURRENCIES)
+    if (!known.includes(code)) {
+      throw new RangeError(
+        `getCurrency: unknown currency code "${code}" — expected one of ${known.join(', ')}`,
+      )
+    }
+    return CURRENCIES[code]
+  })
 }

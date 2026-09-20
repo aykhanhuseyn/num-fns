@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { isSigned } from '../shared/sign'
 import type { RoundingMode } from '../shared/types'
 import { assertFinite } from '../shared/validation'
@@ -36,21 +37,23 @@ const FIVE = BigInt(5)
  * round(-0.4); // -0
  */
 export function round(value: number, precision = 0, mode: RoundingMode = 'halfUp'): number {
-  assertFinite(value, 'value', 'round')
-  if (!Number.isInteger(precision)) {
-    throw new RangeError(`round: precision must be an integer, received ${precision}`)
-  }
+  return guardNumber(() => {
+    assertFinite(value, 'value', 'round')
+    if (!Number.isInteger(precision)) {
+      throw new RangeError(`round: precision must be an integer, received ${precision}`)
+    }
 
-  const { digits, scale } = toDecimal(value)
-  const dropped = scale - precision
-  if (dropped <= 0) return value
+    const { digits, scale } = toDecimal(value)
+    const dropped = scale - precision
+    if (dropped <= 0) return value
 
-  const negative = isSigned(value)
-  const magnitude = digits < ZERO ? -digits : digits
-  const { kept, remainder, half } = split(magnitude, dropped)
-  const rounded = shouldRoundAway(mode, negative, kept, remainder, half) ? kept + ONE : kept
+    const negative = isSigned(value)
+    const magnitude = digits < ZERO ? -digits : digits
+    const { kept, remainder, half } = split(magnitude, dropped)
+    const rounded = shouldRoundAway(mode, negative, kept, remainder, half) ? kept + ONE : kept
 
-  return fromDecimal(negative ? -rounded : rounded, precision, 'round', negative)
+    return fromDecimal(negative ? -rounded : rounded, precision, 'round', negative)
+  })
 }
 
 /**

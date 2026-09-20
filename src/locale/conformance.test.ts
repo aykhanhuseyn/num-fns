@@ -91,6 +91,15 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       expect(thousandsSeparator).not.toBe(decimalSeparator)
     })
 
+    it('names zero, the negative prefix and infinity, all distinct and untrimmed-free', () => {
+      const { zero, negative, infinity } = locale.words
+      for (const word of [zero, negative, infinity]) {
+        expect(word.length).toBeGreaterThan(0)
+        expect(word).toBe(word.trim())
+      }
+      expect(new Set([zero, negative, infinity]).size).toBe(3)
+    })
+
     it('aligns `words.scales` and `notation.scales`: one units slot plus one entry per notation threshold', () => {
       expect(locale.notation.scales.length).toBe(locale.words.scales.length - 1)
     })

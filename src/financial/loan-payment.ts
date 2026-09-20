@@ -1,3 +1,4 @@
+import { guardList, guardNumber } from '../shared/no-throw'
 import { assertFinite, assertFiniteRate, assertPositiveInteger } from '../shared/validation'
 
 /**
@@ -36,12 +37,14 @@ export interface AmortizationScheduleEntry {
  * loanPayment(1000, 0, 10); // 100 (no interest)
  */
 export function loanPayment(principal: number, rate: number, periods: number): number {
-  assertFinite(principal, 'principal', 'loanPayment')
-  assertFiniteRate(rate, 'loanPayment')
-  assertPositiveInteger(periods, 'periods', 'loanPayment')
+  return guardNumber(() => {
+    assertFinite(principal, 'principal', 'loanPayment')
+    assertFiniteRate(rate, 'loanPayment')
+    assertPositiveInteger(periods, 'periods', 'loanPayment')
 
-  if (rate === 0) return principal / periods
-  return (principal * rate) / (1 - (1 + rate) ** -periods)
+    if (rate === 0) return principal / periods
+    return (principal * rate) / (1 - (1 + rate) ** -periods)
+  })
 }
 
 /**
@@ -70,23 +73,25 @@ export function amortizationSchedule(
   rate: number,
   periods: number,
 ): AmortizationScheduleEntry[] {
-  const payment = loanPayment(principal, rate, periods)
+  return guardList(() => {
+    const payment = loanPayment(principal, rate, periods)
 
-  const schedule: AmortizationScheduleEntry[] = []
-  let balance = principal
+    const schedule: AmortizationScheduleEntry[] = []
+    let balance = principal
 
-  for (let period = 1; period <= periods; period++) {
-    const interest = balance * rate
-    let principalPaid = payment - interest
-    balance -= principalPaid
+    for (let period = 1; period <= periods; period++) {
+      const interest = balance * rate
+      let principalPaid = payment - interest
+      balance -= principalPaid
 
-    if (period === periods) {
-      principalPaid += balance
-      balance = 0
+      if (period === periods) {
+        principalPaid += balance
+        balance = 0
+      }
+
+      schedule.push({ period, payment, principal: principalPaid, interest, balance })
     }
 
-    schedule.push({ period, payment, principal: principalPaid, interest, balance })
-  }
-
-  return schedule
+    return schedule
+  })
 }

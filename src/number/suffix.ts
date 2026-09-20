@@ -1,5 +1,6 @@
 import { en } from '../locale/en'
 import { toSafeNumber } from '../shared/bigint'
+import { guardText } from '../shared/no-throw-text'
 import type { OrdinalOptions, SuffixOptions, ToOrdinalOptions } from '../shared/types'
 import { numberToWords } from './words'
 
@@ -26,8 +27,14 @@ import { numberToWords } from './words'
  * getOrdinalSuffix(1, { locale: az }); // "ci" (bir -> birinci)
  */
 export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions = {}): string {
-  const { locale = en } = options
-  return locale.ordinal.suffix(toSafeNumber(value, 'getOrdinalSuffix'))
+  return guardText(
+    () => {
+      const { locale = en } = options
+      return locale.ordinal.suffix(toSafeNumber(value, 'getOrdinalSuffix'))
+    },
+    [value],
+    options,
+  )
 }
 
 /**
@@ -48,14 +55,22 @@ export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions
  * ordinalToWords(3, { locale: az }); // "üçüncü"
  */
 export function ordinalToWords(value: number | bigint, options: OrdinalOptions = {}): string {
-  const isInteger = typeof value === 'bigint' || Number.isInteger(value)
-  if (!isInteger || value < 0) {
-    throw new RangeError(`ordinalToWords: value must be a non-negative integer, received ${value}`)
-  }
+  return guardText(
+    () => {
+      const isInteger = typeof value === 'bigint' || Number.isInteger(value)
+      if (!isInteger || value < 0) {
+        throw new RangeError(
+          `ordinalToWords: value must be a non-negative integer, received ${value}`,
+        )
+      }
 
-  const { locale = en } = options
-  const safe = toSafeNumber(value, 'ordinalToWords')
-  return locale.ordinal.words(safe, numberToWords(safe, { locale }))
+      const { locale = en } = options
+      const safe = toSafeNumber(value, 'ordinalToWords')
+      return locale.ordinal.words(safe, numberToWords(safe, { locale }))
+    },
+    [value],
+    options,
+  )
 }
 
 /**
@@ -84,8 +99,14 @@ export function cardinalToOrdinalWords(
   cardinalWords: string,
   options: OrdinalOptions = {},
 ): string {
-  const { locale = en } = options
-  return locale.ordinal.words(Number.NaN, cardinalWords)
+  return guardText(
+    () => {
+      const { locale = en } = options
+      return locale.ordinal.words(Number.NaN, cardinalWords)
+    },
+    [],
+    options,
+  )
 }
 
 /**
@@ -110,8 +131,14 @@ export function cardinalToOrdinalWords(
  * toOrdinal(5, { separator: ' ' }); // "5 th"
  */
 export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
-  const { separator = '-', locale } = options
-  return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
+  return guardText(
+    () => {
+      const { separator = '-', locale } = options
+      return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
+    },
+    [value],
+    options,
+  )
 }
 
 /**
@@ -130,6 +157,12 @@ export function withSuffix(
   suffix: string,
   options: SuffixOptions = {},
 ): string {
-  const { separator = ' ' } = options
-  return `${value}${separator}${suffix}`
+  return guardText(
+    () => {
+      const { separator = ' ' } = options
+      return `${value}${separator}${suffix}`
+    },
+    [value],
+    options,
+  )
 }

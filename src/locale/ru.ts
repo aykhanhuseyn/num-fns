@@ -372,6 +372,7 @@ export const ru: Locale = {
       { one: 'триллион', few: 'триллиона', many: 'триллионов' },
     ],
     negative: 'минус',
+    infinity: 'бесконечность',
     // The standard spoken reading names the decimal comma itself: `12.34`
     // -> "двенадцать запятая тридцать четыре" (`todo.md` §2).
     decimalConnector: 'запятая',

@@ -3,6 +3,8 @@ import { multiply } from '../arithmetic/multiply'
 import { en } from '../locale/en'
 import { formatNumber, parseNumber } from '../number/format'
 import { resolveOutput } from '../shared/bigint'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import type {
   PercentageFormatOptions,
   PercentageParseOptions,
@@ -46,26 +48,32 @@ export function formatPercentage(
   value: number | bigint,
   options: PercentageFormatOptions = {},
 ): string {
-  const {
-    locale = en,
-    decimals = 0,
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-    roundingMode,
-    space = false,
-    multiplyBy100 = false,
-    unit = 'percent',
-  } = options
+  return guardText(
+    () => {
+      const {
+        locale = en,
+        decimals = 0,
+        thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+        decimalSeparator = locale.formatDefaults.decimalSeparator,
+        roundingMode,
+        space = false,
+        multiplyBy100 = false,
+        unit = 'percent',
+      } = options
 
-  const { sign, scale } = PERCENTAGE_UNITS[unit]
-  const scaledValue = multiplyBy100 ? scaleUp(value, scale) : value
-  const formattedNumber = formatNumber(scaledValue, {
-    decimals,
-    thousandsSeparator,
-    decimalSeparator,
-    roundingMode,
-  })
-  return `${formattedNumber}${space ? ' ' : ''}${sign}`
+      const { sign, scale } = PERCENTAGE_UNITS[unit]
+      const scaledValue = multiplyBy100 ? scaleUp(value, scale) : value
+      const formattedNumber = formatNumber(scaledValue, {
+        decimals,
+        thousandsSeparator,
+        decimalSeparator,
+        roundingMode,
+      })
+      return `${formattedNumber}${space ? ' ' : ''}${sign}`
+    },
+    [value],
+    options,
+  )
 }
 
 /**
@@ -112,26 +120,28 @@ export function parsePercentage(
   value: string,
   options: PercentageParseOptions = {},
 ): number | bigint {
-  const output = resolveOutput(options.output, 'parsePercentage')
-  const {
-    locale = en,
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-    asRatio = false,
-    unit = 'percent',
-  } = options
+  return guardNumber(() => {
+    const output = resolveOutput(options.output, 'parsePercentage')
+    const {
+      locale = en,
+      thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+      decimalSeparator = locale.formatDefaults.decimalSeparator,
+      asRatio = false,
+      unit = 'percent',
+    } = options
 
-  if (asRatio && output === 'bigint') {
-    throw new RangeError(
-      'parsePercentage: asRatio produces a fraction and cannot be combined with output "bigint"',
-    )
-  }
+    if (asRatio && output === 'bigint') {
+      throw new RangeError(
+        'parsePercentage: asRatio produces a fraction and cannot be combined with output "bigint"',
+      )
+    }
 
-  const { sign, scale } = PERCENTAGE_UNITS[unit]
-  const withoutSign = value.split(sign).join('').trim()
-  if (output === 'bigint') {
-    return parseNumber(withoutSign, { thousandsSeparator, decimalSeparator, output })
-  }
-  const numeric = parseNumber(withoutSign, { thousandsSeparator, decimalSeparator })
-  return asRatio ? divide(numeric, scale) : numeric
+    const { sign, scale } = PERCENTAGE_UNITS[unit]
+    const withoutSign = value.split(sign).join('').trim()
+    if (output === 'bigint') {
+      return parseNumber(withoutSign, { thousandsSeparator, decimalSeparator, output })
+    }
+    const numeric = parseNumber(withoutSign, { thousandsSeparator, decimalSeparator })
+    return asRatio ? divide(numeric, scale) : numeric
+  }, options)
 }

@@ -1,4 +1,5 @@
 import { ZERO } from '../shared/bigint'
+import { guardBoolean } from '../shared/no-throw'
 
 const TWO = BigInt(2)
 
@@ -14,13 +15,15 @@ const TWO = BigInt(2)
  * isEven(BigInt('123456789012345678901234567890')); // true
  */
 export function isEven(value: number | bigint): boolean {
-  if (typeof value === 'bigint') return value % TWO === ZERO
+  return guardBoolean(() => {
+    if (typeof value === 'bigint') return value % TWO === ZERO
 
-  if (!Number.isInteger(value)) {
-    throw new TypeError(`isEven: value must be an integer, received ${value}`)
-  }
+    if (!Number.isInteger(value)) {
+      throw new TypeError(`isEven: value must be an integer, received ${value}`)
+    }
 
-  return value % 2 === 0
+    return value % 2 === 0
+  })
 }
 
 /**
@@ -35,11 +38,13 @@ export function isEven(value: number | bigint): boolean {
  * isOdd(BigInt('123456789012345678901234567891')); // true
  */
 export function isOdd(value: number | bigint): boolean {
-  if (typeof value === 'bigint') return value % TWO !== ZERO
+  return guardBoolean(() => {
+    if (typeof value === 'bigint') return value % TWO !== ZERO
 
-  if (!Number.isInteger(value)) {
-    throw new TypeError(`isOdd: value must be an integer, received ${value}`)
-  }
+    if (!Number.isInteger(value)) {
+      throw new TypeError(`isOdd: value must be an integer, received ${value}`)
+    }
 
-  return value % 2 !== 0
+    return value % 2 !== 0
+  })
 }

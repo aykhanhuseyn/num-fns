@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { assertFinite, assertFiniteBounds } from '../shared/validation'
 
 /**
@@ -9,10 +10,12 @@ import { assertFinite, assertFiniteBounds } from '../shared/validation'
  * clamp(5, 0, 10); // 5
  */
 export function clamp(value: number, min: number, max: number): number {
-  assertFinite(value, 'value', 'clamp')
-  assertFiniteBounds(min, max, 'clamp')
+  return guardNumber(() => {
+    assertFinite(value, 'value', 'clamp')
+    assertFiniteBounds(min, max, 'clamp')
 
-  if (value < min) return min
-  if (value > max) return max
-  return value
+    if (value < min) return min
+    if (value > max) return max
+    return value
+  })
 }

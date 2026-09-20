@@ -18,10 +18,11 @@ import * as numFns from './index'
  * is locale-generic rather than Azerbaijani: `number/notation.ts` imports it
  * from `number/words.ts` and the flat `export *` barrel carried it out to the
  * root. `index.ts` re-exports `./number/words` by name now (2026-09-01), so
- * the root surface is exactly the 51 functions below (`getCurrency` joined
+ * the root surface is exactly the 54 functions below (`getCurrency` joined
  * on 2026-09-06 with the ISO 4217 currency registry, and `add`/`subtract`/
  * `multiply`/`divide`/`round` the same day with the decimal-safe precise
- * arithmetic, both `todo.md` §4).
+ * arithmetic, both `todo.md` §4; `getConfig`/`setConfig`/`resetConfig` on
+ * 2026-09-20 with the global `noThrow` config).
  */
 const PUBLIC_EXPORTS = [
   'add',
@@ -37,6 +38,7 @@ const PUBLIC_EXPORTS = [
   'fromBase',
   'fromRoman',
   'futureValue',
+  'getConfig',
   'getCurrency',
   'getOrdinalSuffix',
   'inRange',
@@ -62,7 +64,9 @@ const PUBLIC_EXPORTS = [
   'percentile',
   'presentValue',
   'quantile',
+  'resetConfig',
   'round',
+  'setConfig',
   'simpleInterest',
   'standardDeviation',
   'subtract',

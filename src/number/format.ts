@@ -1,6 +1,8 @@
 import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
 import { absBigInt, decimalToBigInt, ONE, resolveOutput, ZERO } from '../shared/bigint'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 import { assertDistinctSeparators } from '../shared/validation'
@@ -37,31 +39,37 @@ import { assertDistinctSeparators } from '../shared/validation'
  * formatNumber(1234567890123456789n); // "1,234,567,890,123,456,789"
  */
 export function formatNumber(value: number | bigint, options: NumberFormatOptions = {}): string {
-  if (typeof value === 'number' && !Number.isFinite(value)) {
-    throw new RangeError(`formatNumber: value must be finite, received ${value}`)
-  }
+  return guardText(
+    () => {
+      if (typeof value === 'number' && !Number.isFinite(value)) {
+        throw new RangeError(`formatNumber: value must be finite, received ${value}`)
+      }
 
-  const {
-    decimals,
-    locale = en,
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-    roundingMode = 'halfUp',
-  } = options
+      const {
+        decimals,
+        locale = en,
+        thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+        decimalSeparator = locale.formatDefaults.decimalSeparator,
+        roundingMode = 'halfUp',
+      } = options
 
-  assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'formatNumber')
+      assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'formatNumber')
 
-  const { isNegative, integerDigits, fractionDigits } =
-    typeof value === 'bigint'
-      ? splitBigInt(value, decimals)
-      : splitNumber(value, decimals, roundingMode)
+      const { isNegative, integerDigits, fractionDigits } =
+        typeof value === 'bigint'
+          ? splitBigInt(value, decimals)
+          : splitNumber(value, decimals, roundingMode)
 
-  const groupedInteger = groupDigits(integerDigits, thousandsSeparator)
-  const result = fractionDigits
-    ? `${groupedInteger}${decimalSeparator}${fractionDigits}`
-    : groupedInteger
+      const groupedInteger = groupDigits(integerDigits, thousandsSeparator)
+      const result = fractionDigits
+        ? `${groupedInteger}${decimalSeparator}${fractionDigits}`
+        : groupedInteger
 
-  return isNegative ? `-${result}` : result
+      return isNegative ? `-${result}` : result
+    },
+    [value],
+    options,
+  )
 }
 
 /** The sign and the plain integer/fraction digit strings a value formats to, before any separators are applied. */
@@ -131,30 +139,34 @@ export function parseNumber(
 ): number
 export function parseNumber(value: string, options: NumberParseOptions): number | bigint
 export function parseNumber(value: string, options: NumberParseOptions = {}): number | bigint {
-  const {
-    locale = en,
-    thousandsSeparator = locale.formatDefaults.thousandsSeparator,
-    decimalSeparator = locale.formatDefaults.decimalSeparator,
-  } = options
-  const output = resolveOutput(options.output, 'parseNumber')
+  return guardNumber(() => {
+    const {
+      locale = en,
+      thousandsSeparator = locale.formatDefaults.thousandsSeparator,
+      decimalSeparator = locale.formatDefaults.decimalSeparator,
+    } = options
+    const output = resolveOutput(options.output, 'parseNumber')
 
-  assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'parseNumber')
+    assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'parseNumber')
 
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    throw new SyntaxError('parseNumber: cannot parse an empty string')
-  }
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      throw new SyntaxError('parseNumber: cannot parse an empty string')
+    }
 
-  const withoutThousands = removeAll(trimmed, thousandsSeparator)
-  const normalized =
-    decimalSeparator === '.' ? withoutThousands : withoutThousands.split(decimalSeparator).join('.')
+    const withoutThousands = removeAll(trimmed, thousandsSeparator)
+    const normalized =
+      decimalSeparator === '.'
+        ? withoutThousands
+        : withoutThousands.split(decimalSeparator).join('.')
 
-  const numeric = Number(normalized)
-  if (Number.isNaN(numeric)) {
-    throw new SyntaxError(`parseNumber: unable to parse "${value}" as a number`)
-  }
+    const numeric = Number(normalized)
+    if (Number.isNaN(numeric)) {
+      throw new SyntaxError(`parseNumber: unable to parse "${value}" as a number`)
+    }
 
-  return output === 'bigint' ? parseBigInt(normalized, value) : numeric
+    return output === 'bigint' ? parseBigInt(normalized, value) : numeric
+  }, options)
 }
 
 /**

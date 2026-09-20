@@ -1,3 +1,4 @@
+import { guardNumber } from '../shared/no-throw'
 import { assertFinite, assertFiniteRate, assertNonNegative } from '../shared/validation'
 
 /**
@@ -14,9 +15,11 @@ import { assertFinite, assertFiniteRate, assertNonNegative } from '../shared/val
  * futureValue(1000, 0.05, 3); // 1157.625
  */
 export function futureValue(presentAmount: number, rate: number, periods: number): number {
-  assertFinite(presentAmount, 'presentAmount', 'futureValue')
-  assertFiniteRate(rate, 'futureValue')
-  assertNonNegative(periods, 'periods', 'futureValue')
+  return guardNumber(() => {
+    assertFinite(presentAmount, 'presentAmount', 'futureValue')
+    assertFiniteRate(rate, 'futureValue')
+    assertNonNegative(periods, 'periods', 'futureValue')
 
-  return presentAmount * (1 + rate) ** periods
+    return presentAmount * (1 + rate) ** periods
+  })
 }

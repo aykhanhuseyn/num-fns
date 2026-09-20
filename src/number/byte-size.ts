@@ -1,4 +1,6 @@
 import { resolveOutput, scaledBigInt, scaleToFixed } from '../shared/bigint'
+import { guardNumber } from '../shared/no-throw'
+import { guardText } from '../shared/no-throw-text'
 import type { ByteSizeOptions, ByteSizeParseOptions } from '../shared/types'
 import { parseNumber } from './format'
 
@@ -67,29 +69,35 @@ function correctFloatingPointNoise(value: number): number {
  * toByteSize(BigInt(1536)); // "1.5 KB"
  */
 export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}): string {
-  if (typeof bytes === 'number' && !Number.isFinite(bytes)) {
-    throw new RangeError(`toByteSize: bytes must be finite, received ${bytes}`)
-  }
-  if (bytes < 0) {
-    throw new RangeError(`toByteSize: bytes must not be negative, received ${bytes}`)
-  }
+  return guardText(
+    () => {
+      if (typeof bytes === 'number' && !Number.isFinite(bytes)) {
+        throw new RangeError(`toByteSize: bytes must be finite, received ${bytes}`)
+      }
+      if (bytes < 0) {
+        throw new RangeError(`toByteSize: bytes must not be negative, received ${bytes}`)
+      }
 
-  const { decimals = 2, base = 1024, decimalSeparator = '.' } = options
-  if (!Number.isInteger(decimals) || decimals < 0) {
-    throw new RangeError(
-      `toByteSize: decimals must be a non-negative integer, received ${decimals}`,
-    )
-  }
+      const { decimals = 2, base = 1024, decimalSeparator = '.' } = options
+      if (!Number.isInteger(decimals) || decimals < 0) {
+        throw new RangeError(
+          `toByteSize: decimals must be a non-negative integer, received ${decimals}`,
+        )
+      }
 
-  for (const [exponent, label] of BYTE_SCALES) {
-    const threshold = base ** exponent
-    if (bytes >= threshold) {
-      const scaled = trimTrailingZeros(scaleToFixed(bytes, threshold, decimals))
-      return `${scaled.replace('.', decimalSeparator)} ${label}`
-    }
-  }
+      for (const [exponent, label] of BYTE_SCALES) {
+        const threshold = base ** exponent
+        if (bytes >= threshold) {
+          const scaled = trimTrailingZeros(scaleToFixed(bytes, threshold, decimals))
+          return `${scaled.replace('.', decimalSeparator)} ${label}`
+        }
+      }
 
-  return `${scaleToFixed(bytes, 1, 0)} B`
+      return `${scaleToFixed(bytes, 1, 0)} B`
+    },
+    [bytes],
+    options,
+  )
 }
 
 /**
@@ -122,32 +130,34 @@ export function parseByteSize(
 ): number
 export function parseByteSize(value: string, options: ByteSizeParseOptions): number | bigint
 export function parseByteSize(value: string, options: ByteSizeParseOptions = {}): number | bigint {
-  const { base = 1024, decimalSeparator = '.' } = options
-  const output = resolveOutput(options.output, 'parseByteSize')
+  return guardNumber(() => {
+    const { base = 1024, decimalSeparator = '.' } = options
+    const output = resolveOutput(options.output, 'parseByteSize')
 
-  const trimmed = value.trim()
-  if (trimmed === '') {
-    throw new SyntaxError('parseByteSize: cannot parse an empty string')
-  }
-
-  const lowerTrimmed = trimmed.toLowerCase()
-
-  for (const [exponent, label] of BYTE_SCALES) {
-    const lowerLabel = label.toLowerCase()
-    if (lowerTrimmed.endsWith(lowerLabel)) {
-      const numericPart = trimmed.slice(0, trimmed.length - label.length).trim()
-      if (output === 'bigint') {
-        return scaledBigInt(numericPart, base ** exponent, decimalSeparator, 'parseByteSize')
-      }
-      const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
-      return correctFloatingPointNoise(numeric * base ** exponent)
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      throw new SyntaxError('parseByteSize: cannot parse an empty string')
     }
-  }
 
-  if (lowerTrimmed.endsWith('b')) {
-    const numericPart = trimmed.slice(0, trimmed.length - 1).trim()
-    return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator, output })
-  }
+    const lowerTrimmed = trimmed.toLowerCase()
 
-  return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
+    for (const [exponent, label] of BYTE_SCALES) {
+      const lowerLabel = label.toLowerCase()
+      if (lowerTrimmed.endsWith(lowerLabel)) {
+        const numericPart = trimmed.slice(0, trimmed.length - label.length).trim()
+        if (output === 'bigint') {
+          return scaledBigInt(numericPart, base ** exponent, decimalSeparator, 'parseByteSize')
+        }
+        const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
+        return correctFloatingPointNoise(numeric * base ** exponent)
+      }
+    }
+
+    if (lowerTrimmed.endsWith('b')) {
+      const numericPart = trimmed.slice(0, trimmed.length - 1).trim()
+      return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator, output })
+    }
+
+    return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
+  }, options)
 }
