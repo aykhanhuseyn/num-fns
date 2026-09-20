@@ -80,10 +80,11 @@ describe('toShortNotation', () => {
     expect(toShortNotation(0.4)).toBe('0')
   })
 
-  it('never emits "-0" for a negative value that rounds to zero', () => {
-    expect(toShortNotation(-0.4)).toBe('0')
-    expect(toShortNotation(-0)).toBe('0')
+  it('emits "-0" for a negative value that rounds away to zero', () => {
+    expect(toShortNotation(-0.4)).toBe('-0')
+    expect(toShortNotation(-0)).toBe('-0')
     expect(toShortNotation(-0.5)).toBe('-1')
+    expect(toShortNotation(0.4)).toBe('0')
   })
 
   it('keeps every digit of a number whose scaled value is past 1e21, like a bigint', () => {
@@ -125,8 +126,9 @@ describe('toShortNotation', () => {
             expect(toShortNotation(BigInt(value), { locale, decimals })).toBe(
               toShortNotation(value, { locale, decimals }),
             )
+            // `BigInt(-0)` is `0n`: no negative zero bigint, so no "-0".
             expect(toShortNotation(BigInt(-value), { locale, decimals })).toBe(
-              toShortNotation(-value, { locale, decimals }),
+              toShortNotation(value === 0 ? 0 : -value, { locale, decimals }),
             )
           }
         }

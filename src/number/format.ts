@@ -1,6 +1,7 @@
 import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
 import { absBigInt, decimalToBigInt, ONE, resolveOutput, ZERO } from '../shared/bigint'
+import { isSigned } from '../shared/sign'
 import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 import { assertDistinctSeparators } from '../shared/validation'
 
@@ -23,6 +24,10 @@ import { assertDistinctSeparators } from '../shared/validation'
  * as written, never converted to a `number` — and `decimals` pads it with
  * zeros (`formatNumber(10n, { decimals: 2 })` is `"10.00"`); `roundingMode`
  * has nothing to round and is ignored.
+ *
+ * The sign of a zero is kept: `formatNumber(-0)` is `"-0"`, and so is a
+ * negative value that rounds away to zero (`formatNumber(-0.4, { decimals: 0 })`).
+ * `-0n` does not exist, so a `bigint` zero is always `"0"`.
  *
  * @example
  * formatNumber(1234567.891, { decimals: 2 }); // "1,234,567.89"
@@ -71,7 +76,8 @@ function splitNumber(
   decimals: number | undefined,
   roundingMode: NonNullable<NumberFormatOptions['roundingMode']>,
 ): SplitDigits {
-  // `round` never returns -0, so a value that rounds to zero formats as "0".
+  // `round` keeps the sign of a value that rounds away to zero, so `-0.4` at
+  // `decimals: 0` stays negative and formats as "-0".
   const rounded = decimals === undefined ? value : round(value, decimals, roundingMode)
   const absolute = Math.abs(rounded)
   // `toFixed` is safe here only because the value has already been rounded:
@@ -80,7 +86,7 @@ function splitNumber(
   // the "1.005 -> 1.00" trap only bites when toFixed has to drop digits.
   const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals)
   const [integerDigits = '0', fractionDigits = ''] = fixed.split('.')
-  return { isNegative: rounded < 0, integerDigits, fractionDigits }
+  return { isNegative: isSigned(rounded), integerDigits, fractionDigits }
 }
 
 /**

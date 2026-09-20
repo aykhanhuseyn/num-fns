@@ -1,3 +1,4 @@
+import { isSigned } from '../shared/sign'
 import { assertFinite } from '../shared/validation'
 import { digitCount, fromDecimal, pow10, toDecimal } from './decimal'
 
@@ -21,12 +22,15 @@ const QUOTIENT_DIGITS = 25
  * by rounding the true quotient.
  *
  * Throws `RangeError` on non-finite input, when `divisor` is `0`, or when
- * the result is too large for a JavaScript number. Never returns `-0`.
+ * the result is too large for a JavaScript number. A zero quotient carries
+ * the IEEE 754 sign of the operands, so `divide(0, -5)` is `-0` — and so is
+ * a negative value that underflows (`divide(-1e-308, 1e308)`).
  *
  * @example
  * divide(0.3, 0.1); // 3
  * divide(1, 3); // 0.3333333333333333
  * divide(1999, 100); // 19.99
+ * divide(0, -5); // -0
  */
 export function divide(dividend: number, divisor: number): number {
   assertFinite(dividend, 'dividend', 'divide')
@@ -43,5 +47,6 @@ export function divide(dividend: number, divisor: number): number {
   // number has at most 17 significant digits, so the shift is always positive.
   const shift = QUOTIENT_DIGITS + digitCount(y.digits) - digitCount(x.digits)
   const quotient = (x.digits * pow10(shift)) / y.digits
-  return fromDecimal(quotient, x.scale - y.scale + shift, 'divide')
+  const negativeZero = isSigned(dividend) !== isSigned(divisor)
+  return fromDecimal(quotient, x.scale - y.scale + shift, 'divide', negativeZero)
 }

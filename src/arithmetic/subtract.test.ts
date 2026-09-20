@@ -44,8 +44,8 @@ describe('subtract', () => {
     expect(subtract(1e9, 0.001)).toBe(999999999.999)
   })
 
-  it('never returns -0', () => {
-    expect(Object.is(subtract(-0, 0), -0)).toBe(false)
+  it('gives a signed zero only for (-0) - 0 (IEEE 754)', () => {
+    expect(Object.is(subtract(-0, 0), -0)).toBe(true)
     expect(Object.is(subtract(0, 0), -0)).toBe(false)
     expect(Object.is(subtract(-0, -0), -0)).toBe(false)
     expect(Object.is(subtract(-1.5, -1.5), -0)).toBe(false)

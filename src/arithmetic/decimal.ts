@@ -65,11 +65,20 @@ export function toDecimal(value: number): Decimal {
  * `Number("<digits>e<-scale>")` because string-to-number conversion is
  * correctly rounded, whereas `Number(digits) / 10 ** scale` rounds twice.
  * Throws `RangeError` when the exact result is too large for a JS number —
- * a "precise" function never hands back `Infinity`. Never returns `-0`: a
- * negative result too small for a JS number (`-1e-308 / 1e308`) underflows
- * to `-0` in `Number()`, and is normalised to `0` here.
+ * a "precise" function never hands back `Infinity`.
+ *
+ * A zero result keeps its sign (the 2026-09-20 "`-0` is a value" decision).
+ * Two things can make it negative: the exact result underflowed from a
+ * negative value (`-1e-308 / 1e308`), which `digits < 0` already records, or
+ * the exact digits are zero but IEEE 754 says the sign is negative
+ * (`multiply(-1, 0)`), which only the caller knows — hence `negativeZero`.
  */
-export function fromDecimal(digits: bigint, scale: number, context: string): number {
+export function fromDecimal(
+  digits: bigint,
+  scale: number,
+  context: string,
+  negativeZero = false,
+): number {
   const literal = `${digits}e${-scale}`
   const result = Number(literal)
   if (!Number.isFinite(result)) {
@@ -77,7 +86,8 @@ export function fromDecimal(digits: bigint, scale: number, context: string): num
       `${context}: result ${literal} is outside the range of a JavaScript number`,
     )
   }
-  return result === 0 ? 0 : result
+  if (result !== 0) return result
+  return digits < ZERO || negativeZero ? -0 : 0
 }
 
 /** Rewrites two decimals over their larger (finer) common scale so their `digits` can be added or compared directly. */

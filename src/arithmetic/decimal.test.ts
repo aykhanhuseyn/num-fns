@@ -52,12 +52,17 @@ describe('fromDecimal', () => {
     expect(fromDecimal(BigInt(1005), 3, 'test')).toBe(1.005)
   })
 
-  it('never returns -0', () => {
+  it('returns +0 for zero digits unless the caller asks for a signed zero', () => {
     expect(Object.is(fromDecimal(BigInt(0), 5, 'test'), -0)).toBe(false)
     expect(Object.is(fromDecimal(BigInt(0), -5, 'test'), -0)).toBe(false)
     expect(fromDecimal(BigInt(0), 0, 'test')).toBe(0)
-    // Negative underflow: Number('-1e-400') is -0; it must come out as 0.
-    expect(Object.is(fromDecimal(BigInt(-1), 400, 'test'), -0)).toBe(false)
+    expect(Object.is(fromDecimal(BigInt(0), 0, 'test', true), -0)).toBe(true)
+  })
+
+  it('keeps the sign of a negative value that underflows to zero', () => {
+    // Number('-1e-400') is -0, and -0 is a value: it comes out as -0.
+    expect(Object.is(fromDecimal(BigInt(-1), 400, 'test'), -0)).toBe(true)
+    expect(Object.is(fromDecimal(BigInt(1), 400, 'test'), -0)).toBe(false)
   })
 
   it('throws RangeError, prefixed with the context, when the result overflows', () => {

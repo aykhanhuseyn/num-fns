@@ -1,3 +1,4 @@
+import { isSigned } from '../shared/sign'
 import type { RoundingMode } from '../shared/types'
 import { assertFinite } from '../shared/validation'
 import { digitCount, fromDecimal, pow10, toDecimal } from './decimal'
@@ -22,7 +23,8 @@ const FIVE = BigInt(5)
  * Throws `RangeError` on non-finite input, when `precision` is not an
  * integer, or when the result is too large for a JavaScript number (only
  * reachable with an enormous negative `precision` under `'ceil'`/`'floor'`).
- * Never returns `-0`.
+ * The sign of the input survives: a negative value that rounds away to zero
+ * is `-0`, not `0` (the 2026-09-20 "`-0` is a value" decision).
  *
  * @example
  * round(1.005, 2); // 1.01
@@ -31,6 +33,7 @@ const FIVE = BigInt(5)
  * round(-2.5, 0, 'halfDown'); // -2
  * round(1234, -2); // 1200
  * round(-1.21, 1, 'floor'); // -1.3
+ * round(-0.4); // -0
  */
 export function round(value: number, precision = 0, mode: RoundingMode = 'halfUp'): number {
   assertFinite(value, 'value', 'round')
@@ -40,14 +43,14 @@ export function round(value: number, precision = 0, mode: RoundingMode = 'halfUp
 
   const { digits, scale } = toDecimal(value)
   const dropped = scale - precision
-  if (dropped <= 0) return value === 0 ? 0 : value
+  if (dropped <= 0) return value
 
-  const negative = digits < ZERO
-  const magnitude = negative ? -digits : digits
+  const negative = isSigned(value)
+  const magnitude = digits < ZERO ? -digits : digits
   const { kept, remainder, half } = split(magnitude, dropped)
   const rounded = shouldRoundAway(mode, negative, kept, remainder, half) ? kept + ONE : kept
 
-  return fromDecimal(negative ? -rounded : rounded, precision, 'round')
+  return fromDecimal(negative ? -rounded : rounded, precision, 'round', negative)
 }
 
 /**

@@ -115,10 +115,11 @@ describe('numberToWords', () => {
       expect(numberToWords(-0.999, { locale: en })).toBe('negative one')
     })
 
-    it('reads a value that rounds to zero as plain zero, never "negative zero"', () => {
-      expect(numberToWords(-0.001, { locale: en })).toBe('zero')
-      expect(numberToWords(-0, { locale: en })).toBe('zero')
+    it('keeps the sign of a value that rounds away to zero', () => {
+      expect(numberToWords(-0.001, { locale: en })).toBe('negative zero')
+      expect(numberToWords(-0, { locale: en })).toBe('negative zero')
       expect(numberToWords(0.004, { locale: en })).toBe('zero')
+      expect(numberToWords(0, { locale: en })).toBe('zero')
     })
 
     it('checks the magnitude cap after rounding, so a carry cannot slip past it', () => {
@@ -334,7 +335,11 @@ describe('numberToWords', () => {
     it.each(LOCALES)('spells a bigint exactly like the equivalent number (%s)', (_code, locale) => {
       for (const value of AGREEMENT_VALUES) {
         expect(numberToWords(BigInt(value), { locale })).toBe(numberToWords(value, { locale }))
-        expect(numberToWords(BigInt(-value), { locale })).toBe(numberToWords(-value, { locale }))
+        // `-0n` does not exist (`BigInt(-0)` is `0n`), so the negated zero is
+        // the one value where the two paths legitimately differ.
+        expect(numberToWords(BigInt(-value), { locale })).toBe(
+          numberToWords(value === 0 ? 0 : -value, { locale }),
+        )
       }
     })
 

@@ -49,15 +49,19 @@ describe('multiply', () => {
     expect(multiply(1e300, 1e-300)).toBe(1)
   })
 
-  it('never returns -0', () => {
-    expect(Object.is(multiply(-1, 0), -0)).toBe(false)
-    expect(Object.is(multiply(0, -1), -0)).toBe(false)
-    expect(Object.is(multiply(-0, 5), -0)).toBe(false)
+  it('signs a zero product by the factors, like IEEE 754', () => {
+    expect(Object.is(multiply(-1, 0), -0)).toBe(true)
+    expect(Object.is(multiply(0, -1), -0)).toBe(true)
+    expect(Object.is(multiply(-0, 5), -0)).toBe(true)
+    expect(Object.is(multiply(-2.5, 0), -0)).toBe(true)
     expect(Object.is(multiply(-0, -0), -0)).toBe(false)
-    expect(Object.is(multiply(-2.5, 0), -0)).toBe(false)
-    // A negative product too small for a JS number underflows to 0, not -0.
-    expect(Object.is(multiply(-1e-308, 1e-308), -0)).toBe(false)
-    expect(Object.is(multiply(-5e-324, 0.1), -0)).toBe(false)
+    expect(Object.is(multiply(0, 0), -0)).toBe(false)
+  })
+
+  it('keeps the sign of a negative product that underflows', () => {
+    expect(Object.is(multiply(-1e-308, 1e-308), -0)).toBe(true)
+    expect(Object.is(multiply(-5e-324, 0.1), -0)).toBe(true)
+    expect(Object.is(multiply(1e-308, 1e-308), -0)).toBe(false)
   })
 
   it('throws RangeError when a is not finite', () => {

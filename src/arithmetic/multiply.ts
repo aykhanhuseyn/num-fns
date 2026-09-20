@@ -1,3 +1,4 @@
+import { isSigned } from '../shared/sign'
 import { assertFinite } from '../shared/validation'
 import { fromDecimal, toDecimal } from './decimal'
 
@@ -8,12 +9,14 @@ import { fromDecimal, toDecimal } from './decimal'
  * exactly, and the result is the closest JavaScript number to that product.
  *
  * Throws `RangeError` on non-finite input or when the result is too large
- * for a JavaScript number. Never returns `-0`.
+ * for a JavaScript number. A zero product carries the IEEE 754 sign of the
+ * factors, so `multiply(-1, 0)` is `-0`.
  *
  * @example
  * multiply(0.1, 3); // 0.3
  * multiply(1.1, 1.1); // 1.21
  * multiply(19.99, 100); // 1999
+ * multiply(-1, 0); // -0
  */
 export function multiply(a: number, b: number): number {
   assertFinite(a, 'a', 'multiply')
@@ -21,5 +24,6 @@ export function multiply(a: number, b: number): number {
 
   const x = toDecimal(a)
   const y = toDecimal(b)
-  return fromDecimal(x.digits * y.digits, x.scale + y.scale, 'multiply')
+  const negativeZero = isSigned(a) !== isSigned(b)
+  return fromDecimal(x.digits * y.digits, x.scale + y.scale, 'multiply', negativeZero)
 }

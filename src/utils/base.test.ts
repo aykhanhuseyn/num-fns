@@ -98,9 +98,17 @@ describe('fromBase', () => {
     expect(() => fromBase('10', 37)).toThrow(RangeError)
   })
 
-  it('parses "-0" to plain 0 (there is no negative-zero bigint behind it)', () => {
-    expect(fromBase('-0', 2)).toBe(0)
-    expect(Object.is(fromBase('-0', 2), -0)).toBe(false)
+  it('parses "-0" to -0 as a number, and to 0n as a bigint', () => {
+    expect(Object.is(fromBase('-0', 2), -0)).toBe(true)
+    expect(Object.is(fromBase('0', 2), -0)).toBe(false)
+    // There is no negative-zero bigint, so the exact path cannot carry it.
+    expect(fromBase('-0', 2, { output: 'bigint' })).toBe(BigInt(0))
+  })
+
+  it('round-trips a negative zero through toBase', () => {
+    expect(toBase(-0, 2)).toBe('-0')
+    expect(toBase(0, 2)).toBe('0')
+    expect(Object.is(fromBase(toBase(-0, 16), 16), -0)).toBe(true)
   })
 
   it('accepts an explicit output: "number"', () => {

@@ -50,17 +50,24 @@ describe('moneyToWords', () => {
     expect(moneyToWords(2.675, { locale: ru })).toBe('два рубля шестьдесят восемь копеек')
   })
 
-  it('reads an amount that rounds to zero as plain zero, never "negative zero"', () => {
-    expect(moneyToWords(-0.001)).toBe('zero dollars')
-    expect(moneyToWords(-0.004, { includeZeroMinor: true })).toBe('zero dollars zero cents')
+  it('keeps the sign of an amount that rounds away to zero', () => {
+    expect(moneyToWords(-0.001)).toBe('negative zero dollars')
+    expect(moneyToWords(-0.004, { includeZeroMinor: true })).toBe(
+      'negative zero dollars zero cents',
+    )
     expect(moneyToWords(-0.005)).toBe('negative zero dollars one cent')
+    expect(moneyToWords(-0)).toBe('negative zero dollars')
   })
 
   it('spells a whole number amount identically as a number and as a bigint', () => {
     for (const amount of [0, 1, 2, 5, 21, 1001, 1234567, 999999999999999]) {
       for (const locale of [en, az, ru, es]) {
         expect(moneyToWords(amount, { locale })).toBe(moneyToWords(BigInt(amount), { locale }))
-        expect(moneyToWords(-amount, { locale })).toBe(moneyToWords(BigInt(-amount), { locale }))
+        // `BigInt(-0)` is `0n` — there is no negative zero bigint — so the
+        // negated zero is the one amount the two paths differ on.
+        expect(moneyToWords(amount === 0 ? 0 : -amount, { locale })).toBe(
+          moneyToWords(BigInt(-amount), { locale }),
+        )
       }
     }
   })
@@ -292,7 +299,9 @@ describe('moneyToWords', () => {
       for (const amount of [0, 1, 2, 5, 21, 100, 1001, 999999999999999]) {
         for (const locale of [en, az, ru, es, enGB]) {
           expect(moneyToWords(BigInt(amount), { locale })).toBe(moneyToWords(amount, { locale }))
-          expect(moneyToWords(BigInt(-amount), { locale })).toBe(moneyToWords(-amount, { locale }))
+          expect(moneyToWords(BigInt(-amount), { locale })).toBe(
+            moneyToWords(amount === 0 ? 0 : -amount, { locale }),
+          )
         }
       }
     })

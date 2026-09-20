@@ -6,7 +6,8 @@ import type {
   PluralCategory,
 } from '../locale/types'
 import { numberToWords } from '../number/words'
-import { absBigInt, pluralOperand, splitFixed, ZERO } from '../shared/bigint'
+import { absBigInt, pluralOperand, splitFixed } from '../shared/bigint'
+import { isSigned } from '../shared/sign'
 import type { MoneyWordsOptions } from '../shared/types'
 import { type CurrencyCode, getCurrency } from './currency'
 
@@ -106,13 +107,13 @@ interface AmountParts {
  * exact in decimal, so `2.675` is two dollars and sixty-eight cents as
  * written, not the sixty-seven `Math.round((2.675 - 2) * 100)` gives, and a
  * rounded-up minor part (`1.999` at two decimals) carries into the major
- * unit as part of the rounding. An amount that rounds to zero (`-0.001`)
- * is not negative.
+ * unit as part of the rounding. The sign survives an amount that rounds
+ * away to zero: `-0.001` is spelled negative, like `-0` itself.
  */
 function splitAmount(value: number, decimals: number): AmountParts {
   const { whole, fraction } = splitFixed(Math.abs(value), decimals)
   return {
-    isNegative: value < 0 && (whole !== ZERO || fraction !== 0),
+    isNegative: isSigned(value),
     major: whole,
     minor: fraction,
   }
@@ -120,5 +121,5 @@ function splitAmount(value: number, decimals: number): AmountParts {
 
 /** A `bigint` amount is a whole number of major units: nothing to round, no minor part. */
 function splitBigIntAmount(value: bigint): AmountParts {
-  return { isNegative: value < ZERO, major: absBigInt(value), minor: 0 }
+  return { isNegative: isSigned(value), major: absBigInt(value), minor: 0 }
 }

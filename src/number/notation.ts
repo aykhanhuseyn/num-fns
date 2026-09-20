@@ -11,6 +11,7 @@ import {
   toThousandGroups,
   ZERO,
 } from '../shared/bigint'
+import { isSigned } from '../shared/sign'
 import type {
   LongNotationOptions,
   LongNotationParseOptions,
@@ -37,9 +38,9 @@ import { resolveScaleWord } from './words'
  * written, where `(2675000 / 1e6).toFixed(2)` gave `"2.67"` because the
  * double is stored just below the tie — and the equal `bigint` formats to
  * the same string, every digit. A value past the largest scale keeps every
- * digit (`"1500T"`, never `"1.5e15"`), and a value that rounds to zero
- * (`-0.4`) is `"0"`, not `"-0"`. `decimals` must be a non-negative integer
- * (`RangeError` otherwise).
+ * digit (`"1500T"`, never `"1.5e15"`), and a negative value that rounds to
+ * zero (`-0.4`) keeps its sign: `"-0"`, not `"0"`. `decimals` must be a
+ * non-negative integer (`RangeError` otherwise).
  *
  * @example
  * toShortNotation(1500); // "1.5K"
@@ -71,17 +72,17 @@ export function toShortNotation(
     if (absolute >= threshold) {
       const scaled = trimTrailingZeros(scaleToFixed(absolute, threshold, decimals))
       const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
-      return `${signFor(value, scaled)}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
+      return `${signFor(value)}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
     }
   }
 
   const whole = scaleToFixed(absolute, 1, 0)
-  return `${signFor(value, whole)}${whole}`
+  return `${signFor(value)}${whole}`
 }
 
-/** `"-"` for a negative value whose rendered magnitude is not zero — `-0.4` formats as `"0"`, never `"-0"`. */
-function signFor(value: number | bigint, magnitude: string): string {
-  return value < 0 && magnitude !== '0' ? '-' : ''
+/** `"-"` for any signed value, `-0` included — a magnitude that rounds away to zero still formats as `"-0"`. */
+function signFor(value: number | bigint): string {
+  return isSigned(value) ? '-' : ''
 }
 
 /** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */

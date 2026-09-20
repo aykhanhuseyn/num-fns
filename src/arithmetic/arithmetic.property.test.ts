@@ -176,8 +176,8 @@ describe('multiply/divide', () => {
   it('multiplying by 0 gives exactly 0', () => {
     fc.assert(
       fc.property(decimalNumber(6), (a) => {
-        expect(multiply(a, 0)).toBe(0)
-        expect(multiply(0, a)).toBe(0)
+        expect(Object.is(multiply(a, 0), signedZero(a))).toBe(true)
+        expect(Object.is(multiply(0, a), signedZero(a))).toBe(true)
       }),
     )
   })
@@ -356,12 +356,14 @@ describe('round', () => {
         const remainder = Math.abs(n % 100)
         const sign = n < 0 ? -1 : 1
         const halfUp = remainder >= 50 ? quotient + sign : quotient
-        expect(round(n, -2)).toBe(halfUp * 100 === 0 ? 0 : halfUp * 100)
+        // A zero result keeps the sign of the input, so the oracle has to too.
+        const zero = signedZero(n)
+        expect(round(n, -2)).toBe(halfUp * 100 === 0 ? zero : halfUp * 100)
         expect(round(n, -2, 'floor')).toBe(
-          Math.floor(n / 100) * 100 === 0 ? 0 : Math.floor(n / 100) * 100,
+          Math.floor(n / 100) * 100 === 0 ? zero : Math.floor(n / 100) * 100,
         )
         expect(round(n, -2, 'ceil')).toBe(
-          Math.ceil(n / 100) * 100 === 0 ? 0 : Math.ceil(n / 100) * 100,
+          Math.ceil(n / 100) * 100 === 0 ? zero : Math.ceil(n / 100) * 100,
         )
       }),
     )
@@ -372,17 +374,26 @@ describe('round', () => {
       fc.property(decimalNumber(6), fc.integer({ min: -2, max: 5 }), (value, precision) => {
         fc.pre(value !== 0)
         for (const mode of HALF_ROUNDING_MODES) {
-          expect(round(-value, precision, mode)).toBe(-round(value, precision, mode) || 0)
+          expect(round(-value, precision, mode)).toBe(-round(value, precision, mode))
         }
-        expect(round(-value, precision, 'ceil')).toBe(-round(value, precision, 'floor') || 0)
-        expect(round(-value, precision, 'floor')).toBe(-round(value, precision, 'ceil') || 0)
+        expect(round(-value, precision, 'ceil')).toBe(-round(value, precision, 'floor'))
+        expect(round(-value, precision, 'floor')).toBe(-round(value, precision, 'ceil'))
       }),
     )
   })
 })
 
-describe('never -0', () => {
-  it('add and subtract never return -0', () => {
+/**
+ * The zero a result should carry given the sign of the value it came from —
+ * the oracle for the "`-0` is a value" rule. Kept at module scope so the
+ * property callbacks stay under Biome's cognitive-complexity ceiling.
+ */
+function signedZero(value: number): number {
+  return value < 0 || Object.is(value, -0) ? -0 : 0
+}
+
+describe('signed zero (IEEE 754)', () => {
+  it('add and subtract give -0 only where IEEE says they must', () => {
     fc.assert(
       fc.property(decimalNumber(4), decimalNumber(4), (a, b) => {
         for (const result of [
@@ -392,39 +403,43 @@ describe('never -0', () => {
           subtract(a, b),
           subtract(a, a),
           subtract(-a, -a),
-          subtract(-0, 0),
         ]) {
           expect(Object.is(result, -0)).toBe(false)
         }
+        expect(Object.is(add(-0, -0), -0)).toBe(true)
+        expect(Object.is(subtract(-0, 0), -0)).toBe(true)
       }),
     )
   })
 
-  it('multiply and divide never return -0', () => {
+  it('multiply and divide sign a zero result by their operands', () => {
     fc.assert(
       fc.property(decimalNumber(4), decimalNumber(4), (a, b) => {
-        for (const result of [multiply(a, b), multiply(a, 0), multiply(-a, 0), multiply(0, -a)]) {
-          expect(Object.is(result, -0)).toBe(false)
-        }
-        if (b !== 0) {
-          expect(Object.is(divide(a, b), -0)).toBe(false)
-          expect(Object.is(divide(0, -b), -0)).toBe(false)
-          expect(Object.is(divide(-0, b), -0)).toBe(false)
-        }
+        expect(Object.is(multiply(a, 0), signedZero(a))).toBe(true)
+        expect(Object.is(multiply(-a, 0), signedZero(-a))).toBe(true)
+        expect(Object.is(multiply(0, -a), signedZero(-a))).toBe(true)
+        fc.pre(b !== 0)
+        expect(Object.is(divide(0, -b), signedZero(-b))).toBe(true)
+        expect(Object.is(divide(-0, b), signedZero(-b))).toBe(true)
       }),
     )
   })
 
-  it('round never returns -0', () => {
+  it('round keeps the sign of a value that rounds away to zero', () => {
     fc.assert(
       fc.property(
         decimalNumber(6),
         fc.integer({ min: -12, max: 6 }),
         fc.constantFrom(...ROUNDING_MODES),
         (value, precision, mode) => {
-          expect(Object.is(round(value, precision, mode), -0)).toBe(false)
-          expect(Object.is(round(-value, precision, mode), -0)).toBe(false)
-          expect(Object.is(round(-0, precision, mode), -0)).toBe(false)
+          // The magnitude decides whether the result is zero at all; the sign
+          // of the input decides the sign of that zero, always.
+          for (const input of [value, -value, -0, 0]) {
+            const result = round(input, precision, mode)
+            if (result === 0) {
+              expect(Object.is(result, -0)).toBe(Object.is(signedZero(input), -0))
+            }
+          }
         },
       ),
     )

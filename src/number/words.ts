@@ -1,13 +1,7 @@
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
-import {
-  absBigInt,
-  type FixedParts,
-  maxSupportedBigInt,
-  splitFixed,
-  toThousandGroups,
-  ZERO,
-} from '../shared/bigint'
+import { absBigInt, maxSupportedBigInt, splitFixed, toThousandGroups } from '../shared/bigint'
+import { isSigned } from '../shared/sign'
 import type { NumberWordsOptions } from '../shared/types'
 
 /**
@@ -153,8 +147,9 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
       : `${words} ${fractionWords}`
   }
 
-  // A value that rounds to zero (`-0.001`) reads as plain "zero", like `round` never returning `-0`.
-  return isNegative(value, { whole, fraction }) ? `${locale.words.negative} ${words}` : words
+  // The sign survives a value that rounds away to zero: `-0.001` reads
+  // "negative zero", matching `round` keeping the sign of such a value.
+  return isSigned(value) ? `${locale.words.negative} ${words}` : words
 }
 
 /**
@@ -186,11 +181,6 @@ function renderFraction(
   }
   spoken.push(locale.words.renderGroup(fraction, gender))
   return spoken.join(' ')
-}
-
-/** Whether the spelled value carries the negative word: the input is negative and did not round away to zero. */
-function isNegative(value: number | bigint, { whole, fraction }: FixedParts): boolean {
-  return value < 0 && (whole !== ZERO || fraction !== 0)
 }
 
 /** Renders base-1000 `groups` (least significant first, as `toThousandGroups` returns them; `[]` is zero). */

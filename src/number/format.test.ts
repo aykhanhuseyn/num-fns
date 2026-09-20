@@ -23,8 +23,11 @@ describe('formatNumber', () => {
     expect(formatNumber(-1234.5, { decimals: 1 })).toBe('-1,234.5')
   })
 
-  it('does not prefix zero with a minus sign', () => {
-    expect(formatNumber(-0)).toBe('0')
+  it('keeps the minus sign of a negative zero', () => {
+    expect(formatNumber(-0)).toBe('-0')
+    expect(formatNumber(0)).toBe('0')
+    // `-0n` does not exist, so a bigint zero is never signed.
+    expect(formatNumber(BigInt('-0'))).toBe('0')
   })
 
   it('supports custom separators, overriding the locale default', () => {
@@ -42,9 +45,10 @@ describe('formatNumber', () => {
     expect(() => formatNumber(NaN)).toThrow(RangeError)
   })
 
-  it('does not prefix a value that rounds to zero with a minus sign', () => {
-    expect(formatNumber(-0.4, { decimals: 0 })).toBe('0')
-    expect(formatNumber(-0.001, { decimals: 2 })).toBe('0.00')
+  it('keeps the minus sign of a value that rounds away to zero', () => {
+    expect(formatNumber(-0.4, { decimals: 0 })).toBe('-0')
+    expect(formatNumber(-0.001, { decimals: 2 })).toBe('-0.00')
+    expect(formatNumber(0.4, { decimals: 0 })).toBe('0')
   })
 
   describe('decimal-safe rounding', () => {

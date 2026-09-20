@@ -1,4 +1,5 @@
 import { resolveOutput, toOutput, ZERO } from '../shared/bigint'
+import { isNegativeZero } from '../shared/sign'
 import type { BaseParseOptions } from '../shared/types'
 
 const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
@@ -17,10 +18,15 @@ const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
  * exact hex form and round-trips through {@link fromBase} with
  * `{ output: 'bigint' }`.
  *
+ * A negative zero keeps its sign (`toBase(-0, 2)` is `"-0"`), and
+ * {@link fromBase} reads it back as `-0` for a `number` output. A `bigint`
+ * has no negative zero, so neither direction can produce one.
+ *
  * @example
  * toBase(255, 16); // "ff"
  * toBase(10, 2); // "1010"
  * toBase(-8, 8); // "-10"
+ * toBase(-0, 2); // "-0"
  * toBase(BigInt('123456789012345678901'), 16); // "6b14e9f812f366c35"
  */
 export function toBase(value: number | bigint, radix: number): string {
@@ -34,7 +40,7 @@ export function toBase(value: number | bigint, radix: number): string {
     throw new RangeError(`toBase: value must be a safe integer, received ${value}`)
   }
 
-  return value.toString(radix)
+  return isNegativeZero(value) ? '-0' : value.toString(radix)
 }
 
 /**
@@ -47,8 +53,8 @@ export function toBase(value: number | bigint, radix: number): string {
  * string whose value exceeds `Number.MAX_SAFE_INTEGER` is refused with a
  * pointer to `{ output: 'bigint' }` rather than rounded — the mirror image of
  * {@link toBase}'s safe-integer guard. With `{ output: 'bigint' }` any
- * magnitude is returned exactly. (`"-0"` parses to `0`, not `-0`: there is no
- * negative zero `bigint`.)
+ * magnitude is returned exactly — including `"-0"`, which comes back as `0n`,
+ * since there is no negative zero `bigint`; as a `number` it is `-0`.
  *
  * @example
  * fromBase("ff", 16); // 255
@@ -95,6 +101,7 @@ export function fromBase(
     magnitude = magnitude * bigRadix + BigInt(alphabet.indexOf(char))
   }
 
+  if (isNegative && magnitude === ZERO && output === 'number') return -0
   return toOutput(isNegative ? -magnitude : magnitude, output, 'fromBase')
 }
 

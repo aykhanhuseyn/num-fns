@@ -56,12 +56,16 @@ describe('divide', () => {
     expect(divide(1e300, 1e-8)).toBe(1e308)
   })
 
-  it('never returns -0', () => {
-    expect(Object.is(divide(0, -5), -0)).toBe(false)
-    expect(Object.is(divide(-0, 5), -0)).toBe(false)
+  it('signs a zero quotient by the operands, like IEEE 754', () => {
+    expect(Object.is(divide(0, -5), -0)).toBe(true)
+    expect(Object.is(divide(-0, 5), -0)).toBe(true)
     expect(Object.is(divide(-0, -5), -0)).toBe(false)
-    // A negative quotient too small for a JS number underflows to 0, not -0.
-    expect(Object.is(divide(-1e-308, 1e308), -0)).toBe(false)
+    expect(Object.is(divide(0, 5), -0)).toBe(false)
+  })
+
+  it('keeps the sign of a negative quotient that underflows', () => {
+    expect(Object.is(divide(-1e-308, 1e308), -0)).toBe(true)
+    expect(Object.is(divide(1e-308, 1e308), -0)).toBe(false)
   })
 
   it('throws RangeError when dividend is not finite', () => {

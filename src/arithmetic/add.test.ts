@@ -46,10 +46,10 @@ describe('add', () => {
     expect(add(1e9, 0.001)).toBe(1000000000.001)
   })
 
-  it('never returns -0', () => {
+  it('gives a signed zero only when both addends are -0 (IEEE 754)', () => {
+    expect(Object.is(add(-0, -0), -0)).toBe(true)
     expect(Object.is(add(-0, 0), -0)).toBe(false)
     expect(Object.is(add(0, -0), -0)).toBe(false)
-    expect(Object.is(add(-0, -0), -0)).toBe(false)
     expect(Object.is(add(-1.5, 1.5), -0)).toBe(false)
     expect(Object.is(add(-0.1, 0.1), -0)).toBe(false)
   })
