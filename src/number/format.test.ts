@@ -320,7 +320,7 @@ describe('parseNumber', () => {
     it('throws RangeError for a form Number() accepts but a bigint cannot hold', () => {
       expect(() => parseNumber('Infinity', { output: 'bigint' })).toThrow(RangeError)
       expect(() => parseNumber('Infinity', { output: 'bigint' })).toThrow(
-        'parseNumber: "Infinity" is not a whole number and cannot be returned as a bigint',
+        'parseNumber: "Infinity" is not a finite number',
       )
       expect(() => parseNumber('-Infinity', { output: 'bigint' })).toThrow(RangeError)
       expect(() => parseNumber('0x1f', { output: 'bigint' })).toThrow(RangeError)

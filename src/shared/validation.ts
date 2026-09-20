@@ -29,6 +29,43 @@ export function assertFinite(value: number, label: string, context: string): voi
 }
 
 /**
+ * Throws unless `value` is a finite `number` or a `bigint` — the guard every
+ * function taking a `number | bigint` runs first.
+ *
+ * `typeof value === 'number' && !Number.isFinite(value)` was not enough: it
+ * waves `null` and `undefined` straight through, and `Math.abs(null)` is `0`,
+ * so `formatNumber(null)` used to return `"0"` and `toOrdinal(null)` used to
+ * return `"null-th"`. A JavaScript caller with a missing field should be told,
+ * not quietly given a zero (the 2026-09-20 decision: `NaN`, `null`,
+ * `undefined` and the like throw).
+ */
+export function assertNumericValue(value: unknown, label: string, context: string): void {
+  if (typeof value === 'bigint') return
+  if (typeof value !== 'number') {
+    const received = value === null ? 'null' : typeof value
+    throw new TypeError(`${context}: ${label} must be a number or bigint, received ${received}`)
+  }
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`${context}: ${label} must be finite, received ${value}`)
+  }
+}
+
+/**
+ * Throws `RangeError` when a computed result overflowed to `±Infinity`.
+ *
+ * The counterpart of {@link assertFinite} on the way out: `src/arithmetic/`
+ * refuses to hand back a non-finite number (`fromDecimal`), and the `stats`
+ * helpers that accumulate — `sum`, `variance` — have to refuse the same way,
+ * or `sum([1e308, 1e308])` would be the one `Infinity` the package returns
+ * (`todo.md` §5's edge-case pass).
+ */
+export function assertFiniteResult(value: number, context: string): void {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`${context}: result ${value} is outside the range of a JavaScript number`)
+  }
+}
+
+/**
  * Throws `RangeError` unless `value` is a finite number greater than `-1`.
  * The constraint shared by every per-period interest/discount `rate`
  * parameter in `src/financial/` — a rate of exactly `-100%` or lower makes

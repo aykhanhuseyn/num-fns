@@ -24,4 +24,11 @@ describe('sum', () => {
     expect(() => sum([1, Number.NaN, 3])).toThrow(RangeError)
     expect(() => sum([1, Number.POSITIVE_INFINITY])).toThrow(RangeError)
   })
+
+  it('throws RangeError when the total overflows, rather than returning Infinity', () => {
+    expect(() => sum([1e308, 1e308])).toThrow(RangeError)
+    expect(() => sum([1e308, 1e308])).toThrow(
+      'sum: result Infinity is outside the range of a JavaScript number',
+    )
+  })
 })

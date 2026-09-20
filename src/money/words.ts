@@ -10,6 +10,7 @@ import { absBigInt, pluralOperand, splitFixed } from '../shared/bigint'
 import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { MoneyWordsOptions } from '../shared/types'
+import { assertNumericValue } from '../shared/validation'
 import { type CurrencyCode, getCurrency } from './currency'
 
 /** Resolves a currency unit's word for `category`, falling back to `'other'`, then the invariant word. */
@@ -67,9 +68,7 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
 export function moneyToWords(value: number | bigint, options: MoneyWordsOptions = {}): string {
   return guardText(
     () => {
-      if (typeof value === 'number' && !Number.isFinite(value)) {
-        throw new RangeError(`moneyToWords: value must be finite, received ${value}`)
-      }
+      assertNumericValue(value, 'value', 'moneyToWords')
 
       const { locale = en, currency: code = locale.currency.code } = options
       const { decimals } = getCurrency(code)

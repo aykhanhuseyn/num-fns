@@ -1,3 +1,4 @@
+import { toDecimal } from '../arithmetic/decimal'
 import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
 import { absBigInt, decimalToBigInt, ONE, resolveOutput, ZERO } from '../shared/bigint'
@@ -5,7 +6,7 @@ import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
-import { assertDistinctSeparators } from '../shared/validation'
+import { assertDistinctSeparators, assertNumericValue } from '../shared/validation'
 
 /**
  * Formats a number using `options.locale`'s conventions by default (`en`:
@@ -14,6 +15,9 @@ import { assertDistinctSeparators } from '../shared/validation'
  * An explicit `thousandsSeparator`/`decimalSeparator` always overrides the
  * locale's default; the two must differ, since a string written with one
  * character for both cannot be parsed back (`RangeError`).
+ *
+ * `decimals`, when given, is a count of fraction digits to write and must
+ * be a non-negative integer (`RangeError` otherwise).
  *
  * Rounding to `decimals` is decimal-safe: it delegates to
  * {@link round} (`arithmetic/round`), which rounds the value as written
@@ -41,9 +45,7 @@ import { assertDistinctSeparators } from '../shared/validation'
 export function formatNumber(value: number | bigint, options: NumberFormatOptions = {}): string {
   return guardText(
     () => {
-      if (typeof value === 'number' && !Number.isFinite(value)) {
-        throw new RangeError(`formatNumber: value must be finite, received ${value}`)
-      }
+      assertNumericValue(value, 'value', 'formatNumber')
 
       const {
         decimals,
@@ -54,6 +56,15 @@ export function formatNumber(value: number | bigint, options: NumberFormatOption
       } = options
 
       assertDistinctSeparators(thousandsSeparator, decimalSeparator, 'formatNumber')
+      // `round` would happily take a negative precision (`round(1234, -1)` is
+      // `1230`), but a formatter's `decimals` is a count of fraction digits to
+      // write, so it is validated here for both input types rather than being
+      // left to whatever the split path happens to reject.
+      if (decimals !== undefined && (!Number.isInteger(decimals) || decimals < 0)) {
+        throw new RangeError(
+          `formatNumber: decimals must be a non-negative integer, received ${decimals}`,
+        )
+      }
 
       const { isNegative, integerDigits, fractionDigits } =
         typeof value === 'bigint'
@@ -87,27 +98,37 @@ function splitNumber(
   // `round` keeps the sign of a value that rounds away to zero, so `-0.4` at
   // `decimals: 0` stays negative and formats as "-0".
   const rounded = decimals === undefined ? value : round(value, decimals, roundingMode)
-  const absolute = Math.abs(rounded)
-  // `toFixed` is safe here only because the value has already been rounded:
-  // once its shortest decimal form has at most `decimals` fraction digits,
-  // `toFixed(decimals)` reproduces that form exactly (padding with zeros) —
-  // the "1.005 -> 1.00" trap only bites when toFixed has to drop digits.
-  const fixed = decimals === undefined ? String(absolute) : absolute.toFixed(decimals)
-  const [integerDigits = '0', fractionDigits = ''] = fixed.split('.')
-  return { isNegative: isSigned(rounded), integerDigits, fractionDigits }
+  const split = positionalDigits(Math.abs(rounded))
+  const fractionDigits =
+    decimals === undefined ? split.fractionDigits : split.fractionDigits.padEnd(decimals, '0')
+  return { isNegative: isSigned(rounded), integerDigits: split.integerDigits, fractionDigits }
 }
 
 /**
- * A `bigint` has no fraction to round, so `decimals` only pads — but it is
- * validated the same way `round` validates it for a `number`, so the two
- * paths reject the same option values.
+ * The exact positional digits of a non-negative finite number.
+ *
+ * `String(value)` is not usable here: it switches to exponent notation
+ * outside `1e-6 <= |value| < 1e21` (`String(1e21)` is `"1e+21"`), and
+ * `toFixed` caps at 100 fraction digits and has the same cliff — either
+ * would have `formatNumber(1e21)` emit `"1e+21"` instead of a grouped
+ * twenty-two-digit number. There is no magnitude limit on the input
+ * (`todo.md` §4's "min/max unlimited" decision), so the digits come from the
+ * value's exact shortest decimal via `arithmetic/decimal` and are laid out
+ * by scale — lossless at `Number.MAX_VALUE` and `5e-324` alike.
  */
-function splitBigInt(value: bigint, decimals: number | undefined): SplitDigits {
-  if (decimals !== undefined && (!Number.isInteger(decimals) || decimals < 0)) {
-    throw new RangeError(
-      `formatNumber: decimals must be a non-negative integer, received ${decimals}`,
-    )
+function positionalDigits(absolute: number): { integerDigits: string; fractionDigits: string } {
+  const { digits, scale } = toDecimal(absolute)
+  const written = digits.toString()
+  if (scale <= 0) return { integerDigits: written + '0'.repeat(-scale), fractionDigits: '' }
+  const padded = written.padStart(scale + 1, '0')
+  return {
+    integerDigits: padded.slice(0, padded.length - scale),
+    fractionDigits: padded.slice(padded.length - scale),
   }
+}
+
+/** A `bigint` has no fraction to round, so `decimals` — already validated by the caller — only pads. */
+function splitBigInt(value: bigint, decimals: number | undefined): SplitDigits {
   return {
     isNegative: value < ZERO,
     integerDigits: absBigInt(value).toString(),
@@ -163,6 +184,11 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
     const numeric = Number(normalized)
     if (Number.isNaN(numeric)) {
       throw new SyntaxError(`parseNumber: unable to parse "${value}" as a number`)
+    }
+    // `Number("Infinity")` succeeds, and a parser that returned it would be
+    // the one place the package hands back a non-finite number (`todo.md` §5).
+    if (!Number.isFinite(numeric)) {
+      throw new RangeError(`parseNumber: "${value}" is not a finite number`)
     }
 
     return output === 'bigint' ? parseBigInt(normalized, value) : numeric

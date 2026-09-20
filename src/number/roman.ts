@@ -1,5 +1,6 @@
 import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
+import { assertNumericValue } from '../shared/validation'
 
 const ROMAN_NUMERALS: ReadonlyArray<readonly [string, number]> = [
   ['M', 1000],
@@ -34,6 +35,7 @@ const VALID_ROMAN_PATTERN = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0
  */
 export function toRoman(value: number | bigint): string {
   return guardText(() => {
+    assertNumericValue(value, 'value', 'toRoman')
     if (typeof value === 'number' && !Number.isInteger(value)) {
       throw new TypeError(`toRoman: value must be an integer, received ${value}`)
     }

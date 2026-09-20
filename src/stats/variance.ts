@@ -1,5 +1,6 @@
 import type { NoThrowOptions } from '../config'
 import { guardNumber } from '../shared/no-throw'
+import { assertFiniteResult } from '../shared/validation'
 import { mean } from './mean'
 
 export interface VarianceOptions extends NoThrowOptions {
@@ -40,6 +41,7 @@ export function variance(values: readonly number[], options: VarianceOptions = {
     const squaredDiffs = values.reduce((total, value) => total + (value - average) ** 2, 0)
     const divisor = sample ? values.length - 1 : values.length
 
+    assertFiniteResult(squaredDiffs, 'variance')
     return squaredDiffs / divisor
   }, options)
 }

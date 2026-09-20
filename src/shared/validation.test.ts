@@ -3,6 +3,7 @@ import {
   assertFinite,
   assertFiniteBounds,
   assertFiniteRate,
+  assertFiniteResult,
   assertNonNegative,
   assertPositive,
   assertPositiveInteger,
@@ -96,5 +97,20 @@ describe('assertFiniteBounds', () => {
     expect(() => assertFiniteBounds(10, 0, 'fn')).toThrow(
       new RangeError('fn: min (10) must not be greater than max (0)'),
     )
+  })
+})
+
+describe('assertFiniteResult', () => {
+  it('does not throw for a finite result', () => {
+    expect(() => assertFiniteResult(1e308, 'fn')).not.toThrow()
+    expect(() => assertFiniteResult(-0, 'fn')).not.toThrow()
+  })
+
+  it('throws RangeError for a result that overflowed', () => {
+    expect(() => assertFiniteResult(Number.POSITIVE_INFINITY, 'fn')).toThrow(
+      new RangeError('fn: result Infinity is outside the range of a JavaScript number'),
+    )
+    expect(() => assertFiniteResult(Number.NEGATIVE_INFINITY, 'fn')).toThrow(RangeError)
+    expect(() => assertFiniteResult(Number.NaN, 'fn')).toThrow(RangeError)
   })
 })

@@ -2,6 +2,7 @@ import { resolveOutput, scaledBigInt, scaleToFixed } from '../shared/bigint'
 import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
 import type { ByteSizeOptions, ByteSizeParseOptions } from '../shared/types'
+import { assertNumericValue } from '../shared/validation'
 import { parseNumber } from './format'
 
 /**
@@ -71,9 +72,7 @@ function correctFloatingPointNoise(value: number): number {
 export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}): string {
   return guardText(
     () => {
-      if (typeof bytes === 'number' && !Number.isFinite(bytes)) {
-        throw new RangeError(`toByteSize: bytes must be finite, received ${bytes}`)
-      }
+      assertNumericValue(bytes, 'bytes', 'toByteSize')
       if (bytes < 0) {
         throw new RangeError(`toByteSize: bytes must not be negative, received ${bytes}`)
       }

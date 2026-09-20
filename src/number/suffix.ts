@@ -2,6 +2,7 @@ import { en } from '../locale/en'
 import { toSafeNumber } from '../shared/bigint'
 import { guardText } from '../shared/no-throw-text'
 import type { OrdinalOptions, SuffixOptions, ToOrdinalOptions } from '../shared/types'
+import { assertNumericValue } from '../shared/validation'
 import { numberToWords } from './words'
 
 /**
@@ -29,6 +30,7 @@ import { numberToWords } from './words'
 export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions = {}): string {
   return guardText(
     () => {
+      assertNumericValue(value, 'value', 'getOrdinalSuffix')
       const { locale = en } = options
       return locale.ordinal.suffix(toSafeNumber(value, 'getOrdinalSuffix'))
     },
@@ -133,6 +135,7 @@ export function cardinalToOrdinalWords(
 export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
   return guardText(
     () => {
+      assertNumericValue(value, 'value', 'toOrdinal')
       const { separator = '-', locale } = options
       return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
     },

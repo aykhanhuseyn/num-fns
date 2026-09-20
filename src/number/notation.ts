@@ -20,7 +20,7 @@ import type {
   ShortNotationOptions,
   ShortNotationParseOptions,
 } from '../shared/types'
-import { assertGroupSeparator } from '../shared/validation'
+import { assertGroupSeparator, assertNumericValue } from '../shared/validation'
 import { parseNumber } from './format'
 import { resolveScaleWord } from './words'
 
@@ -59,9 +59,7 @@ export function toShortNotation(
 
 /** The body of {@link toShortNotation}, extracted so the `noThrow` wrapper does not nest it. */
 function toShortNotationImpl(value: number | bigint, options: ShortNotationOptions): string {
-  if (typeof value === 'number' && !Number.isFinite(value)) {
-    throw new RangeError(`toShortNotation: value must be finite, received ${value}`)
-  }
+  assertNumericValue(value, 'value', 'toShortNotation')
 
   const {
     decimals = 1,
@@ -214,7 +212,7 @@ function toLongNotationImpl(value: number | bigint, options: LongNotationOptions
       `toLongNotation: value exceeds the maximum supported magnitude of ${maxSupportedInteger}`,
     )
   }
-  if (groups.length === 0) return '0'
+  if (groups.length === 0) return `${signFor(value)}0`
 
   const parts: string[] = []
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -225,15 +223,13 @@ function toLongNotationImpl(value: number | bigint, options: LongNotationOptions
     parts.push(scaleWord ? `${groupValue} ${scaleWord}` : `${groupValue}`)
   }
 
-  return `${value < 0 ? '-' : ''}${parts.join(groupSeparator)}`
+  return `${signFor(value)}${parts.join(groupSeparator)}`
 }
 
 /** A `number` must be a finite integer; a `bigint` is one by construction. */
 function assertLongNotationInput(value: number | bigint): void {
+  assertNumericValue(value, 'value', 'toLongNotation')
   if (typeof value === 'bigint') return
-  if (!Number.isFinite(value)) {
-    throw new RangeError(`toLongNotation: value must be finite, received ${value}`)
-  }
   if (!Number.isInteger(value)) {
     throw new TypeError(`toLongNotation: value must be an integer, received ${value}`)
   }

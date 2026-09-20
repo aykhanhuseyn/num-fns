@@ -25,4 +25,11 @@ describe('variance', () => {
   it('throws when a value is not finite', () => {
     expect(() => variance([1, Number.NaN, 3])).toThrow(RangeError)
   })
+
+  it('throws RangeError when the squared deviations overflow', () => {
+    expect(() => variance([-1e200, 1e200])).toThrow(RangeError)
+    expect(() => variance([-1e200, 1e200])).toThrow(
+      'variance: result Infinity is outside the range of a JavaScript number',
+    )
+  })
 })

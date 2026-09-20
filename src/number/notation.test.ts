@@ -376,8 +376,9 @@ describe('toLongNotation', () => {
           1000000000000, 123456789012345, 999999999999999,
         ]) {
           expect(toLongNotation(BigInt(value), { locale })).toBe(toLongNotation(value, { locale }))
+          // `BigInt(-0)` is `0n`: no negative zero bigint, so no "-0".
           expect(toLongNotation(BigInt(-value), { locale })).toBe(
-            toLongNotation(-value, { locale }),
+            toLongNotation(value === 0 ? 0 : -value, { locale }),
           )
         }
       },

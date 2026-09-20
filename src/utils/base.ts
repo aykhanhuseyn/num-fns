@@ -3,6 +3,7 @@ import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
 import { isNegativeZero } from '../shared/sign'
 import type { BaseParseOptions } from '../shared/types'
+import { assertNumericValue } from '../shared/validation'
 
 const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
@@ -34,6 +35,7 @@ const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 export function toBase(value: number | bigint, radix: number): string {
   return guardText(() => {
     validateRadix(radix, 'toBase')
+    assertNumericValue(value, 'value', 'toBase')
     if (typeof value === 'bigint') return value.toString(radix)
 
     if (!Number.isInteger(value)) {

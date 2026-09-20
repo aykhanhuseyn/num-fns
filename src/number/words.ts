@@ -4,6 +4,7 @@ import { absBigInt, maxSupportedBigInt, splitFixed, toThousandGroups } from '../
 import { guardText } from '../shared/no-throw-text'
 import { isSigned } from '../shared/sign'
 import type { NumberWordsOptions } from '../shared/types'
+import { assertNumericValue } from '../shared/validation'
 
 /**
  * Every value `GrammaticalGender` admits, for validating the `gender`
@@ -124,9 +125,7 @@ export function resolveScaleWord(
 export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
   return guardText(
     () => {
-      if (typeof value === 'number' && !Number.isFinite(value)) {
-        throw new RangeError(`numberToWords: value must be finite, received ${value}`)
-      }
+      assertNumericValue(value, 'value', 'numberToWords')
 
       const { locale = en } = options
       const gender = resolveGender(options.gender, locale)

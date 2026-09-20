@@ -1,4 +1,5 @@
 import { guardNumber } from '../shared/no-throw'
+import { assertFiniteResult } from '../shared/validation'
 /**
  * Sums an array of numbers.
  *
@@ -19,6 +20,7 @@ export function sum(values: readonly number[]): number {
       total += value
     }
 
+    assertFiniteResult(total, 'sum')
     return total
   })
 }
