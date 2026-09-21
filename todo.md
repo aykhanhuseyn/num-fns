@@ -1029,6 +1029,23 @@ New domain from the vision doc.
       multi-currency item; es `kopek`/`gapik` and en `gapik` are the least
       certain spellings).
       Machine-generated number words are wrong in embarrassing, specific ways.
+      (2026-09-21: the *mechanism* is built — `site/review.html`, a second Vite
+      entry beside the playground, plus `scripts/review-check.ts`. The page
+      derives every reviewable entry from the live `Locale` objects and the live
+      public functions rather than from a copied word list, so it cannot show a
+      word the package no longer ships: 110–173 entries per locale across ten
+      sections, each with the calls that produce it. A "Start here" filter
+      narrows each locale to the 26–52 entries a non-speaker genuinely cannot
+      check — borrowed currency words, the ru/es inflection machinery, the
+      reading conventions taken from a dictionary — and the questions for the
+      three flagged spellings (`ru` гяпик, `en`/`enGB` kopek/kopeck, `es`
+      kopek/gapik) are asked by name in `site/src/review/questions.ts`.
+      Submitting opens a prefilled GitHub issue holding a human table and a
+      machine-readable patch; `bun run review:check <file|issue-body>` replays
+      that patch against the current source and refuses any correction whose
+      `current` value has drifted since the review, which is what makes a review
+      that arrives weeks later still safe to apply. What remains is the actual
+      asking: find speakers, send the link, apply what comes back.)
 - [x] `bun test --coverage` in CI with an enforced threshold — "high test
       coverage" is an explicit success criterion in the project vision, so this
       needs a real number and a CI gate, not just running tests.

@@ -1,0 +1,585 @@
+/* Native-speaker locale review page. Shares the landing page's palette via
+   `tokens.css` but none of its layout — this is a working tool, not a pitch:
+   dense cards, one decision per card, and the word under review set large
+   enough to judge without leaning in. */
+
+@import "../tokens.css";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+input {
+  padding: 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 20px 96px;
+}
+
+/* Header */
+
+.rv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.rv-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 650;
+}
+
+.rv-brand:hover {
+  text-decoration: none;
+}
+
+.rv-nav {
+  display: flex;
+  gap: 18px;
+  font-size: 0.92rem;
+}
+
+/* Intro */
+
+.rv-intro {
+  padding: 40px 0 8px;
+  max-width: 68ch;
+}
+
+.rv-intro h1 {
+  margin: 0 0 12px;
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.rv-lead {
+  margin: 0 0 20px;
+  color: var(--text-dim);
+  font-size: 1.05rem;
+}
+
+.rv-steps {
+  margin: 0 0 18px;
+  padding-left: 1.2em;
+  color: var(--text-dim);
+}
+
+.rv-steps li {
+  margin-bottom: 6px;
+}
+
+.rv-steps strong {
+  color: var(--text);
+}
+
+.rv-privacy {
+  margin: 0 0 22px;
+  padding: 11px 14px;
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.rv-reviewer {
+  display: block;
+  max-width: 420px;
+}
+
+.rv-reviewer span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+.rv-reviewer input {
+  width: 100%;
+}
+
+/* Locale tabs */
+
+.rv-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin: 30px 0 22px;
+}
+
+.rv-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rv-tab:hover {
+  border-color: var(--accent);
+}
+
+.rv-tab strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.rv-tab span {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+
+.rv-tab.is-active {
+  border-color: var(--accent);
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Toolbar */
+
+.rv-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.rv-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rv-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.rv-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.rv-chip.is-active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.rv-progress {
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.rv-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+
+.rv-progress-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 160ms ease-out;
+}
+
+.rv-progress-text {
+  margin: 5px 0 0;
+  color: var(--text-faint);
+  font-size: 0.78rem;
+}
+
+.rv-submit {
+  padding: 9px 18px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.rv-submit:disabled {
+  background: var(--border);
+  color: var(--text-faint);
+  cursor: not-allowed;
+}
+
+/* Sections */
+
+.rv-section {
+  margin-top: 40px;
+}
+
+.rv-section-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.rv-section-count {
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.rv-section-head p {
+  margin: 0 0 18px;
+  max-width: 76ch;
+  color: var(--text-dim);
+  font-size: 0.92rem;
+}
+
+.rv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  /* Each card keeps its natural height rather than stretching to the tallest in
+     its row — a short entry with three lines of dead space above its buttons is
+     harder to skim than buttons that sit at different heights. */
+  align-items: start;
+  gap: 12px;
+}
+
+/* Card */
+
+.rv-card {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border-soft);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-card);
+}
+
+.rv-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rv-card.is-ok {
+  border-left-color: var(--good);
+  opacity: 0.62;
+}
+
+.rv-card.is-wrong {
+  border-left-color: var(--bad);
+}
+
+.rv-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.rv-label {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 0.76rem;
+}
+
+.rv-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-strong);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rv-badge.is-muted {
+  background: var(--border-soft);
+  color: var(--text-faint);
+}
+
+.rv-current {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.rv-question {
+  margin: 0 0 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--accent);
+  color: var(--text-dim);
+  font-size: 0.87rem;
+}
+
+.rv-examples {
+  margin-bottom: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rv-example {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.8rem;
+}
+
+.rv-example-call {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.rv-example-result {
+  color: var(--text-dim);
+  overflow-wrap: anywhere;
+}
+
+.rv-example-result.is-error {
+  color: var(--bad);
+}
+
+.rv-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.rv-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.rv-btn:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.rv-btn-ok.is-active {
+  border-color: var(--good);
+  background: color-mix(in srgb, var(--good) 20%, transparent);
+  color: var(--good);
+  font-weight: 600;
+}
+
+.rv-btn-flag.is-active {
+  border-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 20%, transparent);
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.rv-fix {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rv-card.is-wrong .rv-fix {
+  display: flex;
+}
+
+.rv-field span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+}
+
+.rv-field input {
+  width: 100%;
+}
+
+.rv-empty {
+  margin: 48px 0;
+  padding: 28px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* Dialog */
+
+.rv-dialog {
+  width: min(760px, 92vw);
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  color: var(--text);
+}
+
+.rv-dialog::backdrop {
+  background: rgb(6 10 16 / 72%);
+}
+
+.rv-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 1.3rem;
+}
+
+.rv-warning {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bad) 16%, transparent);
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.rv-preview {
+  max-height: 320px;
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.rv-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rv-dialog-actions .rv-btn {
+  flex: 0 1 auto;
+  padding: 9px 16px;
+}
+
+.rv-btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+
+.rv-btn-primary:hover {
+  color: var(--on-accent);
+}
+
+.rv-reset {
+  margin-top: 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: 0.8rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Footer */
+
+.rv-footer {
+  margin-top: 60px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-soft);
+  color: var(--text-faint);
+  font-size: 0.84rem;
+}
+
+.rv-footer p {
+  margin: 4px 0;
+}
+
+@media (max-width: 640px) {
+  .rv-toolbar {
+    position: static;
+  }
+
+  .rv-grid {
+    grid-template-columns: 1fr;
+  }
+}

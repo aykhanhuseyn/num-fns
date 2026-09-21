@@ -8,7 +8,8 @@
     "src/locale/en-gb.ts",
     "src/locale/ru.ts",
     "src/locale/es.ts",
-    "scripts/*.ts"
+    "scripts/*.ts",
+    "site/src/review/main.ts"
   ],
   "project": ["src/**/*.ts", "site/src/**/*.ts", "scripts/**/*.ts", "!scripts/smoke/**"],
   "ignoreDependencies": ["@typescript/typescript6"]

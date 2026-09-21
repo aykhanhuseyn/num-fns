@@ -315,6 +315,36 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
    resolves after a build (`bun run build`) with a real `import`/`require`
    of the built output, not just by inspecting the file tree.
 
+## Reviewing a locale's words
+
+You do not need to write any code to help with the part of this package that is
+hardest to get right. Every number word, ordinal, scale word and currency unit
+num-fns ships is laid out at
+[the locale review page](https://aykhanhuseyn.github.io/num-fns/review.html)
+(`site/review.html`, run locally with `bun run site:dev`), each shown with the
+real calls that produce it. Pick the language you speak, work through the
+"Start here" filter, and press Submit — it opens a prefilled GitHub issue you
+can read and edit before posting. Nothing leaves your browser until then.
+
+The page holds no vocabulary of its own: it reads the live `Locale` objects and
+calls the real functions from `src/`, so it is always showing the current
+release rather than a copy that drifted. Adding a locale or a currency needs no
+change to it.
+
+Applying what comes back:
+
+```sh
+bun run review:check reviews/ru-2026-09.json   # or a saved issue body
+```
+
+The submitted payload carries, for each correction, the dotted path into the
+`Locale` object and the value the reviewer actually saw. `review-check` resolves
+each path against the current source and refuses to green-light a correction
+whose `current` value has changed since the review — the one failure mode that
+turns a good correction into a regression. Corrections to composed output
+(a whole phrase rather than one field) are listed separately as `by hand`, since
+there is no single field to swap.
+
 ## Coding conventions
 
 - **TypeScript strict mode.** `tsconfig.json` has `strict: true` and

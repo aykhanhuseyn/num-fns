@@ -37,6 +37,7 @@ function buildHeader(): HTMLElement {
   const links: [string, string][] = [
     ['Docs', '#playground'],
     ['Locales', '#locales'],
+    ['Review', './review.html'],
     ['GitHub', REPO_URL],
     ['npm', NPM_URL],
   ]
@@ -235,6 +236,7 @@ function buildFooter(): HTMLElement {
 
   const links: [string, string][] = [
     ['Source', REPO_URL],
+    ['Review the locales', './review.html'],
     ['Contributing', `${REPO_URL}/blob/main/CONTRIBUTING.md`],
     ['Roadmap', `${REPO_URL}/blob/main/todo.md`],
   ]

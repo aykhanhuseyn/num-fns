@@ -1,5 +1,11 @@
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
+
+/** The published version, inlined so `review.html` can stamp a report with the release it judged. */
+const { version } = JSON.parse(
+  readFileSync(resolve(import.meta.dirname, '../package.json'), 'utf8'),
+) as { version: string }
 
 // Separate Vite root for the docs/playground landing page (see todo.md §6
 // "Playground page..."). Kept independent from the library's own
@@ -9,7 +15,20 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   root: resolve(import.meta.dirname),
   base: './',
+  define: {
+    __PKG_VERSION__: JSON.stringify(version),
+  },
   build: {
+    // Two pages: the docs/playground landing page and the native-speaker
+    // locale review tool (`todo.md` §2). They share `src/tokens.css` and the
+    // `public/` assets but no layout, so they are separate entries rather than
+    // one router.
+    rollupOptions: {
+      input: {
+        main: resolve(import.meta.dirname, 'index.html'),
+        review: resolve(import.meta.dirname, 'review.html'),
+      },
+    },
     outDir: resolve(import.meta.dirname, '../site-dist'),
     // Mirrors the root `vite.config.ts`'s `emptyOutDir: false` — on this repo's
     // fuse-mounted connected folder, `unlink()` is blocked entirely (see

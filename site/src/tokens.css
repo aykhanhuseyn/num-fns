@@ -1,0 +1,41 @@
+/* Design tokens shared by every page in `site/` (the landing page and
+   `review.html`). Extracted from `style.css` so the review page can reuse the
+   palette without a second copy that drifts. */
+
+:root {
+  color-scheme: dark;
+
+  /* Palette derived from the logo: navy #1f2e45, teal #19c0bd, off-white
+     #fdfdfb. The page sits a step darker than the logo's navy so that the
+     mark's own background reads as a raised badge rather than dissolving into
+     the header, and `--bg-raised` *is* the brand navy. */
+  --navy: #1f2e45;
+  --teal: #19c0bd;
+  --paper: #fdfdfb;
+
+  --bg: #131c29;
+  --bg-raised: var(--navy);
+  --bg-card: #1a2537;
+  --border: #2f4159;
+  --border-soft: #243349;
+  --text: var(--paper);
+  --text-dim: #a5b2c6;
+  /* Lifted from the old #666e82: `--text-faint` carries small text
+     (signatures, install tags, the hero status note), so it clears 4.5:1
+     against every surface here, `--bg-raised` included. */
+  --text-faint: #8b99b2;
+  --accent: var(--teal);
+  /* Lightened teal for links and hovers — the base teal on `--bg-card` is
+     below 4.5:1 for body-sized text. */
+  --accent-strong: #58dbd8;
+  /* Dark ink for text sitting *on* the teal fill. */
+  --on-accent: #10202f;
+  /* Green, not teal-green: `--good` has to stay tellable apart from the
+     accent at a glance. */
+  --good: #74dd90;
+  --bad: #ff8080;
+  --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  --radius: 10px;
+}
