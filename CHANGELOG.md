@@ -1,5 +1,126 @@
 # num-fns
 
+## 0.6.0
+
+### Minor Changes
+
+- [`ee9f4fb`](https://github.com/aykhanhuseyn/num-fns/commit/ee9f4fb874b8332327a931ef32ca43c4d772be15) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Close the `NaN` / `Infinity` / `-0` / min-max edge cases per function
+
+  The per-function edge-case pass turned up four places where the package's own
+  throw-on-bad-input rule was not actually being kept:
+
+  - **`null` and `undefined` were silently zero.** The `typeof value ===
+'number' && !Number.isFinite(value)` guard let a non-number straight
+    through, and `Math.abs(null)` is `0`, so `formatNumber(null)` returned
+    `"0"`, `numberToWords(null)` returned `"zero"` and `toOrdinal(null)`
+    returned `"null-th"`. Every function taking a `number | bigint` now throws
+    `TypeError` for a value that is neither.
+  - **`formatNumber` emitted exponent notation at the bounds.** `String(1e21)`
+    is `"1e+21"` and `toFixed` has the same cliff, so `formatNumber(1e21)` was
+    `"1e+21"` rather than a grouped twenty-two-digit number. The digits now come
+    from the value's exact decimal, so every finite number formats positionally
+    at any magnitude — `Number.MAX_VALUE` and `5e-324` included — and
+    round-trips back through `parseNumber`.
+  - **Parsers could return `Infinity`.** `Number("Infinity")` succeeds, so
+    `parseNumber("Infinity")` returned `Infinity`; it throws `RangeError` now,
+    and so do `parseMoney`, `parsePercentage`, `parseShortNotation` and
+    `parseByteSize` through it.
+  - **`sum` and `variance` could return `Infinity`.** An accumulation that
+    overflows throws `RangeError`, the way `add`/`multiply` already did.
+
+  Also: `formatNumber` validates a negative `decimals` on both input types
+  (`toFixed` used to do it by accident on the `number` path), and
+  `toLongNotation(-0)` is `"-0"` like the other renderers.
+
+- [`26344dc`](https://github.com/aykhanhuseyn/num-fns/commit/26344dc9fa375e3243ae678435bf6f8b7b0bb735) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Add a package-wide config with a `noThrow` mode, and an infinity word per locale
+
+  `num-fns` has always thrown on bad input rather than returning `NaN`, and that
+  is still the default. `setConfig({ noThrow: true })` swaps every throw for the
+  return type's empty value, for callers rendering values they do not control:
+
+  ```ts
+  import { setConfig, formatNumber } from "num-fns";
+
+  setConfig({ noThrow: true });
+  formatNumber(Number.NaN); // ""
+  formatNumber(Number.POSITIVE_INFINITY); // "infinity"
+  formatNumber(1234.5); // "1,234.5" — unchanged
+  ```
+
+  The empty value is `''` for a string, `NaN` for a number, `false` for a
+  boolean, `[]` for `mode`/`amortizationSchedule` and `undefined` for
+  `getCurrency`. `Infinity` and `-Infinity` are the one case a renderer can say
+  something about, so they read as the locale's new `words.infinity`, prefixed
+  with `words.negative` when negative. The mode suppresses _every_ error,
+  option-combination and configuration mistakes included, so prefer the per-call
+  `noThrow` option — every options object now accepts one, and it wins over the
+  global setting — and leave the global value `false`.
+
+  New exports: `getConfig`, `setConfig`, `resetConfig`, and the `NumFnsConfig`
+  and `NoThrowOptions` types. The public function surface goes from 51 to 54.
+
+  **Breaking for custom locales:** `Locale.words.infinity` is a new required
+  field. The five launch locales set it (`az` `sonsuzluq`, `en`/`enGB`
+  `infinity`, `ru` `бесконечность`, `es` `infinito`); a locale of your own needs
+  one line added.
+
+- [`e49f7eb`](https://github.com/aykhanhuseyn/num-fns/commit/e49f7ebb8549d0b9f6fd2705ef10ac56a3975262) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Treat `-0` as a value instead of scrubbing it
+
+  A negative zero now survives every operation that produces one, reversing the
+  "never return `-0`" rule. `formatNumber(-0)` is `"-0"`, `formatNumber(-0.4, {
+decimals: 0 })` is `"-0"`, `toShortNotation(-0.4)` is `"-0"`,
+  `numberToWords(-0.001)` is `"negative zero"`, `moneyToWords(-0.001)` is
+  `"negative zero dollars"`, and `toBase(-0, 2)` is `"-0"` (which `fromBase`
+  reads back as `-0`).
+
+  `round` keeps the sign of a value that rounds away to zero (`round(-0.4)` is
+  `-0`), and `add`/`subtract`/`multiply`/`divide` follow IEEE 754 for signed
+  zeros: `multiply(-1, 0)` and `divide(0, -5)` are `-0`, `add(-0, -0)` is `-0`,
+  `add(-1.5, 1.5)` is `0`. A negative value that underflows to zero
+  (`divide(-1e-308, 1e308)`) keeps its sign too.
+
+  There is no negative zero `bigint`, so the `bigint` paths are unchanged:
+  `formatNumber(BigInt('-0'))` is `"0"` and `fromBase('-0', 2, { output:
+'bigint' })` is `0n`.
+
+### Patch Changes
+
+- [`1ad2590`](https://github.com/aykhanhuseyn/num-fns/commit/1ad25900a4b1886dc5bf1a37bc2a717451411940) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Document the closed design decisions
+
+  `todo.md`'s two long-open decisions are settled, and README, CLAUDE.md and
+  CONTRIBUTING.md say so:
+
+  - **No `Intl`, anywhere.** `formatNumber` stays self-contained rather than
+    delegating to `Intl.NumberFormat`. `Intl` output depends on the runtime's
+    ICU data, which would make `formatNumber` the one function whose result a
+    consumer cannot pin in a test, and it would only cover the grouping half of
+    one function while words, ordinals, notation and roman numerals stayed
+    hand-written. This also drops the planned `Intl.NumberFormat` cross-check
+    from the test suite — the per-locale separator conventions are pinned by the
+    conformance and round-trip property tests instead.
+  - **No precision limit on arithmetic operands.** An operand past
+    `Number.MAX_SAFE_INTEGER` is read at its shortest decimal like any other,
+    the operation runs exactly on `BigInt`, and the only lossy step is the
+    single correctly-rounded conversion back to a `number`. What a precise
+    function still refuses to do is return `±Infinity`.
+
+- [`cef0daf`](https://github.com/aykhanhuseyn/num-fns/commit/cef0daf4c93a53a31980a083e4412e7cb22ef97b) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - Docs-site and tooling fixes (`site/` and `lefthook.yml`, neither part of the published package).
+
+  - The playground's result box rendered a record result through `String(value)`, so the `getCurrency` card showed `[object Object]` instead of the currency it had just looked up. A record now goes through the same table renderer the array-of-records results (`amortizationSchedule`) already used, so `getCurrency("EUR")` shows `code` / `symbol` / `decimals` as `EUR` / `€` / `2`. `numberToWords`' card description also now states how a leading zero in the fraction is read.
+  - The pre-commit Biome hook's `glob` did not list `webmanifest`, so `site/public/site.webmanifest` was the one committed file the hook skipped. Biome formats it as JSON and the repo-wide `bun run format:check` in CI does check it, so a reformat of that file passed the commit hook and could only fail later in CI. The glob now covers it.
+
+- [`ceea040`](https://github.com/aykhanhuseyn/num-fns/commit/ceea040cffb5b4c8762450c1e75d59bbdbf505a5) Thanks [@aykhanhuseyn](https://github.com/aykhanhuseyn)! - `numberToWords` no longer drops a leading zero from the fractional part, so a hundredths value is not read back as a tenths one.
+
+  The fractional part reaches the reader as a plain integer — `splitFixed` rounds to two places and hands back `1` for `.01` and `10` for `.1` — and it was rendered with `locale.words.renderGroup` as-is. That dropped the leading zero: `numberToWords(1.01)` was `"one point one"`, which is exactly how a speaker reads `1.1`, so the two values were indistinguishable in words. `numberToWords(1.005)` inherited the same collision through the rounding.
+
+  The fraction is now padded back to two digits and each leading zero is spoken as `locale.words.zero` before the remainder:
+
+  - `numberToWords(1.01)` is `"one point zero one"`, against `"one point ten"` for `1.1`; `numberToWords(0.09)` is `"zero point zero nine"`.
+  - The fix lives in the locale-generic engine, so every locale gets it without a new hook: `{ locale: az }` reads `"bir tam sıfır bir"`, `{ locale: ru }` `"один запятая ноль один"`, `{ locale: es }` `"uno coma cero uno"`.
+  - A fraction with no leading zero is untouched — `12.34` is still `"twelve point thirty-four"` and `0.5` still `"zero point fifty"` — as are `bigint` inputs, which have no fractional part at all.
+
+  This changes the string returned for any value whose first fraction digit is zero, including `numberToWords(1.005)` (now `"one point zero one"`). A new locale-agnostic invariant in `locale/conformance.test.ts` pins the hundredths/tenths distinction for every locale.
+
 ## 0.5.0
 
 ### Minor Changes
