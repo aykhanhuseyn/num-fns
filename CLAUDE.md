@@ -12,6 +12,10 @@ Threaded so far: `numberToWords`, `toOrdinal`/`ordinalToWords`/`getOrdinalSuffix
 
 The pre-existing `locale: 'az' | 'en'` string option on `toShortNotation` has been folded into the full `Locale` object system described above — it now takes a `Locale`, not a bare string.
 
+## Roadmap and planning
+
+`ROADMAP.md` is the plan: milestones 0.7 → 0.8 → 0.9 → 1.0 and what comes after, with dates. `docs/development-plan.md` is the task list behind it (one task = one change, each with files and a done-when). `docs/plan-review-2026-10-14.md` records why the plan has its shape. Two standing rules from it: **no new domain and no new locale before 1.0.0** (new ideas go to a GitHub issue with milestone `after-1.0`), and **every breaking change lands in 0.7.0**, the earliest milestone, never in the release candidate. `todo.md` is the historical backlog; it will be frozen under `docs/archive/` in 0.8 — cite it, do not extend it.
+
 ## Commands
 
 Package manager is Bun.

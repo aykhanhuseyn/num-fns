@@ -26,8 +26,8 @@ modern and older projects alike.
 
 > **Status: 0.6.0** — the alpha line ended with `0.2.0`, the first stable
 > release (npm's `latest` previously pointed at `0.2.0-alpha.0`). Still `0.x`,
-> so the API can change in a minor bump until 1.0; see [`todo.md`](./todo.md)
-> for what's queued before then. The locale system is implemented: `az`, `en`, `en-GB`,
+> so the API can change in a minor bump until 1.0; see [`ROADMAP.md`](./ROADMAP.md)
+> for the path to 1.0 and what comes after. The locale system is implemented: `az`, `en`, `en-GB`,
 > `ru`, and `es` are all wired into `numberToWords`, ordinals, notation, and
 > money/percentage formatting. **The default locale is `en`** if you don't
 > pass one — `az` was the implicit default before 2026-08-18 and now requires
