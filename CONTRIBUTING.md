@@ -72,7 +72,7 @@ run both after a build (`prepublishOnly` runs `check:pack` only — `check:smoke
 packs a tarball, which `npm publish` is already doing at that point).
 
 CI also runs the smoke fixtures against every Node major the package supports
-(`engines.node: >=18`) plus macOS and Windows, from a single tarball packed in
+(`engines.node: >=20`) plus macOS and Windows, from a single tarball packed in
 the main job. If you are adding a check that needs a specific Node version,
 that `smoke` matrix in `ci.yml` is where it goes.
 

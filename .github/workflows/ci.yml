@@ -100,12 +100,10 @@ jobs:
   # separators in `exports` resolution are the realistic Windows risk). Only
   # the runtime fixtures run here — see the `--types` note above.
   #
-  # `engines.node` was `>=14` until this matrix existed, which was an untested
-  # claim; it is `>=18` now (decided 2026-08-20) because 14 and 16 are long EOL
-  # and `ubuntu-latest` can no longer install them — backing the old claim
-  # would have meant pinning a deprecated `ubuntu-22.04` runner. The build
-  # still targets es2018 and uses no post-2018 runtime API, so it very likely
-  # keeps working on 14/16; the package just stops promising it.
+  # `engines.node` is `>=20` (0.7.0, docs/development-plan.md task 0.7-5):
+  # Node 18 reached end-of-life in April 2025. The build still targets es2018
+  # and needs only `BigInt` (Node 10.4+), so the package very likely keeps
+  # working on 18; it just stops promising it. The matrix is the claim.
   smoke:
     name: smoke (node ${{ matrix.node-version }}, ${{ matrix.os }})
     needs: build
@@ -115,7 +113,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        node-version: ['18', '20', '22', '24']
+        node-version: ['20', '22', '24']
         include:
           - { os: macos-latest, node-version: '22' }
           - { os: windows-latest, node-version: '22' }

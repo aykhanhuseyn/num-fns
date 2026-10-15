@@ -43,6 +43,23 @@ bun add num-fns
 npm install num-fns
 ```
 
+### Runtime support
+
+The package ships ES2018 syntax as ESM and CJS, with no polyfill, and it needs
+one newer global: `BigInt`. Every formatter and the exact arithmetic use it on
+every call, so a runtime without `BigInt` cannot run `num-fns` at all.
+
+| Runtime | Supported |
+| --- | --- |
+| Node.js | 20, 22, 24 (`engines.node: >=20`; 18 is end-of-life and no longer tested) |
+| Bun, Deno | current releases |
+| Browsers | anything with `BigInt`: Chrome 67+, Firefox 68+, Safari 14+, Edge 79+ |
+| Edge runtimes | Cloudflare Workers, Vercel Edge, Deno Deploy (all V8 / `BigInt`) |
+| React Native | Hermes 0.70+ (React Native 0.70+); older engines throw at the first call |
+
+CI runs the consumer smoke fixtures on every listed Node major, plus macOS and
+Windows, against the packed tarball.
+
 ## Usage
 
 Functions are imported individually from the package root; locales are imported
