@@ -2,6 +2,11 @@ import { describe, expect, it } from 'bun:test'
 import { quantile } from './quantile'
 
 describe('quantile', () => {
+  it('scales q exactly', () => {
+    expect(quantile([0.1, 0.2], 0.5)).toBe(0.15)
+    expect(quantile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 0.07)).toBe(1.7)
+  })
+
   it('computes the median at q=0.5', () => {
     expect(quantile([1, 2, 3, 4, 5], 0.5)).toBe(3)
   })

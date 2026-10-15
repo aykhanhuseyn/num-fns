@@ -1489,13 +1489,13 @@ const statsCategory: Category = {
   id: 'stats',
   title: 'Statistics',
   description:
-    'Enter values as a comma- or space-separated list. Every function throws RangeError on an empty array or a non-finite value.',
+    'Enter values as a comma- or space-separated list. Every function throws RangeError on an empty array or a non-finite value. Exact in decimal like the arithmetic: sum([0.1, 0.2]) is 0.3, and Math.sqrt in standardDeviation is the only floating-point step.',
   examples: [
     {
       id: 'sum',
       name: 'sum',
       signature: '(values: number[]): number',
-      description: 'Sums an array of numbers.',
+      description: 'Sums an array of numbers exactly in decimal, like add: sum([0.1, 0.2]) is 0.3.',
       sourceFile: 'src/stats/sum.ts',
       fn: fn(sum),
       fields: [
@@ -1504,7 +1504,7 @@ const statsCategory: Category = {
           label: 'values',
           kind: 'text',
           valueType: 'numberArray',
-          default: '1, 2, 3',
+          default: '0.1, 0.2',
           arg: { kind: 'positional', index: 0 },
         },
       ],
@@ -1513,7 +1513,8 @@ const statsCategory: Category = {
       id: 'mean',
       name: 'mean',
       signature: '(values: number[]): number',
-      description: 'Computes the arithmetic mean (average) of an array of numbers.',
+      description:
+        'Computes the arithmetic mean (average) of an array of numbers, exactly in decimal: mean([0.1, 0.2]) is 0.15.',
       sourceFile: 'src/stats/mean.ts',
       fn: fn(mean),
       fields: [

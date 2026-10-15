@@ -42,3 +42,9 @@ runtime: bun 1.4.2 (x64-linux)
 | • parseNumber               |              avg |         min |         p75 |         p99 |         max |
 | --------------------------- | ---------------- | ----------- | ----------- | ----------- | ----------- |
 | parseNumber("1,234,567.89") | `463.49 ns/iter` | `236.00 ns` | `395.00 ns` | `  1.84 µs` | `  2.09 ms` |
+
+## Changes since the baseline
+
+| Case | Baseline | After | Why |
+| --- | --- | --- | --- |
+| `sum of 100 000 decimals` | `176.59 µs` | `1.89 ms` (≈ 11×) | 0.7-2: `sum` is exact in decimal. The budget was 20×; a fast path for values with a few fraction digits keeps it under. |

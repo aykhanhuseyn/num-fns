@@ -228,7 +228,28 @@ correctly rounding the true quotient.
 Like the rest of the package, these throw `RangeError` rather than returning
 `NaN` or `Infinity`: on non-finite input, on division by zero, on a
 non-integer `precision`, or when a result is too large for a JavaScript
-number. None of them ever returns `-0`.
+number. Signed zeros follow IEEE 754 (see "Negative zero" below).
+
+The statistics are built on the same arithmetic, so one package gives one
+answer: `sum([0.1, 0.2])` is `0.3`, like `add(0.1, 0.2)`. `sum` computes the
+exact total and rounds once at the end; `mean`, `median`, `percentile` and
+`quantile` divide and interpolate with `divide`/`multiply`/`subtract`;
+`variance` sums exact squared deviations; and `standardDeviation` is the
+square root of that — `Math.sqrt` is the only floating-point step in the
+whole group. `min`, `max` and `mode` only compare, so they were exact already.
+
+```ts
+import { sum, mean, median, variance } from 'num-fns';
+
+sum([0.1, 0.2]); // 0.3                  ([0.1, 0.2].reduce((a, b) => a + b) is 0.30000000000000004)
+mean([0.1, 0.2]); // 0.15                (0.30000000000000004 / 2 is 0.15000000000000002)
+median([0.1, 0.2]); // 0.15
+variance([0.1, 0.2, 0.3]); // 0.006666666666666667 (plain floats give 0.006666666666666668)
+```
+
+A list of prices or measurements — a few fraction digits each — takes a fast
+path that adds integer counts of the smallest digit and never touches
+`BigInt`; `bench/BASELINE.md` has the numbers.
 
 ### BigInt in and out
 

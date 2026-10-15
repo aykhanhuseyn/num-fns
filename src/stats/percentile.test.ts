@@ -2,6 +2,12 @@ import { describe, expect, it } from 'bun:test'
 import { percentile } from './percentile'
 
 describe('percentile', () => {
+  it('interpolates exactly in decimal', () => {
+    expect(percentile([0.1, 0.2], 50)).toBe(0.15)
+    expect(percentile([0.1, 0.2, 0.3], 30)).toBe(0.16)
+    expect(percentile([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 30)).toBe(4)
+  })
+
   it('computes the median at p=50', () => {
     expect(percentile([1, 2, 3, 4, 5], 50)).toBe(3)
   })

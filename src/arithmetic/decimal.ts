@@ -90,6 +90,62 @@ export function fromDecimal(
   return digits < ZERO || negativeZero ? -0 : 0
 }
 
+/**
+ * How many significant digits of a quotient are carried before it is
+ * converted back to a JavaScript number. A number holds at most 17, so
+ * anything beyond ~20 only matters for deciding which way a near-tie falls;
+ * 25 leaves a wide margin without making the `BigInt` division noticeably
+ * slower.
+ */
+export const QUOTIENT_DIGITS = 25
+
+/**
+ * The exact sum of `values`, each read at its shortest decimal, as one
+ * decimal. Nothing is rounded on the way: the running total is kept as
+ * `BigInt` digits over the finest scale seen so far, so `sum` converts to a
+ * number once, at the end, instead of once per element like a `reduce` over
+ * `add` would. The caller guarantees every value is finite.
+ */
+export function sumDecimals(values: readonly number[]): Decimal {
+  // Start from the first value rather than `0` at scale 0, so a list of
+  // large values (`[1e308, 1e308]`) is not first rewritten over scale 0.
+  let total: Decimal = { digits: ZERO, scale: 0 }
+  values.forEach((value, index) => {
+    total = index === 0 ? toDecimal(value) : addDecimals(total, toDecimal(value))
+  })
+  return total
+}
+
+/** `a + b`, exactly. */
+export function addDecimals(a: Decimal, b: Decimal): Decimal {
+  const aligned = alignScales(a, b)
+  return { digits: aligned.a + aligned.b, scale: aligned.scale }
+}
+
+/** `a - b`, exactly. */
+export function subtractDecimals(a: Decimal, b: Decimal): Decimal {
+  const aligned = alignScales(a, b)
+  return { digits: aligned.a - aligned.b, scale: aligned.scale }
+}
+
+/** `a × b`, exactly. */
+export function multiplyDecimals(a: Decimal, b: Decimal): Decimal {
+  return { digits: a.digits * b.digits, scale: a.scale + b.scale }
+}
+
+/**
+ * `x / y` carried to {@link QUOTIENT_DIGITS} significant digits. The
+ * dividend is shifted left until the integer quotient is guaranteed to hold
+ * at least that many digits: `|x| ≥ 10^(dx-1)` and `|y| < 10^dy`, so
+ * `|x·10^shift / y| > 10^(dx-1+shift-dy) = 10^(QUOTIENT_DIGITS-1)`. A JS
+ * number has at most 17 significant digits, so the shift is always positive.
+ * The caller guarantees `y.digits` is not zero.
+ */
+export function divideDecimals(x: Decimal, y: Decimal): Decimal {
+  const shift = QUOTIENT_DIGITS + digitCount(y.digits) - digitCount(x.digits)
+  return { digits: (x.digits * pow10(shift)) / y.digits, scale: x.scale - y.scale + shift }
+}
+
 /** Rewrites two decimals over their larger (finer) common scale so their `digits` can be added or compared directly. */
 export function alignScales(a: Decimal, b: Decimal): { a: bigint; b: bigint; scale: number } {
   if (a.scale === b.scale) return { a: a.digits, b: b.digits, scale: a.scale }
