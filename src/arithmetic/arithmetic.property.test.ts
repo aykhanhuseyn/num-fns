@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import fc from 'fast-check'
-import { decimalNumber } from '../shared/arbitraries.test'
+import { decimalNumber, normalizeZero } from '../shared/arbitraries.test'
 import type { RoundingMode } from '../shared/types'
 import { add } from './add'
 import { toDecimal } from './decimal'
@@ -214,7 +214,8 @@ describe('multiply/divide', () => {
     fc.assert(
       fc.property(exactDecimal(3), exactDecimal(3), (a, b) => {
         const product = decimalString(a.digits * b.digits, a.scale + b.scale)
-        expect(multiply(a.value, b.value)).toBe(Number(product))
+        // The oracle has no sign for zero; `multiply(-1, 0)` is `-0` by design.
+        expect(normalizeZero(multiply(a.value, b.value))).toBe(Number(product))
       }),
     )
   })
