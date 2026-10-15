@@ -64,6 +64,20 @@ jobs:
 
       - run: bun run size
 
+      # Benchmarks (docs/development-plan.md, task 0.7-0). The table is kept
+      # as a run artifact so a slow-down can be traced to a commit; the
+      # committed reference is bench/BASELINE.md. Not a gate: CI runners are
+      # too noisy for a threshold, the rule is "compare before/after on one
+      # machine and explain anything over 10 % in the changeset".
+      - name: Benchmarks
+        run: BENCH_FORMAT=markdown bun run bench | tee bench-results.md
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: bench-results.md
+          retention-days: 30
+
       # The tarball the smoke matrix installs. Packed once here so every matrix
       # job tests the same bytes, and so the matrix needs neither bun nor a
       # build — just a Node version and `npm install <tarball>`.

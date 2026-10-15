@@ -9,8 +9,15 @@
     "src/locale/ru.ts",
     "src/locale/es.ts",
     "scripts/*.ts",
+    "bench/*.bench.ts",
     "site/src/review/main.ts"
   ],
-  "project": ["src/**/*.ts", "site/src/**/*.ts", "scripts/**/*.ts", "!scripts/smoke/**"],
+  "project": [
+    "src/**/*.ts",
+    "site/src/**/*.ts",
+    "scripts/**/*.ts",
+    "bench/**/*.ts",
+    "!scripts/smoke/**"
+  ],
   "ignoreDependencies": ["@typescript/typescript6"]
 }

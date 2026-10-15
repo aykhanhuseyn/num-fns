@@ -46,6 +46,7 @@ bun run check:attw                    # attw, verifies types resolve for ESM + C
 bun run check:publint                 # publint --strict, lints package.json for publishing
 bun run check:pack                    # check:attw + check:publint, against a packed tarball
 bun run check:smoke                   # installs the tarball into real consumer projects and runs them
+bun run bench                         # mitata benchmarks; BENCH_FORMAT=markdown for a table
 ```
 
 Before opening a PR, run `bun run check && bun test` — this is the same gate
@@ -83,6 +84,15 @@ work and the scalar one behaves differently than the docs suggest.
 
 Linting and formatting are both handled by [Biome](https://biomejs.dev)
 (`biome.json`) — there is no separate ESLint or Prettier config.
+
+Performance is measured, not guessed: `bun run bench` runs the
+[mitata](https://github.com/evanwashere/mitata) cases in `bench/`, and
+`bench/BASELINE.md` holds the reference table. Run it before and after a
+change that touches a hot path (`formatNumber`, `numberToWords`, the exact
+arithmetic, `parseNumber`) on the same machine and compare the ratio. A case
+that gets more than 10 % slower needs a written reason in the changeset. CI
+runs the benchmarks too and keeps the table as a run artifact, but it is not
+a gate — runner noise is too large for a threshold.
 
 ## How to add a new function
 

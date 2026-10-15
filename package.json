@@ -148,6 +148,7 @@
     "version": "changeset version && bun scripts/sync-readme-version.ts",
     "release": "bun run build && changeset publish",
     "size": "size-limit",
+    "bench": "bun bench/num-fns.bench.ts",
     "new:function": "bun scripts/new-function.ts"
   },
   "keywords": [
@@ -191,6 +192,7 @@
     "fast-check": "4.9.0",
     "knip": "6.32.0",
     "lefthook": "2.1.10",
+    "mitata": "1.0.34",
     "publint": "0.3.24",
     "size-limit": "13.0.3",
     "typescript": "7.0.2",
