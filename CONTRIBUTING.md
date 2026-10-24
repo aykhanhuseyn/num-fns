@@ -207,8 +207,11 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      Most locales can return `'other'` unconditionally; only implement the
      real split if your locale's scale or currency words actually inflect by
      count (Russian does; Spanish, English, and Azerbaijani don't).
-   - **`ordinal`** — `suffix` (the short numeral suffix, `'5th'`/`'5-ci'`)
-     and `words` (the full ordinal word, transforming the cardinal reading
+   - **`ordinal`** — `separator` (what `toOrdinal` puts between the digits
+     and the suffix: `''` for `en` → `'5th'`, `'-'` for `az` → `'5-ci'`;
+     required since 0.7.0), an optional `prefix` (written before the
+     digits, for a language like Chinese `第3`), `suffix` (the short numeral
+     suffix) and `words` (the full ordinal word, transforming the cardinal reading
      `numberToWords` produced). Grammatical case/gender declension on
      ordinals is out of scope for v1 — follow `ru.ts`'s and `es.ts`'s
      documented nominative-masculine-only precedent rather than trying to

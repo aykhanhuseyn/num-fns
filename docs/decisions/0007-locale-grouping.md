@@ -129,7 +129,7 @@ per minor), so it gets a native-speaker review in the same change.
 | --- | --- | --- | --- |
 | Words joined by a space in the engine (`negative`, `decimalConnector`, spoken leading zeros; count and scale word in `toLongNotation`) | `zh` | `负 一十二 点 二十五`, `123 万 4567` | `words.separator?: string`, default `' '` |
 | Fraction read as one group (二十五), not digit by digit (二五) | `zh`, `hi-IN` | `点 二十五` | `words.fractionReading?: 'group' \| 'digits'`, default `'group'` |
-| Ordinal is a prefix (第3), not a suffix | `zh` | conformance fails "non-empty suffix" | **handled by 0.7-3**, which reshapes `LocaleOrdinal` anyway (required `separator`); 0.7-3 should allow a prefix too and relax that conformance check |
+| Ordinal is a prefix (第3), not a suffix | `zh` | conformance fails "non-empty suffix" | **done in 0.7-3**: optional `ordinal.prefix`; the conformance check is now "non-empty suffix or prefix" |
 | Minus sign with the Arabic letter mark (U+061C U+002D), bidi in general | `ar` | `-١٬٢٣٤` | `formatDefaults.minusSign?: string`, default `'-'` |
 | `toOrdinal` writes ASCII digits | `ar` | `3-.` | wire `Locale.digits` into `toOrdinal`/`withSuffix` (behaviour change only for a locale that sets `digits`) |
 | Currencies INR, CNY, SAR not registered | all three | locales default to USD | see the `CurrencyCode` note below |

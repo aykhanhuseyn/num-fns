@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
+import { en } from '../locale/en'
+import { enGB } from '../locale/en-gb'
 import { es } from '../locale/es'
+import { ru } from '../locale/ru'
+import type { Locale } from '../locale/types'
 import {
   cardinalToOrdinalWords,
   getOrdinalSuffix,
@@ -202,30 +206,54 @@ describe('cardinalToOrdinalWords', () => {
 })
 
 describe('toOrdinal', () => {
-  it('formats the ordinal with a hyphen by default', () => {
-    expect(toOrdinal(1)).toBe('1-st')
-    expect(toOrdinal(3)).toBe('3-rd')
-    expect(toOrdinal(21)).toBe('21-st')
-    expect(toOrdinal(100)).toBe('100-th')
+  it("joins the digits and suffix with the locale's ordinal.separator (en: none)", () => {
+    expect(toOrdinal(1)).toBe('1st')
+    expect(toOrdinal(3)).toBe('3rd')
+    expect(toOrdinal(21)).toBe('21st')
+    expect(toOrdinal(100)).toBe('100th')
   })
 
-  it('supports a custom separator', () => {
-    expect(toOrdinal(5, { separator: ' ' })).toBe('5 th')
-  })
-
-  it('supports a locale', () => {
+  it('uses each shipped locale separator', () => {
+    expect(toOrdinal(3, { locale: enGB })).toBe('3rd')
     expect(toOrdinal(5, { locale: az })).toBe('5-ci')
+    expect(toOrdinal(3, { locale: ru })).toBe('3-й')
+    expect(toOrdinal(3, { locale: es })).toBe('3º')
+  })
+
+  it('lets an explicit separator win over the locale', () => {
+    expect(toOrdinal(5, { separator: ' ' })).toBe('5 th')
+    expect(toOrdinal(5, { separator: '-' })).toBe('5-th')
     expect(toOrdinal(5, { locale: az, separator: ' ' })).toBe('5 ci')
+    expect(toOrdinal(5, { locale: az, separator: '' })).toBe('5ci')
+  })
+
+  it('writes a locale ordinal.prefix before the digits', () => {
+    const prefixed: Locale = {
+      ...en,
+      ordinal: { ...en.ordinal, prefix: '第', separator: '', suffix: () => '' },
+    }
+    expect(toOrdinal(3, { locale: prefixed })).toBe('第3')
+  })
+
+  it('throws TypeError for a locale written against 0.6 (no ordinal.separator)', () => {
+    const { separator: _dropped, ...ordinal } = en.ordinal
+    const legacy = { ...en, code: 'xx', ordinal } as unknown as Locale
+    expect(() => toOrdinal(3, { locale: legacy })).toThrow(
+      'toOrdinal: locale "xx" has no ordinal.separator (required since 0.7.0); add one, or pass a separator',
+    )
+    expect(() => toOrdinal(3, { locale: legacy })).toThrow(TypeError)
+    // An explicit separator still works.
+    expect(toOrdinal(3, { locale: legacy, separator: '' })).toBe('3rd')
   })
 
   describe('bigint input', () => {
     it('renders the bigint digits exactly with the suffix of the equal number', () => {
-      expect(toOrdinal(BigInt(0))).toBe('0-th')
-      expect(toOrdinal(BigInt(1))).toBe('1-st')
-      expect(toOrdinal(BigInt(22))).toBe('22-nd')
-      expect(toOrdinal(BigInt(101), { separator: '' })).toBe('101st')
+      expect(toOrdinal(BigInt(0))).toBe('0th')
+      expect(toOrdinal(BigInt(1))).toBe('1st')
+      expect(toOrdinal(BigInt(22))).toBe('22nd')
+      expect(toOrdinal(BigInt(101), { separator: '-' })).toBe('101-st')
       expect(toOrdinal(BigInt(5), { locale: az })).toBe('5-ci')
-      expect(toOrdinal(BigInt(Number.MAX_SAFE_INTEGER))).toBe('9007199254740991-st')
+      expect(toOrdinal(BigInt(Number.MAX_SAFE_INTEGER))).toBe('9007199254740991st')
     })
 
     it('throws for a negative bigint', () => {

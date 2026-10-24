@@ -115,6 +115,12 @@ export function cardinalToOrdinalWords(
  * Formats a non-negative integer as a short ordinal, e.g. `5` becomes
  * `"5th"` (or, with `{ locale: az }`, `"5-ci"`).
  *
+ * The text between the digits and the suffix is the locale's
+ * `ordinal.separator` unless `options.separator` says otherwise: `''` for
+ * `en`/`enGB`/`es`, `'-'` for `az`/`ru`. Before 0.7.0 it was always `'-'`,
+ * which gave the un-English `"3-rd"`. A locale with an `ordinal.prefix`
+ * writes it before the digits (Chinese `第`).
+ *
  * Before 2026-08-18 the separator was a positional second parameter
  * (`toOrdinal(5, ' ')`); it's now part of the options object alongside
  * `locale`, matching the rest of the package's "consistent options object"
@@ -122,22 +128,33 @@ export function cardinalToOrdinalWords(
  * function has more than one optional parameter.
  *
  * A `bigint` renders its own digits exactly (`toOrdinal(BigInt(101))` is
- * `"101-st"`); only the suffix lookup narrows it to a `number`, via
+ * `"101st"`); only the suffix lookup narrows it to a `number`, via
  * {@link getOrdinalSuffix}, so a `bigint` past `Number.MAX_SAFE_INTEGER`
  * throws `RangeError` there.
  *
  * @example
- * toOrdinal(3); // "3-rd"
- * toOrdinal(BigInt(3)); // "3-rd"
+ * toOrdinal(3); // "3rd"
+ * toOrdinal(BigInt(3)); // "3rd"
  * toOrdinal(3, { locale: az }); // "3-cü"
+ * toOrdinal(3, { locale: ru }); // "3-й"
  * toOrdinal(5, { separator: ' ' }); // "5 th"
+ *
+ * @throws {TypeError} when the locale has no `ordinal.separator` (a locale
+ * written against 0.6) and the caller passes none.
  */
 export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
   return guardText(
     () => {
       assertNumericValue(value, 'value', 'toOrdinal')
-      const { separator = '-', locale } = options
-      return `${value}${separator}${getOrdinalSuffix(value, { locale })}`
+      const { locale = en } = options
+      const { separator = locale.ordinal.separator } = options
+      if (typeof separator !== 'string') {
+        throw new TypeError(
+          `toOrdinal: locale "${locale.code}" has no ordinal.separator (required since 0.7.0); add one, or pass a separator`,
+        )
+      }
+      const prefix = locale.ordinal.prefix ?? ''
+      return `${prefix}${value}${separator}${getOrdinalSuffix(value, { locale })}`
     },
     [value],
     options,

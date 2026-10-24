@@ -187,6 +187,7 @@ export const enGB: Locale = {
   },
   plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
   ordinal: {
+    separator: '',
     suffix: (value: number): string => {
       if (!Number.isInteger(value) || value < 0) {
         throw new RangeError(

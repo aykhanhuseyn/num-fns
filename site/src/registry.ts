@@ -400,7 +400,7 @@ const ordinalCategory: Category = {
       name: 'toOrdinal',
       signature: '(value: number | bigint, options?: ToOrdinalOptions): string',
       description:
-        'Formats a non-negative integer as a short ordinal, e.g. 3 -> "3-rd" (defaults to en; az: 3 -> "3-cü"). Accepts a bigint up to Number.MAX_SAFE_INTEGER (the locale ordinal hooks take a number; larger throws RangeError). Before 2026-08-18 separator was a positional second argument — it now lives on the options object alongside locale.',
+        'Formats a non-negative integer as a short ordinal, e.g. 3 -> "3rd" (defaults to en; az: 3 -> "3-cü", ru: 3 -> "3-й"). The separator between digits and suffix comes from the locale ordinal.separator unless you pass one. Accepts a bigint up to Number.MAX_SAFE_INTEGER (the locale ordinal hooks take a number; larger throws RangeError). Before 2026-08-18 separator was a positional second argument — it now lives on the options object alongside locale.',
       sourceFile: 'src/number/suffix.ts',
       fn: fn(toOrdinal),
       fields: [
@@ -418,7 +418,9 @@ const ordinalCategory: Category = {
           label: 'separator',
           kind: 'text',
           valueType: 'string',
-          default: '-',
+          default: '',
+          placeholder: 'locale default',
+          omitWhenDefault: true,
           arg: { kind: 'option', key: 'separator' },
         },
       ],

@@ -397,6 +397,7 @@ export const ru: Locale = {
   },
   plural: ruPlural,
   ordinal: {
+    separator: '-',
     // Russian abbreviates ordinals with a fixed "-й" regardless of the full
     // word's ending, unlike English's varying st/nd/rd/th (nominative
     // masculine singular only, per the v1 scope noted above).

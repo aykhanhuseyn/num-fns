@@ -416,6 +416,7 @@ export const es: Locale = {
   // Only "millón"/"millardo"/"billón" inflect by count; "mil" never does.
   plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
   ordinal: {
+    separator: '',
     // Written with the masculine ordinal indicator "º" directly after the digits
     // (e.g. "5º"), unlike English's varying st/nd/rd/th (nominative masculine
     // singular only; feminine "ª" isn't covered — see the module doc comment).

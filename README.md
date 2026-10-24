@@ -136,7 +136,7 @@ toLongNotation(1234567); // "1 million 234 thousand 567"
 parseShortNotation('2.5M'); // 2500000
 parseLongNotation('1 million 234 thousand 567'); // 1234567
 
-toOrdinal(3); // "3-rd"
+toOrdinal(3); // "3rd"
 ordinalToWords(3); // "third"
 withSuffix(120, 'kg'); // "120 kg"
 

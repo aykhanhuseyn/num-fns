@@ -208,6 +208,26 @@ export interface LocaleWords {
 /** Suffix and full-word derivation for `toOrdinal` / `ordinalToWords`. */
 export interface LocaleOrdinal {
   /**
+   * What `toOrdinal` puts between the digits and the {@link suffix} when the
+   * caller passes no `separator`: en/enGB `''` (`"3rd"`), az `'-'`
+   * (`"3-cü"`), ru `'-'` (`"3-й"`), es `''` (`"3º"`). Required: before 0.7.0
+   * `toOrdinal` always used `'-'`, which is an Azerbaijani habit, not
+   * English (`"3-rd"`). A locale written against 0.6 that lacks it makes
+   * `toOrdinal` throw `TypeError` instead of writing `"3undefinedrd"`.
+   *
+   * @since 0.7.0
+   */
+  separator: string
+  /**
+   * Text `toOrdinal` writes before the digits, for a language that marks an
+   * ordinal in front: Chinese `'第'` (`"第3"`, with an empty `suffix`).
+   * Optional; omitted, nothing is written before the digits (every shipped
+   * locale). See `docs/decisions/0007-locale-grouping.md`.
+   *
+   * @since 0.7.0
+   */
+  prefix?: string
+  /**
    * Short numeral suffix for a value, e.g. az `getOrdinalSuffix` returning
    * `'ci'`/`'cı'`/`'cu'`/`'cü'` by vowel harmony, en `'st'`/`'nd'`/`'rd'`/`'th'`.
    * Used by `toOrdinal` (`5` -> `'5-ci'` / `'5th'`).

@@ -253,6 +253,7 @@ export const az: Locale = {
   // Azerbaijani never inflects scale/currency words by count.
   plural: () => 'other',
   ordinal: {
+    separator: '-',
     suffix: azOrdinalSuffix,
     words: (_value, cardinalWords) => azOrdinalWords(cardinalWords),
   },

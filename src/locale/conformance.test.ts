@@ -10,7 +10,7 @@ import {
   toLongNotation,
   toShortNotation,
 } from '../number/notation'
-import { getOrdinalSuffix, ordinalToWords } from '../number/suffix'
+import { getOrdinalSuffix, ordinalToWords, toOrdinal } from '../number/suffix'
 import { numberToWords } from '../number/words'
 import { maxSupportedBigInt } from '../shared/bigint'
 import { resolveDigits, resolveGrouping } from '../shared/numbering'
@@ -196,8 +196,19 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       assertCleanWords(ordinalToWords(value, { locale }), `ordinalToWords(${value})`)
     })
 
-    it.each(ORDINAL_VALUES)('getOrdinalSuffix produces a non-empty suffix for %p', (value) => {
-      expect(getOrdinalSuffix(value, { locale }).length).toBeGreaterThan(0)
+    it.each(ORDINAL_VALUES)(
+      'marks the ordinal for %p with a non-empty suffix or prefix',
+      (value) => {
+        const marker = `${locale.ordinal.prefix ?? ''}${getOrdinalSuffix(value, { locale })}`
+        expect(marker.length).toBeGreaterThan(0)
+      },
+    )
+
+    it('declares a string `ordinal.separator` (required since 0.7.0)', () => {
+      expect(typeof locale.ordinal.separator).toBe('string')
+      expect(toOrdinal(3, { locale })).toBe(
+        `${locale.ordinal.prefix ?? ''}3${locale.ordinal.separator}${getOrdinalSuffix(3, { locale })}`,
+      )
     })
   })
 

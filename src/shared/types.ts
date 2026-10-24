@@ -192,7 +192,11 @@ export interface OrdinalOptions extends NoThrowOptions {
 }
 
 export interface ToOrdinalOptions extends OrdinalOptions {
-  /** String inserted between the value and the suffix. Defaults to `'-'`. */
+  /**
+   * String inserted between the value and the suffix. Defaults to the
+   * locale's `ordinal.separator` (en `''` → `"3rd"`, az `'-'` → `"3-cü"`);
+   * before 0.7.0 it was always `'-'`.
+   */
   separator?: string
 }
 
