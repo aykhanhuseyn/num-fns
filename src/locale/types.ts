@@ -5,13 +5,19 @@ import type { CurrencyCode } from '../money/currency'
 export type { CurrencyCode } from '../money/currency'
 
 /**
- * CLDR-style plural/case category for a cardinal value. Kept to the four
- * categories the launch locales actually need (`az`/`en`/`es` only ever
- * return `'other'`; `ru` is the one that needs the full split for scale and
- * currency words, e.g. `тысяча` / `тысячи` / `тысяч`). Extend this union if
- * a later locale needs `'zero'`/`'two'`.
+ * CLDR plural category for a cardinal value — all six of them. `az`/`en`/`es`
+ * only ever return `'one'`/`'other'`, `ru` adds `'few'`/`'many'`
+ * (`тысяча` / `тысячи` / `тысяч`); `'zero'` and `'two'` are what Arabic needs
+ * (`ألف` / `ألفان` / `آلاف`) and Welsh, Breton or Slovenian too.
+ *
+ * Before 0.7.0 this held only the four categories the launch locales used.
+ * The 0.7-1 spike (`docs/decisions/0007-locale-grouping.md`) wrote an
+ * Arabic locale that could not type its `plural` hook without them, and
+ * adding members to a union is a type-level break for code that handles
+ * every member, so the set was completed while a break is still a minor
+ * bump. It is CLDR's complete list and will not grow again.
  */
-export type PluralCategory = 'one' | 'few' | 'many' | 'other'
+export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other'
 
 /**
  * Grammatical gender of the noun a cardinal number agrees with, for locales
@@ -30,14 +36,18 @@ export type PluralCategory = 'one' | 'few' | 'many' | 'other'
 export type GrammaticalGender = 'masculine' | 'feminine' | 'neuter'
 
 /**
- * One base-1000 chunk of a number's cardinal reading, produced while
- * grouping right-to-left the same way `integerToWords` in `number/words.ts`
- * does today. `Locale.words.compose` receives an ordered array of these
+ * One chunk of a number's cardinal reading — a base-1000 group under the
+ * default {@link LocaleWords.grouping} — produced while grouping
+ * right-to-left the same way `integerToWords` in `number/words.ts` does. `Locale.words.compose` receives an ordered array of these
  * (largest scale first) instead of raw digits, so a locale only has to
  * decide word order, spacing, hyphenation and elision — never arithmetic.
  */
 export interface WordChunk {
-  /** The 0-999 value of this chunk, e.g. `234` in `234 000`. */
+  /**
+   * The value of this chunk, e.g. `234` in `234 000`: 0-999 under the
+   * default grouping, 0-99 for an Indian lakh/crore group, 0-9999 for a
+   * CJK 万 group (see {@link LocaleWords.grouping}).
+   */
   value: number
   /** This chunk's hundreds/tens/ones already rendered as words, in this locale's internal order. */
   words: string
@@ -78,9 +88,11 @@ export interface LocaleWords {
    */
   hundreds: string | readonly string[]
   /**
-   * Scale words for each group-of-three-digits position, read from the
-   * right: index `0` is the units group (always `''`), index `1` is
-   * thousands, index `2` millions, and so on. Plain strings are used as-is;
+   * Scale words for each digit-group position, read from the right: index
+   * `0` is the units group (always `''`), index `1` is thousands, index `2`
+   * millions, and so on — under the default {@link grouping}. A locale with
+   * another grouping names its own ladder: Indian `[3, 2]` is `''`,
+   * thousand, lakh, crore, …; CJK `[4]` is `''`, 万, 亿, …. Plain strings are used as-is;
    * locales that inflect
    * the scale word by plural category (Russian) provide a category map
    * instead and `plural(n)` picks the form.
@@ -137,7 +149,28 @@ export interface LocaleWords {
    */
   defaultGender?: GrammaticalGender
   /**
-   * Renders a single 0-999 group as cardinal words using this locale's own
+   * How `numberToWords` and `toLongNotation` split an integer into the
+   * groups each scale word counts, CLDR-style: the first entry is the digit
+   * count of the units group, each later entry the next group's, and the
+   * last entry repeats. Optional; defaults to `[3]` (thousand, million,
+   * billion — every shipped locale). Indian English or Hindi set `[3, 2]`
+   * (`12,34,567` is twelve lakh thirty-four thousand five hundred
+   * sixty-seven); Chinese and Japanese set `[4]` (一百二十三万四千五百六十七).
+   *
+   * {@link renderGroup} then receives values up to `10^size - 1` for each
+   * group (0-9999 under `[4]`), and the magnitude cap is
+   * `10^(sum of the first scales.length sizes) - 1`. Each size is an integer
+   * from 1 to 15 (`RangeError` otherwise), so a group is always a safe
+   * integer.
+   *
+   * Independent of `formatDefaults.grouping`: Chinese writes digits in
+   * threes (`1,234,567`) but counts words in fours.
+   *
+   * @since 0.7.0
+   */
+  grouping?: readonly number[]
+  /**
+   * Renders a single group (0-999 under the default {@link grouping}) as cardinal words using this locale's own
    * `ones`/`teens`/`tens`/`hundreds` vocabulary and composition rules
    * (hyphenation, the `and` connector, irregular contractions like Spanish
    * `veinte` + `uno` -> `"veintiuno"`). Always produces the *regular* form —
@@ -312,7 +345,35 @@ export interface Locale {
     thousandsSeparator: string
     /** Separator between the integer and fractional part. */
     decimalSeparator: string
+    /**
+     * Digit-group sizes for the integer part, CLDR-style: the first entry
+     * is the rightmost group, each later entry the next group to its left,
+     * and the last entry repeats. Optional; defaults to `[3]`
+     * (`1,234,567` — every shipped locale). Indian `[3, 2]` writes
+     * `12,34,567`. Each size is an integer from 1 to 15 (`RangeError`
+     * otherwise). Parsing ignores it: the parsers strip every
+     * `thousandsSeparator` wherever it stands.
+     *
+     * @example
+     * formatNumber(1234567, { locale: { ...en, formatDefaults: { ...en.formatDefaults, grouping: [3, 2] } } }); // "12,34,567"
+     *
+     * @since 0.7.0
+     */
+    grouping?: readonly number[]
   }
+  /**
+   * The ten characters this locale writes for the digits 0-9, e.g.
+   * Arabic-Indic `['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']`.
+   * Optional; omitted, every function writes ASCII `0`-`9` (every shipped
+   * locale). When set, `formatNumber` — and so `formatMoney` and
+   * `formatPercentage` — `toShortNotation` and `toLongNotation` write these
+   * digits, and their parsers read them back (ASCII digits are accepted
+   * too). Each entry must be a single character and the ten must be
+   * distinct (`RangeError` otherwise).
+   *
+   * @since 0.7.0
+   */
+  digits?: readonly string[]
   /** Cardinal word data and composition rules for `numberToWords`. */
   words: LocaleWords
   /**

@@ -201,8 +201,9 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      renderer emits for `Infinity` under `noThrow` (prefixed with
      `negative` for `-Infinity`), and it has no default precisely so that no
      locale can quietly borrow another language's word.
-   - **`plural`** — the CLDR-ish plural-category selector (`'one' | 'few' |
-     'many' | 'other'`) used to pick the right scale/currency word form.
+   - **`plural`** — the CLDR plural-category selector (`'zero' | 'one' |
+     'two' | 'few' | 'many' | 'other'`, all six since 0.7.0) used to pick
+     the right scale/currency word form.
      Most locales can return `'other'` unconditionally; only implement the
      real split if your locale's scale or currency words actually inflect by
      count (Russian does; Spanish, English, and Azerbaijani don't).
@@ -238,6 +239,19 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      reference examples for why the field exists: without it, `moneyToWords`
      spells every amount with `words.defaultGender` and gets those units
      wrong. Indeclinable words (`ru`'s "евро") simply omit `plurals`.
+   - **Numbering system** (optional, since 0.7.0) — leave these out unless
+     your language needs them; omitted, they mean what every shipped locale
+     does. `formatDefaults.grouping` is the digit-group sizes for
+     `formatNumber` (`[3]` by default; `[3, 2]` writes Indian `12,34,567`).
+     `words.grouping` is how `numberToWords`/`toLongNotation` split a number
+     into the groups each scale word counts (`[3]` by default; `[3, 2]` for
+     thousand/lakh/crore, `[4]` for 万/亿) — your `words.scales` then names
+     that ladder, and `renderGroup` receives values up to `10^size - 1`.
+     `digits` is the ten characters you write for 0-9 (Arabic-Indic
+     `٠`…`٩`); the formatters write them and the parsers read them back.
+     [`docs/decisions/0007-locale-grouping.md`](./docs/decisions/0007-locale-grouping.md)
+     records what the 0.7 spike with `hi-IN`, `zh` and `ar` found, including
+     what is not supported yet.
    - **`fractions`** (optional) — `half` plus a `words(numerator,
      denominator)` composer for `fractionToWords`. Only implement this once
      you have real fraction-noun vocabulary, not a guess derived from your

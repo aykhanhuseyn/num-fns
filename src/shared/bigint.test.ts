@@ -3,18 +3,19 @@ import {
   absBigInt,
   assertSafeInteger,
   decimalToBigInt,
+  groupSize,
   maxSupportedBigInt,
   ONE,
   pluralOperand,
   pow10,
   resolveOutput,
   scaledBigInt,
+  scaleExponent,
   scaleToFixed,
   splitFixed,
-  THOUSAND,
   toOutput,
   toSafeNumber,
-  toThousandGroups,
+  toScaleGroups,
   ZERO,
 } from './bigint'
 
@@ -30,7 +31,6 @@ describe('constants', () => {
   it('are the plain bigint values their names say', () => {
     expect(ZERO).toBe(BigInt(0))
     expect(ONE).toBe(BigInt(1))
-    expect(THOUSAND).toBe(BigInt(1000))
   })
 })
 
@@ -52,45 +52,86 @@ describe('absBigInt', () => {
   })
 })
 
-describe('toThousandGroups', () => {
+describe('toScaleGroups', () => {
   it('returns no groups for zero on either path', () => {
-    expect(toThousandGroups(0)).toEqual([])
-    expect(toThousandGroups(BigInt(0))).toEqual([])
+    expect(toScaleGroups(0)).toEqual([])
+    expect(toScaleGroups(BigInt(0))).toEqual([])
   })
 
   it('splits into base-1000 groups, least significant first', () => {
-    expect(toThousandGroups(1234567)).toEqual([567, 234, 1])
-    expect(toThousandGroups(BigInt(1234567))).toEqual([567, 234, 1])
-    expect(toThousandGroups(1000)).toEqual([0, 1])
-    expect(toThousandGroups(BigInt(1000))).toEqual([0, 1])
-    expect(toThousandGroups(999)).toEqual([999])
-    expect(toThousandGroups(BigInt(999))).toEqual([999])
+    expect(toScaleGroups(1234567)).toEqual([567, 234, 1])
+    expect(toScaleGroups(BigInt(1234567))).toEqual([567, 234, 1])
+    expect(toScaleGroups(1000)).toEqual([0, 1])
+    expect(toScaleGroups(BigInt(1000))).toEqual([0, 1])
+    expect(toScaleGroups(999)).toEqual([999])
+    expect(toScaleGroups(BigInt(999))).toEqual([999])
   })
 
   it('agrees between the number and bigint paths for safe integers', () => {
     for (const value of [1, 12, 999, 1000, 1001, 100000, 999999, 123456789, 999999999999999]) {
-      expect(toThousandGroups(BigInt(value))).toEqual(toThousandGroups(value))
+      expect(toScaleGroups(BigInt(value))).toEqual(toScaleGroups(value))
     }
-    expect(toThousandGroups(BigInt(Number.MAX_SAFE_INTEGER))).toEqual(
-      toThousandGroups(Number.MAX_SAFE_INTEGER),
+    expect(toScaleGroups(BigInt(Number.MAX_SAFE_INTEGER))).toEqual(
+      toScaleGroups(Number.MAX_SAFE_INTEGER),
     )
   })
 
   it('keeps every digit of a bigint beyond Number.MAX_SAFE_INTEGER', () => {
-    expect(toThousandGroups(BigInt('1234567890123456789'))).toEqual([
-      789, 456, 123, 890, 567, 234, 1,
-    ])
-    expect(toThousandGroups(BigInt('9007199254740993'))).toEqual([993, 740, 254, 199, 7, 9])
+    expect(toScaleGroups(BigInt('1234567890123456789'))).toEqual([789, 456, 123, 890, 567, 234, 1])
+    expect(toScaleGroups(BigInt('9007199254740993'))).toEqual([993, 740, 254, 199, 7, 9])
   })
 
   it('returns plain numbers as group values', () => {
-    for (const group of toThousandGroups(BigInt('1234567890123456789'))) {
+    for (const group of toScaleGroups(BigInt('1234567890123456789'))) {
       expect(typeof group).toBe('number')
     }
   })
 })
 
+describe('toScaleGroups with a grouping', () => {
+  it('splits Indian [3, 2] groups: units of three, then twos', () => {
+    expect(toScaleGroups(1234567, [3, 2])).toEqual([567, 34, 12])
+    expect(toScaleGroups(BigInt(1234567), [3, 2])).toEqual([567, 34, 12])
+    expect(toScaleGroups(BigInt('123456789012'), [3, 2])).toEqual([12, 89, 67, 45, 23, 1])
+  })
+
+  it('splits CJK [4] groups', () => {
+    expect(toScaleGroups(1234567, [4])).toEqual([4567, 123])
+    expect(toScaleGroups(BigInt(100000000), [4])).toEqual([0, 0, 1])
+  })
+
+  it('agrees between the number and bigint paths under any grouping', () => {
+    for (const grouping of [[3], [3, 2], [4], [1], [2, 3, 1]]) {
+      for (const value of [0, 9, 10, 1234567, 999999999999999]) {
+        expect(toScaleGroups(BigInt(value), grouping)).toEqual(toScaleGroups(value, grouping))
+      }
+    }
+  })
+})
+
+describe('groupSize / scaleExponent', () => {
+  it('repeats the last size', () => {
+    expect([0, 1, 2, 3].map((i) => groupSize([3, 2], i))).toEqual([3, 2, 2, 2])
+    expect([0, 1, 5].map((i) => groupSize([3], i))).toEqual([3, 3, 3])
+  })
+
+  it('sums the sizes below a scale index', () => {
+    expect(scaleExponent(0, [3])).toBe(0)
+    expect(scaleExponent(2, [3])).toBe(6)
+    // lakh is 10^5, crore 10^7
+    expect(scaleExponent(2, [3, 2])).toBe(5)
+    expect(scaleExponent(3, [3, 2])).toBe(7)
+    // 亿 is 10^8
+    expect(scaleExponent(2, [4])).toBe(8)
+  })
+})
+
 describe('maxSupportedBigInt', () => {
+  it('follows the grouping', () => {
+    expect(maxSupportedBigInt(4, [3, 2])).toBe(BigInt('999999999'))
+    expect(maxSupportedBigInt(3, [4])).toBe(BigInt('999999999999'))
+  })
+
   it('is 1000^scaleCount - 1', () => {
     expect(maxSupportedBigInt(1)).toBe(BigInt(999))
     expect(maxSupportedBigInt(2)).toBe(BigInt(999999))

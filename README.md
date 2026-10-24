@@ -456,6 +456,25 @@ and the shared conformance suite (`src/locale/conformance.test.ts`) every
 locale must pass unmodified — see [`CONTRIBUTING.md`](./CONTRIBUTING.md#how-to-add-a-new-locale)
 for the full locale-authoring guide. Contributions welcome.
 
+A custom locale can also change the numbering system — all three fields are
+optional and no shipped locale sets them:
+
+```ts
+import { en } from 'num-fns/locale/en'
+
+const enIN = {
+  ...en,
+  formatDefaults: { ...en.formatDefaults, grouping: [3, 2] }, // 12,34,567
+  words: { ...en.words, grouping: [3, 2], scales: ['', 'thousand', 'lakh', 'crore'] },
+}
+formatNumber(1234567, { locale: enIN }) // "12,34,567"
+numberToWords(1234567, { locale: enIN }) // "twelve lakh thirty-four thousand five hundred sixty-seven"
+// digits: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'] writes and reads Arabic-Indic digits
+```
+
+See [`docs/decisions/0007-locale-grouping.md`](./docs/decisions/0007-locale-grouping.md)
+for what Indian, CJK and Arabic locales need and what is still missing.
+
 ## Development
 
 This project uses Bun, TypeScript, and Vite.

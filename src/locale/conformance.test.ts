@@ -12,6 +12,8 @@ import {
 } from '../number/notation'
 import { getOrdinalSuffix, ordinalToWords } from '../number/suffix'
 import { numberToWords } from '../number/words'
+import { maxSupportedBigInt } from '../shared/bigint'
+import { resolveDigits, resolveGrouping } from '../shared/numbering'
 import * as locales from './index'
 import type { GrammaticalGender } from './types'
 
@@ -100,6 +102,26 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       expect(new Set([zero, negative, infinity]).size).toBe(3)
     })
 
+    it('declares a valid `formatDefaults.grouping`, `words.grouping` and `digits` when it sets them', () => {
+      // All three are optional (0.7-1); omitted, they mean `[3]`, `[3]` and ASCII.
+      expect(() =>
+        resolveGrouping(locale.formatDefaults.grouping, 'formatDefaults.grouping', locale.code),
+      ).not.toThrow()
+      expect(() =>
+        resolveGrouping(locale.words.grouping, 'words.grouping', locale.code),
+      ).not.toThrow()
+      expect(() => resolveDigits(locale.digits, locale.code)).not.toThrow()
+      for (const digit of locale.digits ?? []) {
+        expect(digit).not.toBe(locale.formatDefaults.thousandsSeparator)
+        expect(digit).not.toBe(locale.formatDefaults.decimalSeparator)
+      }
+    })
+
+    it('returns a CLDR plural category from `plural`', () => {
+      const categories = ['zero', 'one', 'two', 'few', 'many', 'other']
+      for (let n = 0; n <= 200; n++) expect(categories).toContain(locale.plural(n))
+    })
+
     it('aligns `words.scales` and `notation.scales`: one units slot plus one entry per notation threshold', () => {
       expect(locale.notation.scales.length).toBe(locale.words.scales.length - 1)
     })
@@ -148,7 +170,7 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
     })
 
     it('throws RangeError for a bigint one past the cap its scale words allow', () => {
-      const max = BigInt(1000) ** BigInt(locale.words.scales.length) - BigInt(1)
+      const max = maxSupportedBigInt(locale.words.scales.length, locale.words.grouping)
       assertCleanWords(numberToWords(max, { locale }), `numberToWords(${max})`)
       expect(() => numberToWords(max + BigInt(1), { locale })).toThrow(RangeError)
     })

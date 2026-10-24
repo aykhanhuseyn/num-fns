@@ -203,17 +203,17 @@
     {
       "name": "index (full number/money/percentage surface, no locale)",
       "path": "dist/index.js",
-      "limit": "8.5 KB"
+      "limit": "9 KB"
     },
     {
       "name": "locale (barrel — all five launch locales)",
       "path": "dist/locale/index.js",
-      "limit": "7 KB"
+      "limit": "7.2 KB"
     },
     {
       "name": "locale/az (single locale, subpath import)",
       "path": "dist/locale/az.js",
-      "limit": "3.3 KB"
+      "limit": "3.6 KB"
     },
     {
       "name": "locale/en (single locale, subpath import)",
@@ -223,7 +223,7 @@
     {
       "name": "locale/en-gb (single locale, subpath import)",
       "path": "dist/locale/en-gb.js",
-      "limit": "3 KB"
+      "limit": "3.3 KB"
     },
     {
       "name": "locale/ru (single locale, subpath import)",

@@ -1,9 +1,15 @@
 import { toDecimal } from '../arithmetic/decimal'
 import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
-import { absBigInt, decimalToBigInt, ONE, resolveOutput, ZERO } from '../shared/bigint'
+import { absBigInt, decimalToBigInt, groupSize, ONE, resolveOutput, ZERO } from '../shared/bigint'
 import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
+import {
+  delocalizeDigits,
+  localizeDigits,
+  resolveDigits,
+  resolveGrouping,
+} from '../shared/numbering'
 import { isSigned } from '../shared/sign'
 import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 import { assertDistinctSeparators, assertNumericValue } from '../shared/validation'
@@ -30,6 +36,11 @@ import { assertDistinctSeparators, assertNumericValue } from '../shared/validati
  * as written, never converted to a `number` — and `decimals` pads it with
  * zeros (`formatNumber(10n, { decimals: 2 })` is `"10.00"`); `roundingMode`
  * has nothing to round and is ignored.
+ *
+ * The integer digits are grouped by the locale's `formatDefaults.grouping`
+ * (`[3]` unless the locale says otherwise; Indian `[3, 2]` gives
+ * `12,34,567`) and written in the locale's `digits` when it declares them
+ * (Arabic-Indic `١٬٢٣٤٬٥٦٧`). No shipped locale sets either.
  *
  * The sign of a zero is kept: `formatNumber(-0)` is `"-0"`, and so is a
  * negative value that rounds away to zero (`formatNumber(-0.4, { decimals: 0 })`).
@@ -71,9 +82,15 @@ export function formatNumber(value: number | bigint, options: NumberFormatOption
           ? splitBigInt(value, decimals)
           : splitNumber(value, decimals, roundingMode)
 
-      const groupedInteger = groupDigits(integerDigits, thousandsSeparator)
+      const grouping = resolveGrouping(
+        locale.formatDefaults.grouping,
+        'locale formatDefaults.grouping',
+        'formatNumber',
+      )
+      const digits = resolveDigits(locale.digits, 'formatNumber')
+      const groupedInteger = groupDigits(integerDigits, thousandsSeparator, grouping, digits)
       const result = fractionDigits
-        ? `${groupedInteger}${decimalSeparator}${fractionDigits}`
+        ? `${groupedInteger}${decimalSeparator}${localizeDigits(fractionDigits, digits)}`
         : groupedInteger
 
       return isNegative ? `-${result}` : result
@@ -142,6 +159,10 @@ function splitBigInt(value: bigint, decimals: number | undefined): SplitDigits {
  * exact `bigint` (the string must then be a whole number: `"1,234.00"` is
  * `1234n`, `"1.5"` throws `RangeError`).
  *
+ * Locale digits (`Locale.digits`) are read as well as ASCII ones, and the
+ * thousands separator is stripped wherever it stands, so Indian `12,34,567`
+ * parses like `1,234,567`.
+ *
  * @example
  * parseNumber("1,234,567.89"); // 1234567.89
  * parseNumber("1 234 567,89", { locale: az }); // 1234567.89
@@ -175,7 +196,8 @@ export function parseNumber(value: string, options: NumberParseOptions = {}): nu
       throw new SyntaxError('parseNumber: cannot parse an empty string')
     }
 
-    const withoutThousands = removeAll(trimmed, thousandsSeparator)
+    const ascii = delocalizeDigits(trimmed, resolveDigits(locale.digits, 'parseNumber'))
+    const withoutThousands = removeAll(ascii, thousandsSeparator)
     const normalized =
       decimalSeparator === '.'
         ? withoutThousands
@@ -211,9 +233,28 @@ function parseBigInt(normalized: string, original: string): bigint {
   return parsed
 }
 
-function groupDigits(digits: string, separator: string): string {
-  if (separator === '') return digits
-  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, separator)
+/**
+ * Splits ASCII integer `digits` into groups by `grouping` (rightmost group
+ * first, last size repeating — `[3]` gives `1,234,567`, `[3, 2]` gives
+ * `12,34,567`), writes each group in the locale's `numerals` and joins them
+ * with `separator`. Grouping happens on the ASCII digits, before they are
+ * localized, so a locale digit outside the BMP still counts as one digit.
+ */
+function groupDigits(
+  digits: string,
+  separator: string,
+  grouping: readonly number[],
+  numerals: readonly string[] | undefined,
+): string {
+  let result = ''
+  let end = digits.length
+  for (let index = 0; end > 0; index++) {
+    const start = separator === '' ? 0 : Math.max(0, end - groupSize(grouping, index))
+    const group = localizeDigits(digits.slice(start, end), numerals)
+    result = index === 0 ? group : group + separator + result
+    end = start
+  }
+  return result
 }
 
 function removeAll(value: string, token: string): string {

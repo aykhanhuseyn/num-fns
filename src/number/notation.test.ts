@@ -659,3 +659,68 @@ describe('long notation group separator validation', () => {
     expect(() => parseLongNotation('1 million', { groupSeparator: '7' })).toThrow(RangeError)
   })
 })
+
+describe('Locale.words.grouping and Locale.digits (0.7-1)', () => {
+  const enIN: Locale = {
+    ...en,
+    words: { ...en.words, grouping: [3, 2], scales: ['', 'thousand', 'lakh', 'crore'] },
+    notation: {
+      spaceBeforeShort: true,
+      scales: [
+        { threshold: 1e7, short: 'Cr', long: 'crore' },
+        { threshold: 1e5, short: 'L', long: 'lakh' },
+        { threshold: 1e3, short: 'K', long: 'thousand' },
+      ],
+    },
+  }
+  const arabicDigits: Locale = {
+    ...en,
+    formatDefaults: { thousandsSeparator: '٬', decimalSeparator: '٫' },
+    digits: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+  }
+
+  it('expands and parses long notation on the locale grouping', () => {
+    expect(toLongNotation(1234567, { locale: enIN })).toBe('12 lakh 34 thousand 567')
+    expect(parseLongNotation('12 lakh 34 thousand 567', { locale: enIN })).toBe(1234567)
+    expect(parseLongNotation('3 crore 5', { locale: enIN, output: 'bigint' })).toBe(
+      BigInt(30000005),
+    )
+  })
+
+  it('caps long notation at the grouping-aware maximum for both input types', () => {
+    expect(() => toLongNotation(1e9, { locale: enIN })).toThrow(
+      'toLongNotation: value exceeds the maximum supported magnitude of 999999999',
+    )
+    expect(() => toLongNotation(BigInt(1e9), { locale: enIN })).toThrow(
+      'toLongNotation: value exceeds the maximum supported magnitude of 999999999',
+    )
+  })
+
+  it('abbreviates with lakh/crore thresholds', () => {
+    expect(toShortNotation(2500000, { locale: enIN })).toBe('25 L')
+    expect(parseShortNotation('2.5 Cr', { locale: enIN })).toBe(25000000)
+  })
+
+  it('writes and reads the locale digits in short and long notation', () => {
+    expect(toShortNotation(1500, { locale: arabicDigits })).toBe('١٫٥K')
+    expect(toShortNotation(-42, { locale: arabicDigits })).toBe('-٤٢')
+    expect(parseShortNotation('١٫٥K', { locale: arabicDigits })).toBe(1500)
+    expect(parseShortNotation('١٫٥K', { locale: arabicDigits, output: 'bigint' })).toBe(
+      BigInt(1500),
+    )
+    expect(toLongNotation(1234567, { locale: arabicDigits })).toBe('١ million ٢٣٤ thousand ٥٦٧')
+    expect(toLongNotation(0, { locale: arabicDigits })).toBe('٠')
+    expect(parseLongNotation('١ million ٢٣٤ thousand ٥٦٧', { locale: arabicDigits })).toBe(1234567)
+  })
+
+  it('throws RangeError for a malformed grouping or digit table', () => {
+    const badGrouping: Locale = { ...en, words: { ...en.words, grouping: [16] } }
+    expect(() => toLongNotation(1, { locale: badGrouping })).toThrow(RangeError)
+    expect(() => parseLongNotation('1', { locale: badGrouping })).toThrow(RangeError)
+    const badDigits: Locale = { ...en, digits: [] }
+    expect(() => toShortNotation(1, { locale: badDigits })).toThrow(RangeError)
+    expect(() => parseShortNotation('1', { locale: badDigits })).toThrow(RangeError)
+    expect(() => toLongNotation(1, { locale: badDigits })).toThrow(RangeError)
+    expect(() => parseLongNotation('1', { locale: badDigits })).toThrow(RangeError)
+  })
+})

@@ -65,6 +65,7 @@ export function formatPercentage(
       const scaledValue = multiplyBy100 ? scaleUp(value, scale) : value
       const formattedNumber = formatNumber(scaledValue, {
         decimals,
+        locale,
         thousandsSeparator,
         decimalSeparator,
         roundingMode,
@@ -139,9 +140,9 @@ export function parsePercentage(
     const { sign, scale } = PERCENTAGE_UNITS[unit]
     const withoutSign = value.split(sign).join('').trim()
     if (output === 'bigint') {
-      return parseNumber(withoutSign, { thousandsSeparator, decimalSeparator, output })
+      return parseNumber(withoutSign, { locale, thousandsSeparator, decimalSeparator, output })
     }
-    const numeric = parseNumber(withoutSign, { thousandsSeparator, decimalSeparator })
+    const numeric = parseNumber(withoutSign, { locale, thousandsSeparator, decimalSeparator })
     return asRatio ? divide(numeric, scale) : numeric
   }, options)
 }

@@ -1,7 +1,8 @@
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
-import { absBigInt, maxSupportedBigInt, splitFixed, toThousandGroups } from '../shared/bigint'
+import { absBigInt, maxSupportedBigInt, splitFixed, toScaleGroups } from '../shared/bigint'
 import { guardText } from '../shared/no-throw-text'
+import { resolveGrouping } from '../shared/numbering'
 import { isSigned } from '../shared/sign'
 import type { NumberWordsOptions } from '../shared/types'
 import { assertNumericValue } from '../shared/validation'
@@ -78,15 +79,17 @@ export function resolveScaleWord(
  * `options.locale` (defaults to `en` — see `todo.md` §1's "default locale"
  * decision; pass `{ locale: az }` for the pre-refactor default).
  *
- * Groups the integer into base-1000 chunks, renders each chunk's own
- * 0-999 reading via `locale.words.renderGroup`, resolves each chunk's scale
+ * Groups the integer into chunks — base-1000 by default, or by the
+ * locale's `words.grouping` (Indian lakh/crore `[3, 2]`, CJK 万/亿 `[4]`) —
+ * renders each chunk's own reading via `locale.words.renderGroup`, resolves each chunk's scale
  * word via `locale.plural`, and joins the chunks with `locale.words.compose`
  * — the same three-step algorithm for every locale, since all
  * locale-specific irregularity lives in `renderGroup`/`compose` themselves
  * (see `locale/types.ts`'s `LocaleWords` doc comments).
  *
  * Supports integers from 0 up to `1000 ** locale.words.scales.length - 1`
- * (999 trillion range for every launch locale), negative numbers (prefixed
+ * under the default grouping (999 trillion range for every launch locale;
+ * a locale with its own `words.grouping` caps at the matching power of ten), negative numbers (prefixed
  * with `locale.words.negative`), and a fraction rounded to two decimal
  * digits, read as a whole number of hundredths joined by
  * `locale.words.decimalConnector` when the locale defines one (see
@@ -134,10 +137,15 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
         typeof value === 'bigint'
           ? { whole: absBigInt(value), fraction: 0 }
           : splitFixed(Math.abs(value), FRACTION_DIGITS)
-      const groups = toThousandGroups(whole)
+      const grouping = resolveGrouping(
+        locale.words.grouping,
+        'locale words.grouping',
+        'numberToWords',
+      )
+      const groups = toScaleGroups(whole, grouping)
       if (groups.length > locale.words.scales.length) {
         throw new RangeError(
-          `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length)}`,
+          `numberToWords: value exceeds the maximum supported magnitude of ${maxSupportedBigInt(locale.words.scales.length, grouping)}`,
         )
       }
 
@@ -189,7 +197,7 @@ function renderFraction(
   return spoken.join(' ')
 }
 
-/** Renders base-1000 `groups` (least significant first, as `toThousandGroups` returns them; `[]` is zero). */
+/** Renders scale `groups` (least significant first, as `toScaleGroups` returns them; `[]` is zero). */
 function integerToWords(
   groups: readonly number[],
   locale: Locale,

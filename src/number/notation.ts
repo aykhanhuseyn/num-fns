@@ -3,16 +3,23 @@ import type { Locale } from '../locale/types'
 import {
   absBigInt,
   maxSupportedBigInt,
+  pow10,
   resolveOutput,
   scaledBigInt,
+  scaleExponent,
   scaleToFixed,
-  THOUSAND,
   toOutput,
-  toThousandGroups,
+  toScaleGroups,
   ZERO,
 } from '../shared/bigint'
 import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
+import {
+  delocalizeDigits,
+  localizeDigits,
+  resolveDigits,
+  resolveGrouping,
+} from '../shared/numbering'
 import { isSigned } from '../shared/sign'
 import type {
   LongNotationOptions,
@@ -71,17 +78,21 @@ function toShortNotationImpl(value: number | bigint, options: ShortNotationOptio
       `toShortNotation: decimals must be a non-negative integer, received ${decimals}`,
     )
   }
+  const digits = resolveDigits(locale.digits, 'toShortNotation')
   const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
 
   for (const { threshold, short } of locale.notation.scales) {
     if (absolute >= threshold) {
-      const scaled = trimTrailingZeros(scaleToFixed(absolute, threshold, decimals))
+      const scaled = localizeDigits(
+        trimTrailingZeros(scaleToFixed(absolute, threshold, decimals)),
+        digits,
+      )
       const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
       return `${signFor(value)}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
     }
   }
 
-  const whole = scaleToFixed(absolute, 1, 0)
+  const whole = localizeDigits(scaleToFixed(absolute, 1, 0), digits)
   return `${signFor(value)}${whole}`
 }
 
@@ -144,7 +155,10 @@ export function parseShortNotation(
     const { locale = en, decimalSeparator = locale.formatDefaults.decimalSeparator } = options
     const output = resolveOutput(options.output, 'parseShortNotation')
 
-    const trimmed = value.trim()
+    const trimmed = delocalizeDigits(
+      value.trim(),
+      resolveDigits(locale.digits, 'parseShortNotation'),
+    )
     if (trimmed === '') {
       throw new SyntaxError('parseShortNotation: cannot parse an empty string')
     }
@@ -172,7 +186,9 @@ export function parseShortNotation(
 /**
  * Expands an integer into digit groups paired with their scale word (per
  * `options.locale`, defaults to `en`), without spelling every number out —
- * e.g. `1234567` becomes `"1 million 234 thousand 567"`.
+ * e.g. `1234567` becomes `"1 million 234 thousand 567"`. The groups follow
+ * the locale's `words.grouping` (base-1000 unless it says otherwise; Indian
+ * `[3, 2]` gives `"12 lakh 34 thousand 567"`), and the digits its `digits`.
  *
  * A `bigint` is expanded exactly at any magnitude (`todo.md` §4's BigInt
  * input path) — the natural input for a custom locale whose scale words go
@@ -200,19 +216,21 @@ function toLongNotationImpl(value: number | bigint, options: LongNotationOptions
 
   assertGroupSeparator(groupSeparator, 'toLongNotation')
 
+  const grouping = resolveGrouping(locale.words.grouping, 'locale words.grouping', 'toLongNotation')
+  const digits = resolveDigits(locale.digits, 'toLongNotation')
   const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
-  const groups = toThousandGroups(absolute)
+  const groups = toScaleGroups(absolute, grouping)
 
   if (groups.length > locale.words.scales.length) {
     const maxSupportedInteger =
       typeof value === 'bigint'
-        ? maxSupportedBigInt(locale.words.scales.length)
-        : 1000 ** locale.words.scales.length - 1
+        ? maxSupportedBigInt(locale.words.scales.length, grouping)
+        : 10 ** scaleExponent(locale.words.scales.length, grouping) - 1
     throw new RangeError(
       `toLongNotation: value exceeds the maximum supported magnitude of ${maxSupportedInteger}`,
     )
   }
-  if (groups.length === 0) return `${signFor(value)}0`
+  if (groups.length === 0) return `${signFor(value)}${localizeDigits('0', digits)}`
 
   const parts: string[] = []
   for (let i = groups.length - 1; i >= 0; i--) {
@@ -220,7 +238,8 @@ function toLongNotationImpl(value: number | bigint, options: LongNotationOptions
     if (!groupValue) continue
     const scaleEntry = locale.words.scales[i]
     const scaleWord = scaleEntry ? resolveScaleWord(scaleEntry, locale.plural(groupValue)) : ''
-    parts.push(scaleWord ? `${groupValue} ${scaleWord}` : `${groupValue}`)
+    const count = localizeDigits(String(groupValue), digits)
+    parts.push(scaleWord ? `${count} ${scaleWord}` : count)
   }
 
   return `${signFor(value)}${parts.join(groupSeparator)}`
@@ -302,7 +321,12 @@ function parseLongNotationImpl(value: string, options: LongNotationParseOptions)
 
   assertGroupSeparator(groupSeparator, 'parseLongNotation')
 
-  const trimmed = value.trim()
+  const grouping = resolveGrouping(
+    locale.words.grouping,
+    'locale words.grouping',
+    'parseLongNotation',
+  )
+  const trimmed = delocalizeDigits(value.trim(), resolveDigits(locale.digits, 'parseLongNotation'))
   if (trimmed === '') {
     throw new SyntaxError('parseLongNotation: cannot parse an empty string')
   }
@@ -327,7 +351,7 @@ function parseLongNotationImpl(value: string, options: LongNotationParseOptions)
     const scaleIndex = nextToken === undefined ? -1 : (scaleWordIndex.get(nextToken) ?? -1)
 
     if (scaleIndex > 0) {
-      total += count * THOUSAND ** BigInt(scaleIndex)
+      total += count * pow10(scaleExponent(scaleIndex, grouping))
       i += 2
     } else {
       total += count

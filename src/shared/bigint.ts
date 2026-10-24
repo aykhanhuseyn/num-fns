@@ -10,7 +10,7 @@
  *   `number | bigint`. A `bigint` is an exact integer of any magnitude, so a
  *   `number`-only algorithm (`remaining % 1000`, `Math.floor`, `toFixed`)
  *   is replaced by the exact `bigint` equivalent on that path —
- *   {@link toThousandGroups} chunks either type into 0–999 groups, and
+ *   {@link toScaleGroups} chunks either type into digit groups (0–999 by default), and
  *   {@link scaleToFixed} divides either type by a scale factor with exact
  *   half-up rounding, standing in for `(value / threshold).toFixed(decimals)`.
  *   Since 2026-09-08 the `number` path runs through the same integer
@@ -44,13 +44,14 @@
 
 import { type Decimal, toDecimal } from '../arithmetic/decimal'
 import { round } from '../arithmetic/round'
+import { DEFAULT_GROUPING } from './numbering'
 import type { ParseOutput } from './types'
 
 export const ZERO = BigInt(0)
 export const ONE = BigInt(1)
 const TWO = BigInt(2)
 const TEN = BigInt(10)
-export const THOUSAND = BigInt(1000)
+const THOUSAND = BigInt(1000)
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER)
 
 /** The shapes a decimal number string can take: `"15"`, `"-0.25"`, `"+7"`, `"1e+21"`, `"1.5E-7"`, `".5"`, `"5."`. */
@@ -67,39 +68,88 @@ export function absBigInt(value: bigint): bigint {
 }
 
 /**
- * Splits a non-negative integer into base-1000 groups, least significant
- * first (`1234567` → `[567, 234, 1]`; `0` → `[]`), as the plain 0–999
- * numbers a locale's `renderGroup`/`plural` hooks take. The `number` branch
- * is the loop `numberToWords` and `toLongNotation` always ran; the `bigint`
- * branch is the exact equivalent for values `Number` cannot hold.
+ * The digit count of group `index` (`0` is the least significant) under a
+ * CLDR-style `grouping`: the first entry is the units group, each later
+ * entry the next group, and the last entry repeats for every group after
+ * it. `[3]` is 3, 3, 3, …; Indian `[3, 2]` is 3, 2, 2, …; CJK `[4]` is
+ * 4, 4, 4, ….
  */
-export function toThousandGroups(value: number | bigint): number[] {
+export function groupSize(grouping: readonly number[], index: number): number {
+  return grouping[Math.min(index, grouping.length - 1)] as number
+}
+
+/**
+ * The power of ten scale index `index` stands for: the digit count of every
+ * group below it. Under `[3]` scale `2` is `10^6` (million); under
+ * `[3, 2]` it is `10^5` (lakh) and scale `3` is `10^7` (crore); under `[4]`
+ * scale `2` is `10^8` (亿).
+ */
+export function scaleExponent(index: number, grouping: readonly number[]): number {
+  let exponent = 0
+  for (let i = 0; i < index; i++) exponent += groupSize(grouping, i)
+  return exponent
+}
+
+/**
+ * Splits a non-negative integer into groups by `grouping` (see
+ * {@link groupSize}), least significant first, as the plain numbers a
+ * locale's `renderGroup`/`plural` hooks take: `1234567` is `[567, 234, 1]`
+ * under the default `[3]`, `[567, 34, 12]` under Indian `[3, 2]` and
+ * `[4567, 123]` under CJK `[4]`; `0` is `[]` under any grouping. The
+ * `number` branch is the loop `numberToWords` and `toLongNotation` always
+ * ran (with `10 ** 3`, which is exactly `1000`, for the default); the
+ * `bigint` branch is the exact equivalent for values `Number` cannot hold.
+ * `grouping` must already be valid (`shared/numbering.ts`'s
+ * `resolveGrouping`).
+ */
+export function toScaleGroups(
+  value: number | bigint,
+  grouping: readonly number[] = DEFAULT_GROUPING,
+): number[] {
   const groups: number[] = []
+  // The group size changes at most `grouping.length` times, so the base is
+  // recomputed only then — the `bigint` power especially is not free.
+  let size = 0
   if (typeof value === 'bigint') {
     let remaining = value
+    let base = ONE
     while (remaining > ZERO) {
-      groups.push(Number(remaining % THOUSAND))
-      remaining /= THOUSAND
+      const next = groupSize(grouping, groups.length)
+      if (next !== size) {
+        size = next
+        base = size === 3 ? THOUSAND : pow10(size)
+      }
+      groups.push(Number(remaining % base))
+      remaining /= base
     }
     return groups
   }
   let remaining = value
+  let base = 1
   while (remaining > 0) {
-    groups.push(remaining % 1000)
-    remaining = Math.floor(remaining / 1000)
+    const next = groupSize(grouping, groups.length)
+    if (next !== size) {
+      size = next
+      base = 10 ** size
+    }
+    groups.push(remaining % base)
+    remaining = Math.floor(remaining / base)
   }
   return groups
 }
 
 /**
- * The largest integer `scaleCount` base-1000 scale words can express
- * (`1000^scaleCount - 1`), as a `bigint` — the `bigint`-input counterpart of
- * the `1000 ** locale.words.scales.length - 1` cap `numberToWords` and
- * `toLongNotation` apply to a `number`, computed exactly so a custom locale
- * with more scales than `Number` can hold still gets a correct bound.
+ * The largest integer `scaleCount` scale words can express under
+ * `grouping` (`10^scaleExponent(scaleCount) - 1`; `1000^scaleCount - 1`
+ * under the default), as a `bigint` — the cap `numberToWords` and
+ * `toLongNotation` apply, computed exactly so a custom locale with more
+ * scales than `Number` can hold still gets a correct bound.
  */
-export function maxSupportedBigInt(scaleCount: number): bigint {
-  return THOUSAND ** BigInt(scaleCount) - ONE
+export function maxSupportedBigInt(
+  scaleCount: number,
+  grouping: readonly number[] = DEFAULT_GROUPING,
+): bigint {
+  return pow10(scaleExponent(scaleCount, grouping)) - ONE
 }
 
 /**
@@ -143,7 +193,7 @@ function divideToFixed(numerator: bigint, denominator: bigint, decimals: number)
 
 /** A non-negative `number` split at the decimal point after rounding to a fixed number of fraction digits. */
 export interface FixedParts {
-  /** The whole part, exact at any magnitude (a `bigint` so `toThousandGroups` never floors a float). */
+  /** The whole part, exact at any magnitude (a `bigint` so `toScaleGroups` never floors a float). */
   whole: bigint
   /** The fraction read as a whole number of its last place: `0` to `10 ** decimals - 1`. */
   fraction: number

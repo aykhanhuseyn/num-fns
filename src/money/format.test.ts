@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
+import { en } from '../locale/en'
 import { enGB } from '../locale/en-gb'
 import { ru } from '../locale/ru'
+import type { Locale } from '../locale/types'
 import type { CurrencyCode } from './currency'
 import { formatMoney, parseMoney } from './format'
 
@@ -177,5 +179,18 @@ describe('money separator validation', () => {
     expect(() => parseMoney('$ 0.001', { thousandsSeparator: '.', decimalSeparator: '.' })).toThrow(
       RangeError,
     )
+  })
+})
+
+describe('Locale grouping and digits flow through (0.7-1)', () => {
+  const locale: Locale = {
+    ...en,
+    formatDefaults: { thousandsSeparator: ',', decimalSeparator: '.', grouping: [3, 2] },
+    digits: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+  }
+
+  it('formats and parses with the locale grouping and digits', () => {
+    expect(formatMoney(1234567.5, { locale })).toBe('$ ١٢,٣٤,٥٦٧.٥٠')
+    expect(parseMoney('$ ١٢,٣٤,٥٦٧.٥٠', { locale })).toBe(1234567.5)
   })
 })

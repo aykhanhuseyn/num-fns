@@ -48,6 +48,7 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
 
       const formattedNumber = formatNumber(value, {
         decimals,
+        locale,
         thousandsSeparator,
         decimalSeparator,
         roundingMode,
@@ -96,6 +97,6 @@ export function parseMoney(value: string, options: MoneyParseOptions = {}): numb
     } = options
 
     const withoutSymbol = value.split(symbol).join('').trim()
-    return parseNumber(withoutSymbol, { thousandsSeparator, decimalSeparator, output })
+    return parseNumber(withoutSymbol, { locale, thousandsSeparator, decimalSeparator, output })
   }, options)
 }

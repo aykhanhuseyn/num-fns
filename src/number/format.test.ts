@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
+import { en } from '../locale/en'
+import type { Locale } from '../locale/types'
 import { formatNumber, parseNumber } from './format'
 
 describe('formatNumber', () => {
@@ -426,5 +428,49 @@ describe('separator validation', () => {
   it('still accepts an empty thousands separator alongside a real decimal one', () => {
     expect(formatNumber(1234.5, { decimals: 1, thousandsSeparator: '' })).toBe('1234.5')
     expect(parseNumber('1234.5', { thousandsSeparator: '' })).toBeCloseTo(1234.5)
+  })
+})
+
+describe('Locale.formatDefaults.grouping and Locale.digits (0.7-1)', () => {
+  const indian: Locale = { ...en, formatDefaults: { ...en.formatDefaults, grouping: [3, 2] } }
+  const arabicDigits: Locale = {
+    ...en,
+    formatDefaults: { thousandsSeparator: '٬', decimalSeparator: '٫' },
+    digits: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'],
+  }
+
+  it('groups in threes when the locale leaves grouping out (every shipped locale)', () => {
+    expect(en.formatDefaults.grouping).toBeUndefined()
+    expect(az.formatDefaults.grouping).toBeUndefined()
+    expect(formatNumber(1234567)).toBe('1,234,567')
+  })
+
+  it('groups by the locale grouping, the last size repeating', () => {
+    expect(formatNumber(1234567, { locale: indian })).toBe('12,34,567')
+    expect(formatNumber(123456789.5, { locale: indian, decimals: 2 })).toBe('12,34,56,789.50')
+    expect(formatNumber(BigInt('1234567890123'), { locale: indian })).toBe('12,34,56,78,90,123')
+    expect(formatNumber(999, { locale: indian })).toBe('999')
+    expect(formatNumber(1234567, { locale: indian, thousandsSeparator: '' })).toBe('1234567')
+  })
+
+  it('parses an Indian-grouped string back', () => {
+    expect(parseNumber('12,34,567.5', { locale: indian })).toBe(1234567.5)
+  })
+
+  it('writes and reads the locale digits', () => {
+    expect(formatNumber(-1234567.25, { locale: arabicDigits })).toBe('-١٬٢٣٤٬٥٦٧٫٢٥')
+    expect(formatNumber(BigInt(1000), { locale: arabicDigits, decimals: 1 })).toBe('١٬٠٠٠٫٠')
+    expect(parseNumber('-١٬٢٣٤٬٥٦٧٫٢٥', { locale: arabicDigits })).toBe(-1234567.25)
+    expect(parseNumber('١٬٢٣٤', { locale: arabicDigits, output: 'bigint' })).toBe(BigInt(1234))
+    // ASCII digits are read too.
+    expect(parseNumber('1٬234', { locale: arabicDigits })).toBe(1234)
+  })
+
+  it('throws RangeError for a malformed grouping or digit table', () => {
+    const badGrouping: Locale = { ...en, formatDefaults: { ...en.formatDefaults, grouping: [0] } }
+    expect(() => formatNumber(1, { locale: badGrouping })).toThrow(RangeError)
+    const badDigits: Locale = { ...en, digits: ['a'] }
+    expect(() => formatNumber(1, { locale: badDigits })).toThrow(RangeError)
+    expect(() => parseNumber('1', { locale: badDigits })).toThrow(RangeError)
   })
 })

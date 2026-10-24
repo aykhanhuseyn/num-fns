@@ -455,3 +455,49 @@ describe('numberToWords', () => {
     })
   })
 })
+
+describe('Locale.words.grouping (0.7-1)', () => {
+  /** `en` vocabulary on the Indian lakh/crore ladder — the shape an `en-IN` locale would take. */
+  const enIN: Locale = {
+    ...en,
+    words: { ...en.words, grouping: [3, 2], scales: ['', 'thousand', 'lakh', 'crore'] },
+  }
+
+  it('chunks in thousands when the locale leaves grouping out (every shipped locale)', () => {
+    for (const locale of [az, en, enGB, es, ru]) expect(locale.words.grouping).toBeUndefined()
+    expect(numberToWords(1234567)).toBe(
+      'one million two hundred thirty-four thousand five hundred sixty-seven',
+    )
+  })
+
+  it('chunks by the locale grouping', () => {
+    expect(numberToWords(1234567, { locale: enIN })).toBe(
+      'twelve lakh thirty-four thousand five hundred sixty-seven',
+    )
+    expect(numberToWords(BigInt(100000000), { locale: enIN })).toBe('ten crore')
+    expect(numberToWords(-250000.5, { locale: enIN })).toBe(
+      'negative two lakh fifty thousand point fifty',
+    )
+  })
+
+  it('joins the fraction with a plain space when the locale has no decimal connector', () => {
+    const noConnector: Locale = { ...enIN, words: { ...enIN.words, decimalConnector: undefined } }
+    expect(numberToWords(100000.5, { locale: noConnector })).toBe('one lakh fifty')
+  })
+
+  it('caps at the grouping-aware maximum', () => {
+    expect(numberToWords(999999999, { locale: enIN })).toBe(
+      'ninety-nine crore ninety-nine lakh ninety-nine thousand nine hundred ninety-nine',
+    )
+    expect(() => numberToWords(1e9, { locale: enIN })).toThrow(
+      'numberToWords: value exceeds the maximum supported magnitude of 999999999',
+    )
+  })
+
+  it('throws RangeError for a malformed grouping', () => {
+    const bad: Locale = { ...en, words: { ...en.words, grouping: [] } }
+    expect(() => numberToWords(1, { locale: bad })).toThrow(
+      'numberToWords: locale words.grouping must be a non-empty list of integers from 1 to 15, received []',
+    )
+  })
+})

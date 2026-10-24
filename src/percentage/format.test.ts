@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { az } from '../locale/az'
+import { en } from '../locale/en'
+import type { Locale } from '../locale/types'
 import { formatPercentage, parsePercentage } from './format'
 
 describe('formatPercentage', () => {
@@ -210,5 +212,16 @@ describe('percentage separator validation', () => {
     expect(() =>
       parsePercentage('0.001%', { thousandsSeparator: '.', decimalSeparator: '.' }),
     ).toThrow(RangeError)
+  })
+})
+
+describe('Locale digits flow through (0.7-1)', () => {
+  const locale: Locale = { ...en, digits: ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'] }
+
+  it('formats and parses with the locale digits', () => {
+    expect(formatPercentage(12.5, { locale, decimals: 1 })).toBe('١٢.٥%')
+    expect(parsePercentage('١٢.٥%', { locale })).toBe(12.5)
+    expect(parsePercentage('١٢.٥%', { locale, asRatio: true })).toBe(0.125)
+    expect(parsePercentage('١٢%', { locale, output: 'bigint' })).toBe(BigInt(12))
   })
 })
