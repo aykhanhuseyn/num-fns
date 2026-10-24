@@ -2,7 +2,7 @@
 "num-fns": minor
 ---
 
-Make the statistics exact in decimal, the same way `add`/`divide` are.
+**Breaking:** make the statistics exact in decimal, the same way `add`/`divide` are.
 `sum([0.1, 0.2])` is now `0.3` (it was `0.30000000000000004`),
 `mean([0.1, 0.2])` is `0.15`, and `median`, `percentile`, `quantile` and
 `variance` use the exact arithmetic for every step; `standardDeviation`
