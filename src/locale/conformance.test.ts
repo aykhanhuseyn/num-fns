@@ -136,6 +136,10 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       }
     })
 
+    it('declares a boolean `currency.symbolSpacing` (required since 0.7.0)', () => {
+      expect(typeof locale.currency.symbolSpacing).toBe('boolean')
+    })
+
     it('defaults to a registered currency it has unit words for', () => {
       expect(() => getCurrency(locale.currency.code)).not.toThrow()
       expect(locale.currency.units[locale.currency.code]).toBeDefined()
@@ -298,9 +302,10 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
         const formatted = formatMoney(1234.5, { locale, currency })
         const { symbol } = getCurrency(currency)
         expect(formatted.split(symbol).length - 1).toBe(1)
+        const space = locale.currency.symbolSpacing ? ' ' : ''
         if (locale.currency.symbolPosition === 'before')
-          expect(formatted.startsWith(`${symbol} `)).toBe(true)
-        else expect(formatted.endsWith(` ${symbol}`)).toBe(true)
+          expect(formatted.startsWith(`${symbol}${space}`)).toBe(true)
+        else expect(formatted.endsWith(`${space}${symbol}`)).toBe(true)
         expect(parseMoney(formatted, { locale, currency })).toBeCloseTo(1234.5, 5)
       },
     )

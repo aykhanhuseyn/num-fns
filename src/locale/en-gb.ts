@@ -233,6 +233,7 @@ export const enGB: Locale = {
     // `en`'s, bar the British "rouble" spelling.
     code: 'GBP',
     symbolPosition: 'before',
+    symbolSpacing: false,
     units: {
       GBP: {
         major: { word: 'pound', plurals: { one: 'pound', other: 'pounds' } },

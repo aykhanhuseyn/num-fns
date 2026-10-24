@@ -325,6 +325,17 @@ export interface LocaleCurrency {
    */
   symbolPosition: 'before' | 'after'
   /**
+   * Whether `formatMoney` puts a space between the symbol and the amount:
+   * `en`/`enGB` `false` (`"$1,234.50"`, `"£1,234.50"`), `az`/`ru`/`es`
+   * `true` (`"1 234,50 ₼"`). Required: before 0.7.0 the space was always
+   * there, which is not how English writes money. A locale written against
+   * 0.6 without it makes `formatMoney` throw `TypeError` unless the caller
+   * passes `symbolSpacing`. `parseMoney` reads both forms in every locale.
+   *
+   * @since 0.7.0
+   */
+  symbolSpacing: boolean
+  /**
    * Unit words per ISO 4217 code this locale can spell an amount in. Every
    * launch locale covers every {@link CurrencyCode} (pinned by
    * `locale/conformance.test.ts`); `moneyToWords` throws `RangeError` for a

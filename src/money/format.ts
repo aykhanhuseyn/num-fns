@@ -13,24 +13,33 @@ import { getCurrency } from './currency'
  * same locale: the symbol comes from `getCurrency(code)`, its placement from
  * the locale, so `{ locale: az, currency: 'USD' }` gives `"9,99 $"`.
  *
+ * Whether a space separates the symbol from the amount comes from the
+ * locale's `currency.symbolSpacing` unless `symbolSpacing` is passed: `en`
+ * and `enGB` write `"$1,234.50"`, `az`, `ru` and `es` `"1 234,50 ₼"`. Before
+ * 0.7.0 every locale put a space there.
+ *
  * Rounding to `decimals` is decimal-safe (it goes through `formatNumber`,
- * hence `round`): `formatMoney(1.005)` is `"$ 1.01"`, not the `"$ 1.00"`
+ * hence `round`): `formatMoney(1.005)` is `"$1.01"`, not the `"$1.00"`
  * that `toFixed(2)` would produce.
  *
  * A `bigint` is an exact whole amount of the major unit, formatted at any
  * magnitude — its digits are grouped as written, never converted to a
  * `number` — with the currency's `decimals` padded as zeros
- * (`formatMoney(10n)` is `"$ 10.00"`); `roundingMode` has nothing to round
+ * (`formatMoney(10n)` is `"$10.00"`); `roundingMode` has nothing to round
  * and is ignored.
  *
  * @example
- * formatMoney(1234.5); // "$ 1,234.50"
- * formatMoney(1.005); // "$ 1.01"
+ * formatMoney(1234.5); // "$1,234.50"
+ * formatMoney(1234.5, { symbolSpacing: true }); // "$ 1,234.50"
+ * formatMoney(1.005); // "$1.01"
  * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
- * formatMoney(1234.5, { currency: 'EUR' }); // "€ 1,234.50"
+ * formatMoney(1234.5, { currency: 'EUR' }); // "€1,234.50"
  * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"
  * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after' }); // "9.99 US$"
- * formatMoney(1234567890123456789n); // "$ 1,234,567,890,123,456,789.00"
+ * formatMoney(1234567890123456789n); // "$1,234,567,890,123,456,789.00"
+ *
+ * @throws {TypeError} when the locale has no `currency.symbolSpacing` (a
+ * locale written against 0.6) and the caller passes none.
  */
 export function formatMoney(value: number | bigint, options: MoneyFormatOptions = {}): string {
   return guardText(
@@ -44,7 +53,13 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
         roundingMode,
         symbol = currency.symbol,
         symbolPosition = locale.currency.symbolPosition,
+        symbolSpacing = locale.currency.symbolSpacing,
       } = options
+      if (typeof symbolSpacing !== 'boolean') {
+        throw new TypeError(
+          `formatMoney: locale "${locale.code}" has no currency.symbolSpacing (required since 0.7.0); add one, or pass symbolSpacing`,
+        )
+      }
 
       const formattedNumber = formatNumber(value, {
         decimals,
@@ -53,9 +68,10 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
         decimalSeparator,
         roundingMode,
       })
+      const space = symbolSpacing ? ' ' : ''
       return symbolPosition === 'before'
-        ? `${symbol} ${formattedNumber}`
-        : `${formattedNumber} ${symbol}`
+        ? `${symbol}${space}${formattedNumber}`
+        : `${formattedNumber}${space}${symbol}`
     },
     [value],
     options,
@@ -70,15 +86,19 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
  *
  * With `{ output: 'bigint' }` the amount comes back as an exact `bigint` of
  * whole major units, so the string must be a whole number once the symbol is
- * stripped: `"$ 1,234.00"` is `1234n`, `"$ 1.50"` throws `RangeError` (a
+ * stripped: `"$1,234.00"` is `1234n`, `"$1.50"` throws `RangeError` (a
  * `bigint` cannot carry the fifty cents, and truncating them silently would
  * be the wrong answer). Any other `output` value is a `RangeError` too.
  *
+ * The symbol is stripped with or without a space next to it, so every
+ * locale reads both `"$1,234.50"` and `"$ 1,234.50"`.
+ *
  * @example
+ * parseMoney("$1,234.50"); // 1234.5
  * parseMoney("$ 1,234.50"); // 1234.5
  * parseMoney("1 234,50 ₼", { locale: az }); // 1234.5
- * parseMoney("€ 1,234.50", { currency: 'EUR' }); // 1234.5
- * parseMoney("$ 1,234,567,890,123,456,789.00", { output: 'bigint' }); // 1234567890123456789n
+ * parseMoney("€1,234.50", { currency: 'EUR' }); // 1234.5
+ * parseMoney("$1,234,567,890,123,456,789.00", { output: 'bigint' }); // 1234567890123456789n
  */
 export function parseMoney(value: string, options: MoneyParseOptions & { output: 'bigint' }): bigint
 export function parseMoney(

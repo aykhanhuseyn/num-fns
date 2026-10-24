@@ -83,6 +83,14 @@ export interface MoneyFormatOptions extends NumberFormatOptions {
   symbol?: string
   /** Whether the symbol is placed before or after the amount. Defaults to `locale.currency.symbolPosition`. */
   symbolPosition?: 'before' | 'after'
+  /**
+   * Whether a space separates the symbol from the amount. Defaults to
+   * `locale.currency.symbolSpacing` (`en` `false` → `"$1,234.50"`, `az`
+   * `true` → `"1 234,50 ₼"`); before 0.7.0 it was always `true`.
+   *
+   * @since 0.7.0
+   */
+  symbolSpacing?: boolean
 }
 
 export interface MoneyParseOptions extends NumberParseOptions {

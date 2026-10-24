@@ -32,8 +32,8 @@ import { az } from 'num-fns/locale'
 
 formatNumber(1234567.89, { decimals: 2 }); // "1,234,567.89"
 numberToWords(1234); // "one thousand two hundred thirty-four"
-formatMoney(1234.5); // "$ 1,234.50"
-formatMoney(1234.5, { currency: 'EUR' }); // "€ 1,234.50"
+formatMoney(1234.5); // "$1,234.50"
+formatMoney(1234.5, { currency: 'EUR' }); // "€1,234.50"
 toRoman(1994); // "MCMXCIV"
 
 // pass a locale for anything locale-dependent — az remains fully supported

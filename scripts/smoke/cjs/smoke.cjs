@@ -31,7 +31,7 @@ assert.strictEqual(
   numberToWords(1234, { locale: enGB }),
   'one thousand two hundred and thirty-four',
 )
-assert.strictEqual(formatMoney(1234.5), '$ 1,234.50')
+assert.strictEqual(formatMoney(1234.5), '$1,234.50')
 assert.strictEqual(toRoman(2026), 'MMXXVI')
 assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 // The decimal-safe arithmetic runs on BigInt reached through the `BigInt()`

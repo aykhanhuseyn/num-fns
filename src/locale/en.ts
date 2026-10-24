@@ -160,6 +160,7 @@ export const en: Locale = {
   currency: {
     code: 'USD',
     symbolPosition: 'before',
+    symbolSpacing: false,
     units: {
       USD: {
         major: { word: 'dollar', plurals: { one: 'dollar', other: 'dollars' } },

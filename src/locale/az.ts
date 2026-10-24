@@ -274,6 +274,7 @@ export const az: Locale = {
   currency: {
     code: 'AZN',
     symbolPosition: 'after',
+    symbolSpacing: true,
     // Azerbaijani nouns don't inflect after a numeral ("iki manat", "beş
     // dollar"), so every unit is a single invariant word. "qəpik" doubles as
     // the Russian kopek, as it does in everyday Azerbaijani usage.

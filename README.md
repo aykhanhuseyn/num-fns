@@ -79,7 +79,7 @@ numberToWords(1234, { locale: ru }); // "одна тысяча двести тр
 numberToWords(1234, { locale: es }); // "mil doscientos treinta y cuatro"
 
 formatMoney(1234.5, { locale: az }); // "1 234,50 ₼" (az.currency defaults to AZN)
-formatMoney(1234.5, { locale: en }); // "$ 1,234.50" (en.currency defaults to USD)
+formatMoney(1234.5, { locale: en }); // "$1,234.50" (en.currency defaults to USD)
 formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €" (any ISO 4217 code)
 ```
 
@@ -140,10 +140,10 @@ toOrdinal(3); // "3rd"
 ordinalToWords(3); // "third"
 withSuffix(120, 'kg'); // "120 kg"
 
-formatMoney(1234.5); // "$ 1,234.50"
+formatMoney(1234.5); // "$1,234.50"
 parseMoney('$ 1,234.50'); // 1234.5
 moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
-formatMoney(1234.5, { currency: 'GBP' }); // "£ 1,234.50"
+formatMoney(1234.5, { currency: 'GBP' }); // "£1,234.50"
 moneyToWords(1.5, { currency: 'GBP' }); // "one pound fifty pence"
 getCurrency('EUR'); // { code: 'EUR', symbol: '€', decimals: 2 }
 
@@ -186,7 +186,7 @@ every plural form and grammatical gender the language needs.
 import { formatMoney, moneyToWords } from 'num-fns';
 import { az, en, ru, es } from 'num-fns/locale';
 
-formatMoney(9.99, { currency: 'EUR' }); // "€ 9.99"      (en: symbol before)
+formatMoney(9.99, { currency: 'EUR' }); // "€9.99"       (en: symbol before, no space)
 formatMoney(9.99, { locale: az, currency: 'EUR' }); // "9,99 €"     (az: symbol after)
 
 moneyToWords(2.02, { currency: 'EUR' }); // "two euros two cents"
@@ -297,7 +297,7 @@ import {
 // In: number | bigint
 formatNumber(BigInt('1234567890123456789')); // "1,234,567,890,123,456,789"
 formatNumber(BigInt(10), { decimals: 2 }); // "10.00" — pads; there is nothing to round
-formatMoney(BigInt('98765432109876543210'), { currency: 'EUR' }); // "€ 98,765,432,109,876,543,210.00"
+formatMoney(BigInt('98765432109876543210'), { currency: 'EUR' }); // "€98,765,432,109,876,543,210.00"
 numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion four hundred ..."
 toLongNotation(BigInt('999999999999999')); // "999 trillion 999 billion 999 million 999 thousand 999"
 toByteSize(statSync('video.mkv', { bigint: true }).size); // "1.5 GB"

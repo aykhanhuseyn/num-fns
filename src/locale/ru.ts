@@ -432,6 +432,7 @@ export const ru: Locale = {
   currency: {
     code: 'RUB',
     symbolPosition: 'after',
+    symbolSpacing: true,
     units: {
       RUB: {
         // "рубль" is masculine ("один рубль"), matching `words.defaultGender`;

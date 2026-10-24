@@ -223,7 +223,9 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      lengths align, and `locale/index.test.ts`'s scale-naming block checks
      the actual words agree.
    - **`currency`** — the default ISO 4217 `code`, the `symbolPosition`
-     your language puts every currency sign on, and `units`: a map from
+     your language puts every currency sign on, `symbolSpacing` (whether a
+     space separates the sign from the amount: `en` `false` → `$1,234.50`,
+     `az` `true` → `1 234,50 ₼`; required since 0.7.0), and `units`: a map from
      each `CurrencyCode` (`AZN`, `USD`, `EUR`, `RUB`, `GBP` — the closed
      union in `src/money/currency.ts`) to that currency's `major`/`minor`
      unit words in your language. **Cover every code**, not just your

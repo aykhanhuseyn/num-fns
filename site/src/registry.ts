@@ -758,7 +758,7 @@ const moneyCategory: Category = {
       name: 'formatMoney',
       signature: '(value: number | bigint, options?: MoneyFormatOptions): string',
       description:
-        "Formats a monetary amount in the locale's default currency (en: USD) or the ISO 4217 code you pass — the symbol comes from the registry, its placement from the locale, so { locale: az, currency: 'USD' } gives \"9,99 $\".",
+        'Formats a monetary amount in the locale\'s default currency (en: USD) or the ISO 4217 code you pass — the symbol comes from the registry, its placement and spacing from the locale, so en gives "$1,234.50" and { locale: az, currency: \'USD\' } gives "9,99 $".',
       sourceFile: 'src/money/format.ts',
       fn: fn(formatMoney),
       fields: [
@@ -801,6 +801,20 @@ const moneyCategory: Category = {
           ],
           arg: { kind: 'option', key: 'symbolPosition' },
         },
+        {
+          id: 'symbolSpacing',
+          label: 'symbolSpacing',
+          kind: 'select',
+          valueType: 'boolean',
+          default: '',
+          omitWhenDefault: true,
+          selectOptions: [
+            { value: '', label: '(locale default)' },
+            { value: 'true', label: 'true' },
+            { value: 'false', label: 'false' },
+          ],
+          arg: { kind: 'option', key: 'symbolSpacing' },
+        },
       ],
     },
     {
@@ -808,7 +822,7 @@ const moneyCategory: Category = {
       name: 'parseMoney',
       signature: '(value: string, options?: MoneyParseOptions): number | bigint',
       description:
-        'Parses a string produced by formatMoney back into a JavaScript number, stripping the symbol of the locale\'s default currency (en: $) or of the ISO 4217 code you pass. output: bigint returns an exact bigint for whole amounts ("$ 1,234.00" is 1234n).',
+        'Parses a string produced by formatMoney back into a JavaScript number, stripping the symbol of the locale\'s default currency (en: $) or of the ISO 4217 code you pass. output: bigint returns an exact bigint for whole amounts ("$1,234.00" is 1234n).',
       sourceFile: 'src/money/format.ts',
       fn: fn(parseMoney),
       fields: [

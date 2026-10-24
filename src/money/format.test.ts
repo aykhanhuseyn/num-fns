@@ -9,24 +9,24 @@ import { formatMoney, parseMoney } from './format'
 
 describe('formatMoney', () => {
   it('formats with the dollar sign before the amount by default', () => {
-    expect(formatMoney(1234.5)).toBe('$ 1,234.50')
+    expect(formatMoney(1234.5)).toBe('$1,234.50')
   })
 
   it('supports a custom symbol and position', () => {
-    expect(formatMoney(9.99, { symbol: '€', symbolPosition: 'after' })).toBe('9.99 €')
+    expect(formatMoney(9.99, { symbol: '€', symbolPosition: 'after' })).toBe('9.99€')
   })
 
   it('supports a custom decimal precision', () => {
-    expect(formatMoney(10, { decimals: 0 })).toBe('$ 10')
+    expect(formatMoney(10, { decimals: 0 })).toBe('$10')
   })
 
   it('rounds decimal-safely to the currency minor unit', () => {
     // (1.005).toFixed(2) is "1.00"; decimal-safe rounding sees the tie.
-    expect(formatMoney(1.005)).toBe('$ 1.01')
+    expect(formatMoney(1.005)).toBe('$1.01')
     expect(formatMoney(2.675, { locale: az })).toBe('2,68 ₼')
-    expect(formatMoney(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('$ 1.00')
-    expect(formatMoney(-1.005, { decimals: 2 })).toBe('$ -1.01')
-    expect(formatMoney(1234.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('$ 1,234')
+    expect(formatMoney(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('$1.00')
+    expect(formatMoney(-1.005, { decimals: 2 })).toBe('$-1.01')
+    expect(formatMoney(1234.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('$1,234')
   })
 
   it('throws RangeError for a non-integer decimals', () => {
@@ -35,18 +35,18 @@ describe('formatMoney', () => {
 
   describe('{ currency }', () => {
     it("selects the symbol by ISO 4217 code, keeping the locale's placement", () => {
-      expect(formatMoney(1234.5, { currency: 'EUR' })).toBe('€ 1,234.50')
-      expect(formatMoney(1234.5, { currency: 'GBP' })).toBe('£ 1,234.50')
+      expect(formatMoney(1234.5, { currency: 'EUR' })).toBe('€1,234.50')
+      expect(formatMoney(1234.5, { currency: 'GBP' })).toBe('£1,234.50')
       expect(formatMoney(1234.5, { locale: az, currency: 'USD' })).toBe('1 234,50 $')
       expect(formatMoney(1234.5, { locale: ru, currency: 'AZN' })).toBe('1 234,50 ₼')
     })
 
     it("defaults to the locale's own currency — GBP for enGB", () => {
-      expect(formatMoney(1234.5, { locale: enGB })).toBe('£ 1,234.50')
+      expect(formatMoney(1234.5, { locale: enGB })).toBe('£1,234.50')
     })
 
     it("lets an explicit symbol override the code's symbol", () => {
-      expect(formatMoney(9.99, { currency: 'USD', symbol: 'US$' })).toBe('US$ 9.99')
+      expect(formatMoney(9.99, { currency: 'USD', symbol: 'US$' })).toBe('US$9.99')
     })
 
     it('throws RangeError for a code the registry does not know', () => {
@@ -54,6 +54,38 @@ describe('formatMoney', () => {
       expect(() => formatMoney(1, { currency: 'XYZ' as CurrencyCode })).toThrow(
         'unknown currency code "XYZ"',
       )
+    })
+  })
+
+  describe('symbolSpacing (0.7-4)', () => {
+    it('takes the space between symbol and amount from the locale', () => {
+      expect(formatMoney(1234.5)).toBe('$1,234.50')
+      expect(formatMoney(1234.5, { locale: enGB })).toBe('£1,234.50')
+      expect(formatMoney(1234.5, { locale: az })).toBe('1 234,50 ₼')
+      expect(formatMoney(1234.5, { locale: ru })).toBe('1 234,50 ₽')
+    })
+
+    it('lets the option win over the locale, on either side', () => {
+      expect(formatMoney(1234.5, { symbolSpacing: true })).toBe('$ 1,234.50')
+      expect(formatMoney(1234.5, { locale: az, symbolSpacing: false })).toBe('1 234,50₼')
+      expect(formatMoney(9.99, { symbolPosition: 'after', symbolSpacing: true })).toBe('9.99 $')
+    })
+
+    it('parses both forms in every locale', () => {
+      expect(parseMoney('$1,234.50')).toBe(1234.5)
+      expect(parseMoney('$ 1,234.50')).toBe(1234.5)
+      expect(parseMoney('1 234,50₼', { locale: az })).toBe(1234.5)
+      expect(parseMoney('1 234,50 ₼', { locale: az })).toBe(1234.5)
+    })
+
+    it('throws TypeError for a locale written against 0.6 (no currency.symbolSpacing)', () => {
+      const { symbolSpacing: _dropped, ...currency } = enGB.currency
+      const legacy = { ...enGB, code: 'xx', currency } as unknown as Locale
+      expect(() => formatMoney(1, { locale: legacy })).toThrow(
+        'formatMoney: locale "xx" has no currency.symbolSpacing (required since 0.7.0); add one, or pass symbolSpacing',
+      )
+      expect(() => formatMoney(1, { locale: legacy })).toThrow(TypeError)
+      expect(formatMoney(1, { locale: legacy, symbolSpacing: false })).toBe('£1.00')
     })
   })
 
@@ -71,12 +103,12 @@ describe('formatMoney', () => {
 
   describe('bigint input', () => {
     it('formats a whole amount exactly, padding the currency decimals with zeros', () => {
-      expect(formatMoney(BigInt(1234))).toBe('$ 1,234.00')
-      expect(formatMoney(BigInt('1234567890123456789'))).toBe('$ 1,234,567,890,123,456,789.00')
+      expect(formatMoney(BigInt(1234))).toBe('$1,234.00')
+      expect(formatMoney(BigInt('1234567890123456789'))).toBe('$1,234,567,890,123,456,789.00')
     })
 
     it('keeps the sign and honours the locale placement', () => {
-      expect(formatMoney(BigInt(-1234))).toBe('$ -1,234.00')
+      expect(formatMoney(BigInt(-1234))).toBe('$-1,234.00')
       expect(formatMoney(BigInt(-5), { locale: az })).toBe('-5,00 ₼')
       expect(formatMoney(BigInt('-1234567890123456789'), { locale: ru, currency: 'EUR' })).toBe(
         '-1 234 567 890 123 456 789,00 €',
@@ -84,14 +116,14 @@ describe('formatMoney', () => {
     })
 
     it('formats zero', () => {
-      expect(formatMoney(BigInt(0))).toBe('$ 0.00')
-      expect(formatMoney(BigInt(0), { decimals: 0 })).toBe('$ 0')
+      expect(formatMoney(BigInt(0))).toBe('$0.00')
+      expect(formatMoney(BigInt(0), { decimals: 0 })).toBe('$0')
     })
 
     it('pads to an explicit decimals and ignores roundingMode', () => {
-      expect(formatMoney(BigInt(10), { decimals: 0 })).toBe('$ 10')
-      expect(formatMoney(BigInt(10), { decimals: 3 })).toBe('$ 10.000')
-      expect(formatMoney(BigInt(10), { roundingMode: 'floor' })).toBe('$ 10.00')
+      expect(formatMoney(BigInt(10), { decimals: 0 })).toBe('$10')
+      expect(formatMoney(BigInt(10), { decimals: 3 })).toBe('$10.000')
+      expect(formatMoney(BigInt(10), { roundingMode: 'floor' })).toBe('$10.00')
     })
 
     it('throws RangeError for a non-integer decimals', () => {
@@ -190,7 +222,7 @@ describe('Locale grouping and digits flow through (0.7-1)', () => {
   }
 
   it('formats and parses with the locale grouping and digits', () => {
-    expect(formatMoney(1234567.5, { locale })).toBe('$ ١٢,٣٤,٥٦٧.٥٠')
+    expect(formatMoney(1234567.5, { locale })).toBe('$١٢,٣٤,٥٦٧.٥٠')
     expect(parseMoney('$ ١٢,٣٤,٥٦٧.٥٠', { locale })).toBe(1234567.5)
   })
 })

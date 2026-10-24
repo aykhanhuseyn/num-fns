@@ -459,6 +459,7 @@ export const es: Locale = {
   currency: {
     code: 'EUR',
     symbolPosition: 'after',
+    symbolSpacing: true,
     units: {
       EUR: {
         // Both "euro" and "céntimo" are masculine, matching

@@ -118,17 +118,38 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
     )
   })
 
-  it('always emits the symbol exactly once, on the side the options ask for', () => {
+  it('always emits the symbol exactly once, on the side and with the spacing the options ask for', () => {
     fc.assert(
       fc.property(
         decimalNumber(2),
         fc.constantFrom<'before' | 'after'>('before', 'after'),
-        (value, symbolPosition) => {
+        fc.constantFrom<boolean | undefined>(true, false, undefined),
+        (value, symbolPosition, symbolSpacing) => {
           const symbol = '¤'
-          const formatted = formatMoney(value, { locale, symbolPosition, symbol })
+          const formatted = formatMoney(value, { locale, symbolPosition, symbol, symbolSpacing })
+          const space = (symbolSpacing ?? locale.currency.symbolSpacing) ? ' ' : ''
           expect(formatted.split(symbol).length - 1).toBe(1)
-          if (symbolPosition === 'before') expect(formatted.startsWith(`${symbol} `)).toBe(true)
-          else expect(formatted.endsWith(` ${symbol}`)).toBe(true)
+          if (symbolPosition === 'before') {
+            expect(formatted.startsWith(`${symbol}${space}`)).toBe(true)
+            expect(formatted.charAt(symbol.length + space.length)).not.toBe(' ')
+          } else {
+            expect(formatted.endsWith(`${space}${symbol}`)).toBe(true)
+          }
+        },
+      ),
+    )
+  })
+
+  it('round-trips with both spacings and both positions (0.7-4)', () => {
+    fc.assert(
+      fc.property(
+        decimalNumber(4),
+        fc.boolean(),
+        fc.constantFrom<'before' | 'after'>('before', 'after'),
+        fc.constantFrom<CurrencyCode>('AZN', 'USD', 'EUR', 'RUB', 'GBP'),
+        (value, symbolSpacing, symbolPosition, currency) => {
+          const formatted = formatMoney(value, { locale, currency, symbolSpacing, symbolPosition })
+          expect(normalizeZero(parseMoney(formatted, { locale, currency }))).toBe(round(value, 2))
         },
       ),
     )
