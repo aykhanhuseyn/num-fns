@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { variance } from './variance'
 
-const OVERFLOW = /^variance: result \d+e0 is outside the range of a JavaScript number$/
+const OVERFLOW = 'variance: result (about 1e+400) is outside the range of a JavaScript number'
 
 describe('variance', () => {
   it('computes population variance by default', () => {
@@ -37,5 +37,23 @@ describe('variance', () => {
   it('throws RangeError when the squared deviations overflow', () => {
     expect(() => variance([-1e200, 1e200])).toThrow(RangeError)
     expect(() => variance([-1e200, 1e200])).toThrow(OVERFLOW)
+  })
+})
+
+describe('variance rounds once (0.7 review)', () => {
+  it('never rounds the mean: a non-terminating mean stays exact', () => {
+    // mean 4/3; exact population variance of [1, 1, 2] is 2/9.
+    expect(variance([1, 1, 2])).toBe(2 / 9)
+    expect(variance([1, 1, 2], { sample: true })).toBe(1 / 3)
+  })
+
+  it('handles values whose total overflows but whose variance fits', () => {
+    expect(variance([Number.MAX_VALUE, Number.MAX_VALUE])).toBe(0)
+  })
+
+  it('names itself in its errors', () => {
+    expect(() => variance([Number.NaN])).toThrow(
+      'variance: all values must be finite, received NaN',
+    )
   })
 })

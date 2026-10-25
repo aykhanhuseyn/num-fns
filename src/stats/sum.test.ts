@@ -63,7 +63,7 @@ describe('sum', () => {
   it('throws RangeError when the total overflows, rather than returning Infinity', () => {
     expect(() => sum([1e308, 1e308])).toThrow(RangeError)
     expect(() => sum([1e308, 1e308])).toThrow(
-      'sum: result 2e308 is outside the range of a JavaScript number',
+      'sum: result (about 2e+308) is outside the range of a JavaScript number',
     )
   })
 })

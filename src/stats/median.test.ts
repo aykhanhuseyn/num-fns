@@ -30,3 +30,20 @@ describe('median', () => {
     expect(() => median([1, Number.NaN, 3])).toThrow(RangeError)
   })
 })
+
+describe('median rounds once (0.7 review)', () => {
+  it('does not overflow on the two middle values', () => {
+    expect(median([Number.MAX_VALUE, Number.MAX_VALUE])).toBe(Number.MAX_VALUE)
+    expect(median([-Number.MAX_VALUE, -Number.MAX_VALUE])).toBe(-Number.MAX_VALUE)
+  })
+
+  it('rounds the exact midpoint', () => {
+    // 5000000000000000.5 is a tie; round-half-even gives …000.
+    expect(median([1, 1e16])).toBe(5000000000000000)
+  })
+
+  it('keeps -0 only when both middle values are -0', () => {
+    expect(Object.is(median([-0, -0]), -0)).toBe(true)
+    expect(Object.is(median([-0, 0]), 0)).toBe(true)
+  })
+})

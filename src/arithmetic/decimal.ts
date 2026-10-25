@@ -30,6 +30,7 @@ export interface Decimal {
 }
 
 const ZERO = BigInt(0)
+const ONE = BigInt(1)
 const TEN = BigInt(10)
 
 /** The shapes `String(number)` produces for a finite number: `"15"`, `"-0.25"`, `"1e+21"`, `"1.5e-7"`. */
@@ -97,7 +98,7 @@ export function fromDecimal(
  * 25 leaves a wide margin without making the `BigInt` division noticeably
  * slower.
  */
-export const QUOTIENT_DIGITS = 25
+const QUOTIENT_DIGITS = 25
 
 /**
  * The exact sum of `values`, each read at its shortest decimal, as one
@@ -134,16 +135,32 @@ export function multiplyDecimals(a: Decimal, b: Decimal): Decimal {
 }
 
 /**
- * `x / y` carried to {@link QUOTIENT_DIGITS} significant digits. The
+ * `x / y` carried to {@link QUOTIENT_DIGITS} significant digits, plus a
+ * sticky digit when the division is inexact (see the body). The
  * dividend is shifted left until the integer quotient is guaranteed to hold
  * at least that many digits: `|x| ≥ 10^(dx-1)` and `|y| < 10^dy`, so
  * `|x·10^shift / y| > 10^(dx-1+shift-dy) = 10^(QUOTIENT_DIGITS-1)`. A JS
- * number has at most 17 significant digits, so the shift is always positive.
+ * When `x` already has more digits than that, the shift is negative and
+ * `y` is scaled up instead.
  * The caller guarantees `y.digits` is not zero.
  */
 export function divideDecimals(x: Decimal, y: Decimal): Decimal {
   const shift = QUOTIENT_DIGITS + digitCount(y.digits) - digitCount(x.digits)
-  return { digits: (x.digits * pow10(shift)) / y.digits, scale: x.scale - y.scale + shift }
+  // A dividend with more digits than the quotient needs (an exact sum of
+  // squares can have hundreds) is not shifted left; the divisor is shifted
+  // instead, which keeps `10^shift` a whole power either way.
+  const dividend = shift >= 0 ? x.digits * pow10(shift) : x.digits
+  const divisor = shift >= 0 ? y.digits : y.digits * pow10(-shift)
+  const quotient = dividend / divisor
+  const scale = x.scale - y.scale + shift
+  if (quotient * divisor === dividend) return { digits: quotient, scale }
+  // Inexact: append one more digit, 1 in the quotient's direction (a
+  // "sticky" digit). The truncated quotient could otherwise sit exactly on
+  // a halfway point between two numbers — `5000000000000000.5` for a true
+  // value just above it — and the final conversion would round the tie the
+  // wrong way. With the extra digit it is always strictly past the tie.
+  const sticky = quotient < ZERO ? -ONE : ONE
+  return { digits: quotient * TEN + sticky, scale: scale + 1 }
 }
 
 /** Rewrites two decimals over their larger (finer) common scale so their `digits` can be added or compared directly. */

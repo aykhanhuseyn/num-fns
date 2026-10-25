@@ -38,3 +38,26 @@ describe('percentile', () => {
     expect(() => percentile([1, Number.NaN, 3], 50)).toThrow(RangeError)
   })
 })
+
+describe('percentile rounds once (0.7 review)', () => {
+  it('agrees with median at p = 50', () => {
+    expect(percentile([1, 1e16], 50)).toBe(5000000000000000)
+  })
+
+  it('does not overflow in a middle step', () => {
+    expect(percentile([-Number.MAX_VALUE, Number.MAX_VALUE], 50)).toBe(0)
+    expect(percentile([Number.MAX_VALUE, Number.MAX_VALUE], 30)).toBe(Number.MAX_VALUE)
+  })
+
+  it('returns the value itself, -0 included, when the rank is whole', () => {
+    expect(Object.is(percentile([-0, 1, 2], 0), -0)).toBe(true)
+    expect(percentile([1, 2, 3], 100)).toBe(3)
+    expect(percentile([5, 1, 3], 50)).toBe(3)
+  })
+
+  it('names itself in its errors', () => {
+    expect(() => percentile([1, Number.NaN], 50)).toThrow(
+      'percentile: all values must be finite, received NaN',
+    )
+  })
+})

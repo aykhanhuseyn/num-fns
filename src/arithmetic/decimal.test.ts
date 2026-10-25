@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { alignScales, digitCount, fromDecimal, pow10, toDecimal } from './decimal'
+import { alignScales, digitCount, divideDecimals, fromDecimal, pow10, toDecimal } from './decimal'
 
 describe('toDecimal', () => {
   it('decomposes an integer with scale 0', () => {
@@ -145,5 +145,29 @@ describe('alignScales', () => {
     const aligned = alignScales(toDecimal(-0.25), toDecimal(1.5e-7))
     expect(fromDecimal(aligned.a, aligned.scale, 'test')).toBe(-0.25)
     expect(fromDecimal(aligned.b, aligned.scale, 'test')).toBe(1.5e-7)
+  })
+})
+
+describe('divideDecimals', () => {
+  const big = (text: string) => ({ digits: BigInt(text), scale: 0 })
+  const toNumber = (d: { digits: bigint; scale: number }) => fromDecimal(d.digits, d.scale, 'test')
+
+  it('is exact when the quotient terminates (no sticky digit)', () => {
+    const quotient = divideDecimals(big('3'), big('4'))
+    expect(toNumber(quotient)).toBe(0.75)
+    expect(quotient.digits % BigInt(10)).toBe(BigInt(0))
+  })
+
+  it('adds a sticky digit when inexact, so a value just past a tie rounds away from it', () => {
+    // 100000000000000010000000001 / 20 = 5000000000000000.50000000005: the
+    // 25-digit truncation is exactly …0.5, the tie; the sticky digit is not.
+    const x = { digits: BigInt('100000000000000010000000001'), scale: 10 }
+    expect(toNumber(divideDecimals(x, big('2')))).toBe(5000000000000001)
+    expect(toNumber(divideDecimals({ ...x, digits: -x.digits }, big('2')))).toBe(-5000000000000001)
+  })
+
+  it('shifts the divisor instead when the dividend already has more digits than needed', () => {
+    const huge = big(`1${'0'.repeat(400)}`)
+    expect(toNumber(divideDecimals(huge, big(`1${'0'.repeat(399)}`)))).toBe(10)
   })
 })

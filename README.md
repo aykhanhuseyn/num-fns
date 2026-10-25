@@ -249,11 +249,13 @@ number. Signed zeros follow IEEE 754 (see "Negative zero" below).
 
 The statistics are built on the same arithmetic, so one package gives one
 answer: `sum([0.1, 0.2])` is `0.3`, like `add(0.1, 0.2)`. `sum` computes the
-exact total and rounds once at the end; `mean`, `median`, `percentile` and
-`quantile` divide and interpolate with `divide`/`multiply`/`subtract`;
-`variance` sums exact squared deviations; and `standardDeviation` is the
-square root of that — `Math.sqrt` is the only floating-point step in the
-whole group. `min`, `max` and `mode` only compare, so they were exact already.
+exact total and rounds once at the end, and so does every other statistic:
+`mean`, `median`, `percentile`, `quantile` and `variance` keep every middle
+step exact and round only the result, so `percentile(xs, 50)` always equals
+`median(xs)` and `mean([Number.MAX_VALUE, Number.MAX_VALUE])` is
+`Number.MAX_VALUE`, not an overflow. `standardDeviation` is the square root of
+the exact variance — `Math.sqrt` is the only floating-point step in the whole
+group. `min`, `max` and `mode` only compare, so they were exact already.
 
 ```ts
 import { sum, mean, median, variance } from 'num-fns';

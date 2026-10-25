@@ -1,14 +1,17 @@
-import { divide } from '../arithmetic/divide'
+import { divideDecimals } from '../arithmetic/decimal'
 import { guardNumber } from '../shared/no-throw'
-import { sum } from './sum'
+import { exactSum, integerDecimal, toNumber, validateValues } from './exact'
 
 /**
  * Computes the arithmetic mean (average) of an array of numbers, exactly in
- * decimal: the total comes from {@link sum} and the division from
- * {@link divide}, so `mean([0.1, 0.2])` is `0.15`, not
- * `0.15000000000000002`.
+ * decimal: the exact total is divided by the count and the quotient is
+ * rounded once, so `mean([0.1, 0.2])` is `0.15`, not `0.15000000000000002`,
+ * and the result is the correctly rounded mean even where the total itself
+ * would not fit a `number` (`mean([Number.MAX_VALUE, Number.MAX_VALUE])` is
+ * `Number.MAX_VALUE`).
  *
  * Throws `RangeError` when `values` is empty or a value is not finite.
+ * Signed zeros follow {@link sum}: the mean is `-0` only when every value is.
  *
  * @example
  * mean([1, 2, 3, 4]); // 2.5
@@ -18,10 +21,8 @@ import { sum } from './sum'
  */
 export function mean(values: readonly number[]): number {
   return guardNumber(() => {
-    if (values.length === 0) {
-      throw new RangeError('mean: values must not be empty')
-    }
-
-    return divide(sum(values), values.length)
+    const negativeZero = validateValues(values, 'mean')
+    const quotient = divideDecimals(exactSum(values), integerDecimal(values.length))
+    return toNumber(quotient, 'mean', negativeZero)
   })
 }

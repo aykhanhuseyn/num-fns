@@ -162,7 +162,9 @@ describe('the magnitude bounds', () => {
     expect(() => numFns.add(Number.MAX_VALUE, Number.MAX_VALUE)).toThrow(RangeError)
     expect(() => numFns.multiply(1e308, 10)).toThrow(RangeError)
     expect(() => numFns.sum([1e308, 1e308])).toThrow(RangeError)
-    expect(() => numFns.mean([1e308, 1e308])).toThrow(RangeError)
+    // The exact mean of two 1e308s is 1e308: only the total overflows, and
+    // `mean` never rounds the total on its own (0.7 review).
+    expect(numFns.mean([1e308, 1e308])).toBe(1e308)
   })
 
   it('keeps the sign of a negative value that underflows to zero', () => {

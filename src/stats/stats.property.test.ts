@@ -62,18 +62,19 @@ describe('stats (property)', () => {
     )
   })
 
-  it('percentile(xs, p) interpolates with exact arithmetic', () => {
+  it('percentile(xs, p) equals a BigInt oracle of the interpolation', () => {
+    // Every value has at most four fraction digits, so it is K / 10^4 for an
+    // integer K, and the interpolated result is
+    // (100·L + (U − L)·(p·(n − 1) mod 100)) / 10^6 — an exact integer over a
+    // power of ten, converted once. Independent of the code under test.
     fc.assert(
       fc.property(values, fc.integer({ min: 0, max: 100 }), (xs, p) => {
-        const sorted = [...xs].sort((a, b) => a - b)
-        const rank = divide(multiply(p, sorted.length - 1), 100)
-        const lower = sorted[Math.floor(rank)] as number
-        const upper = sorted[Math.ceil(rank)] as number
-        const expected = add(
-          lower,
-          multiply(subtract(upper, lower), subtract(rank, Math.floor(rank))),
-        )
-        expect(percentile(xs, p)).toBe(expected)
+        const sorted = [...xs].sort((a, b) => a - b).map((x) => BigInt(Math.round(x * 1e4)))
+        const steps = p * (sorted.length - 1)
+        const lower = sorted[Math.floor(steps / 100)] as bigint
+        const upper = sorted[Math.ceil(steps / 100)] as bigint
+        const scaled = BigInt(100) * lower + (upper - lower) * BigInt(steps % 100)
+        expect(percentile(xs, p) + 0).toBe(Number(`${scaled}e-6`))
       }),
       RUNS,
     )
