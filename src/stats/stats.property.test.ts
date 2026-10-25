@@ -123,8 +123,35 @@ describe('stats (property)', () => {
     })
     fc.assert(
       fc.property(ints, (xs) => {
-        // Appending 0.5 twice forces the exact path without changing the total.
-        expect(sum([...xs, 0.5, 0.5])).toBe(sum(xs) + 1)
+        // 1e-16 has sixteen fraction digits, one past the fast path's limit,
+        // so appending it and its negation forces the exact BigInt path
+        // without changing the total.
+        expect(sum([...xs, 1e-16, -1e-16])).toBe(sum(xs))
+      }),
+      RUNS,
+    )
+  })
+
+  it('the exact path rounds once: sum of many-digit decimals equals a BigInt oracle', () => {
+    // Each value is k × 10^-s with |k| < 10^15, so its shortest decimal is
+    // exactly that (a double round-trips 15 significant digits), and s > 15
+    // keeps `sum` off the fast path. The oracle adds the k's at scale 10^-20
+    // in BigInt and converts once, which is the correctly rounded total.
+    const SCALE = 20
+    const term = fc.record({
+      k: fc.integer({ min: -(10 ** 15) + 1, max: 10 ** 15 - 1 }),
+      s: fc.integer({ min: 16, max: SCALE }),
+    })
+    fc.assert(
+      fc.property(fc.array(term, { minLength: 1, maxLength: 30 }), (terms) => {
+        const xs = terms.map(({ k, s }) => Number(`${k}e-${s}`))
+        const total = terms.reduce(
+          (acc, { k, s }) => acc + BigInt(k) * BigInt(10) ** BigInt(SCALE - s),
+          BigInt(0),
+        )
+        const expected = Number(`${total}e-${SCALE}`)
+        // `+ 0` folds a signed zero: the oracle's BigInt has no -0.
+        expect(sum(xs) + 0).toBe(expected)
       }),
       RUNS,
     )

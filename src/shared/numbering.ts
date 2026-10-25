@@ -3,8 +3,8 @@
  * `docs/decisions/0007-locale-grouping.md`): digit grouping
  * (`formatDefaults.grouping`, `words.grouping`) and native digits
  * (`Locale.digits`). Every shipped locale leaves all three out, so each
- * resolver here returns the `en` default for them and the engine's output
- * is byte-identical to 0.6 (`locale/golden.test.ts`).
+ * resolver here returns the `en` default for them, and these fields leave
+ * the shipped locales' output unchanged (`locale/golden.test.ts`).
  *
  * A locale is data a third party can write, so a malformed field throws
  * `RangeError` at the first call that reads it — a grouping of `[0]` would
@@ -55,11 +55,15 @@ export function resolveGrouping(
 /** ASCII digits `0`–`9`, the form every numeric string is built and parsed in. */
 const ASCII_ZERO = 48
 
+/** Characters a digit may not be: whitespace and the number syntax `parseNumber` reads (`+ - . , e E`). */
+const NUMBER_SYNTAX = /^[\s+\-.,eE]$/u
+
 /**
  * Validates `Locale.digits` and returns it, or `undefined` when the locale
  * writes ASCII digits (every shipped locale). The table must hold exactly
  * ten single-character digits for 0–9, all distinct, none of them an ASCII
- * digit in the wrong place (`'٠'` … `'٩'` for Arabic-Indic).
+ * digit in the wrong place (`'٠'` … `'٩'` for Arabic-Indic), whitespace, or
+ * a character of number syntax (`+ - . , e E`) the parsers would misread.
  */
 export function resolveDigits(
   digits: readonly string[] | undefined,
@@ -74,11 +78,12 @@ export function resolveDigits(
       (digit, index) =>
         typeof digit === 'string' &&
         Array.from(digit).length === 1 &&
+        !NUMBER_SYNTAX.test(digit) &&
         !(isAsciiDigit(digit) && digit.charCodeAt(0) - ASCII_ZERO !== index),
     )
   if (!valid) {
     throw new RangeError(
-      `${context}: locale digits must be ten distinct single characters for 0-9, received ${JSON.stringify(digits)}`,
+      `${context}: locale digits must be ten distinct single characters for 0-9, none of them whitespace or + - . , e E, received ${JSON.stringify(digits)}`,
     )
   }
   return digits

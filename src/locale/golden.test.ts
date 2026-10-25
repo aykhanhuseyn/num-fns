@@ -151,7 +151,7 @@ function render(locale: Locale): string {
     )
   }
 
-  line('numberToDigitWords("+994 50 123")', () => numberToDigitWords('994050123', { locale }))
+  line('numberToDigitWords("994050123")', () => numberToDigitWords('994050123', { locale }))
 
   return lines.join('\n')
 }

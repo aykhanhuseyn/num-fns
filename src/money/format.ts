@@ -1,4 +1,5 @@
 import { en } from '../locale/en'
+import type { Locale } from '../locale/types'
 import { formatNumber, parseNumber } from '../number/format'
 import { guardNumber } from '../shared/no-throw'
 import { guardText } from '../shared/no-throw-text'
@@ -35,11 +36,12 @@ import { getCurrency } from './currency'
  * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
  * formatMoney(1234.5, { currency: 'EUR' }); // "€1,234.50"
  * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"
- * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after' }); // "9.99 US$"
+ * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after', symbolSpacing: true }); // "9.99 US$"
  * formatMoney(1234567890123456789n); // "$1,234,567,890,123,456,789.00"
  *
- * @throws {TypeError} when the locale has no `currency.symbolSpacing` (a
- * locale written against 0.6) and the caller passes none.
+ * @throws {TypeError} when `symbolSpacing` is not a boolean, or when the
+ * locale has no `currency.symbolSpacing` (a locale written against 0.6) and
+ * the caller passes none.
  */
 export function formatMoney(value: number | bigint, options: MoneyFormatOptions = {}): string {
   return guardText(
@@ -53,13 +55,8 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
         roundingMode,
         symbol = currency.symbol,
         symbolPosition = locale.currency.symbolPosition,
-        symbolSpacing = locale.currency.symbolSpacing,
       } = options
-      if (typeof symbolSpacing !== 'boolean') {
-        throw new TypeError(
-          `formatMoney: locale "${locale.code}" has no currency.symbolSpacing (required since 0.7.0); add one, or pass symbolSpacing`,
-        )
-      }
+      const symbolSpacing = resolveSymbolSpacing(options.symbolSpacing, locale)
 
       const formattedNumber = formatNumber(value, {
         decimals,
@@ -76,6 +73,30 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
     [value],
     options,
   )
+}
+
+/**
+ * The `symbolSpacing` to format with: the option when given (it must be a
+ * boolean), else the locale's required `currency.symbolSpacing`. Each
+ * mistake gets its own `TypeError`, so a bad option is never blamed on the
+ * locale.
+ */
+function resolveSymbolSpacing(option: unknown, locale: Locale): boolean {
+  if (option !== undefined) {
+    if (typeof option !== 'boolean') {
+      throw new TypeError(
+        `formatMoney: symbolSpacing must be a boolean, received ${JSON.stringify(option)}`,
+      )
+    }
+    return option
+  }
+  const fromLocale: unknown = locale.currency.symbolSpacing
+  if (typeof fromLocale !== 'boolean') {
+    throw new TypeError(
+      `formatMoney: locale "${locale.code}" has no currency.symbolSpacing (required since 0.7.0); add one, or pass symbolSpacing`,
+    )
+  }
+  return fromLocale
 }
 
 /**

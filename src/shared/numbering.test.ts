@@ -68,6 +68,10 @@ describe('resolveDigits', () => {
     [['1', '0', '2', '3', '4', '5', '6', '7', '8', '9']],
     [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as unknown as string[]],
     ['٠١٢٣٤٥٦٧٨٩' as unknown as string[]],
+    [['.', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']],
+    [['٠', '-', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩']],
+    [['٠', '١', 'e', '٣', '٤', '٥', '٦', '٧', '٨', '٩']],
+    [['٠', '١', '٢', ' ', '٤', '٥', '٦', '٧', '٨', '٩']],
   ])('throws RangeError for %p', (digits) => {
     expect(() => resolveDigits(digits, 'formatNumber')).toThrow(DIGITS_ERROR)
   })

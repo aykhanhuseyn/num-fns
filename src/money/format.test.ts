@@ -87,6 +87,13 @@ describe('formatMoney', () => {
       expect(() => formatMoney(1, { locale: legacy })).toThrow(TypeError)
       expect(formatMoney(1, { locale: legacy, symbolSpacing: false })).toBe('£1.00')
     })
+
+    it('throws TypeError naming the option, not the locale, for a non-boolean symbolSpacing', () => {
+      const bad = { symbolSpacing: 'yes' } as unknown as { symbolSpacing: boolean }
+      expect(() => formatMoney(1, bad)).toThrow(
+        'formatMoney: symbolSpacing must be a boolean, received "yes"',
+      )
+    })
   })
 
   describe('{ locale: az }', () => {

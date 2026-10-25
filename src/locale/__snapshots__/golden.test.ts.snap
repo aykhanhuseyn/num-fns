@@ -819,7 +819,7 @@ fractionToWords(1/3) => üçdə bir
 fractionToWords(3/4) => dörddə üç
 fractionToWords(5/8) => səkkizdə beş
 fractionToWords(2/100) => yüzdə iki
-numberToDigitWords("+994 50 123") => doqquz doqquz dörd sıfır beş sıfır bir iki üç"
+numberToDigitWords("994050123") => doqquz doqquz dörd sıfır beş sıfır bir iki üç"
 `;
 
 exports[`golden output of the shipped locales en is byte-identical to the committed snapshot 1`] = `
@@ -1641,7 +1641,7 @@ fractionToWords(1/3) => one third
 fractionToWords(3/4) => three fourths
 fractionToWords(5/8) => five eighths
 fractionToWords(2/100) => two one hundredths
-numberToDigitWords("+994 50 123") => nine nine four zero five zero one two three"
+numberToDigitWords("994050123") => nine nine four zero five zero one two three"
 `;
 
 exports[`golden output of the shipped locales enGB is byte-identical to the committed snapshot 1`] = `
@@ -2463,7 +2463,7 @@ fractionToWords(1/3) => one third
 fractionToWords(3/4) => three fourths
 fractionToWords(5/8) => five eighths
 fractionToWords(2/100) => two one hundredths
-numberToDigitWords("+994 50 123") => nine nine four zero five zero one two three"
+numberToDigitWords("994050123") => nine nine four zero five zero one two three"
 `;
 
 exports[`golden output of the shipped locales ru is byte-identical to the committed snapshot 1`] = `
@@ -3285,7 +3285,7 @@ fractionToWords(1/3) => RangeError: fractionToWords: locale "ru" does not define
 fractionToWords(3/4) => RangeError: fractionToWords: locale "ru" does not define fraction words yet — see todo.md §2
 fractionToWords(5/8) => RangeError: fractionToWords: locale "ru" does not define fraction words yet — see todo.md §2
 fractionToWords(2/100) => RangeError: fractionToWords: locale "ru" does not define fraction words yet — see todo.md §2
-numberToDigitWords("+994 50 123") => девять девять четыре ноль пять ноль один два три"
+numberToDigitWords("994050123") => девять девять четыре ноль пять ноль один два три"
 `;
 
 exports[`golden output of the shipped locales es is byte-identical to the committed snapshot 1`] = `
@@ -4107,5 +4107,5 @@ fractionToWords(1/3) => RangeError: fractionToWords: locale "es" does not define
 fractionToWords(3/4) => RangeError: fractionToWords: locale "es" does not define fraction words yet — see todo.md §2
 fractionToWords(5/8) => RangeError: fractionToWords: locale "es" does not define fraction words yet — see todo.md §2
 fractionToWords(2/100) => RangeError: fractionToWords: locale "es" does not define fraction words yet — see todo.md §2
-numberToDigitWords("+994 50 123") => nueve nueve cuatro cero cinco cero uno dos tres"
+numberToDigitWords("994050123") => nueve nueve cuatro cero cinco cero uno dos tres"
 `;

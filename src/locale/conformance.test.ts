@@ -302,10 +302,17 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
         const formatted = formatMoney(1234.5, { locale, currency })
         const { symbol } = getCurrency(currency)
         expect(formatted.split(symbol).length - 1).toBe(1)
+        // The exact neighbour of the symbol: a space when the locale asks
+        // for one, a digit or minus sign when it does not.
+        const amount = formatMoney(1234.5, { locale, currency, symbolSpacing: false })
         const space = locale.currency.symbolSpacing ? ' ' : ''
-        if (locale.currency.symbolPosition === 'before')
-          expect(formatted.startsWith(`${symbol}${space}`)).toBe(true)
-        else expect(formatted.endsWith(`${space}${symbol}`)).toBe(true)
+        if (locale.currency.symbolPosition === 'before') {
+          expect(amount.startsWith(symbol)).toBe(true)
+          expect(formatted).toBe(`${symbol}${space}${amount.slice(symbol.length)}`)
+        } else {
+          expect(amount.endsWith(symbol)).toBe(true)
+          expect(formatted).toBe(`${amount.slice(0, -symbol.length)}${space}${symbol}`)
+        }
         expect(parseMoney(formatted, { locale, currency })).toBeCloseTo(1234.5, 5)
       },
     )

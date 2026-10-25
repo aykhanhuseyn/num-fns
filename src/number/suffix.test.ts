@@ -246,6 +246,15 @@ describe('toOrdinal', () => {
     expect(toOrdinal(3, { locale: legacy, separator: '' })).toBe('3rd')
   })
 
+  it('throws TypeError naming the option, not the locale, for a non-string separator', () => {
+    for (const separator of [null, 1]) {
+      const options = { separator } as unknown as { separator: string }
+      expect(() => toOrdinal(3, options)).toThrow(
+        `toOrdinal: separator must be a string, received ${JSON.stringify(separator)}`,
+      )
+    }
+  })
+
   describe('bigint input', () => {
     it('renders the bigint digits exactly with the suffix of the equal number', () => {
       expect(toOrdinal(BigInt(0))).toBe('0th')

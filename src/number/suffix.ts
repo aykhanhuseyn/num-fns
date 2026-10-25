@@ -1,4 +1,5 @@
 import { en } from '../locale/en'
+import type { Locale } from '../locale/types'
 import { toSafeNumber } from '../shared/bigint'
 import { guardText } from '../shared/no-throw-text'
 import type { OrdinalOptions, SuffixOptions, ToOrdinalOptions } from '../shared/types'
@@ -139,26 +140,45 @@ export function cardinalToOrdinalWords(
  * toOrdinal(3, { locale: ru }); // "3-й"
  * toOrdinal(5, { separator: ' ' }); // "5 th"
  *
- * @throws {TypeError} when the locale has no `ordinal.separator` (a locale
- * written against 0.6) and the caller passes none.
+ * @throws {TypeError} when `separator` is not a string, or when the locale
+ * has no `ordinal.separator` (a locale written against 0.6) and the caller
+ * passes none.
  */
 export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
   return guardText(
     () => {
       assertNumericValue(value, 'value', 'toOrdinal')
       const { locale = en } = options
-      const { separator = locale.ordinal.separator } = options
-      if (typeof separator !== 'string') {
-        throw new TypeError(
-          `toOrdinal: locale "${locale.code}" has no ordinal.separator (required since 0.7.0); add one, or pass a separator`,
-        )
-      }
+      const separator = resolveOrdinalSeparator(options.separator, locale)
       const prefix = locale.ordinal.prefix ?? ''
       return `${prefix}${value}${separator}${getOrdinalSuffix(value, { locale })}`
     },
     [value],
     options,
   )
+}
+
+/**
+ * The separator {@link toOrdinal} writes: the option when given (it must be
+ * a string), else the locale's required `ordinal.separator`. Each mistake
+ * gets its own `TypeError`, so a bad option is never blamed on the locale.
+ */
+function resolveOrdinalSeparator(option: unknown, locale: Locale): string {
+  if (option !== undefined) {
+    if (typeof option !== 'string') {
+      throw new TypeError(
+        `toOrdinal: separator must be a string, received ${JSON.stringify(option)}`,
+      )
+    }
+    return option
+  }
+  const fromLocale: unknown = locale.ordinal.separator
+  if (typeof fromLocale !== 'string') {
+    throw new TypeError(
+      `toOrdinal: locale "${locale.code}" has no ordinal.separator (required since 0.7.0); add one, or pass a separator`,
+    )
+  }
+  return fromLocale
 }
 
 /**
