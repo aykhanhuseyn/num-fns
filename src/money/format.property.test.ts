@@ -18,6 +18,9 @@ import { formatMoney, parseMoney } from './format'
  * a symbol before the amount (`en`) and after it (`az`, `ru`, `es`), a
  * negative sign between the two, and a multi-character symbol.
  */
+/** One digit (ASCII or not) — what must follow the symbol and its spacing. */
+const DIGIT = /^\p{Nd}$/u
+
 const LOCALES: ReadonlyArray<readonly [string, Locale]> = [
   ['az', az],
   ['en', en],
@@ -130,8 +133,10 @@ describe.each(LOCALES)('formatMoney/parseMoney round trip (%s)', (_code, locale)
           const space = (symbolSpacing ?? locale.currency.symbolSpacing) ? ' ' : ''
           expect(formatted.split(symbol).length - 1).toBe(1)
           if (symbolPosition === 'before') {
-            expect(formatted.startsWith(`${symbol}${space}`)).toBe(true)
-            expect(formatted.charAt(symbol.length + space.length)).not.toBe(' ')
+            // A negative amount puts its minus sign in front of the symbol.
+            const unsigned = formatted.startsWith('-') ? formatted.slice(1) : formatted
+            expect(unsigned.startsWith(`${symbol}${space}`)).toBe(true)
+            expect(unsigned.charAt(symbol.length + space.length)).toMatch(DIGIT)
           } else {
             expect(formatted.endsWith(`${space}${symbol}`)).toBe(true)
           }

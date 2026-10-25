@@ -131,6 +131,7 @@ per minor), so it gets a native-speaker review in the same change.
 | Fraction read as one group (二十五), not digit by digit (二五) | `zh`, `hi-IN` | `点 二十五` | `words.fractionReading?: 'group' \| 'digits'`, default `'group'` |
 | Ordinal is a prefix (第3), not a suffix | `zh` | conformance fails "non-empty suffix" | **done in 0.7-3**: optional `ordinal.prefix`; the conformance check is now "non-empty suffix or prefix" |
 | Minus sign with the Arabic letter mark (U+061C U+002D), bidi in general | `ar` | `-١٬٢٣٤` | `formatDefaults.minusSign?: string`, default `'-'` |
+| Negative money with the sign after a leading symbol (`€ -1,00`) | `nl` (not in the spike) | the 0.7 review fixed the rule as `-$1.50` for every locale | `currency.negativePattern?`, default sign first |
 | `toOrdinal` writes ASCII digits | `ar` | `3-.` | wire `Locale.digits` into `toOrdinal`/`withSuffix` (behaviour change only for a locale that sets `digits`) |
 | Currencies INR, CNY, SAR not registered | all three | locales default to USD | see the `CurrencyCode` note below |
 

@@ -203,7 +203,7 @@
     {
       "name": "index (full number/money/percentage surface, no locale)",
       "path": "dist/index.js",
-      "limit": "9 KB"
+      "limit": "9.5 KB"
     },
     {
       "name": "locale (barrel — all five launch locales)",

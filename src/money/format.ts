@@ -14,6 +14,10 @@ import { getCurrency } from './currency'
  * same locale: the symbol comes from `getCurrency(code)`, its placement from
  * the locale, so `{ locale: az, currency: 'USD' }` gives `"9,99 $"`.
  *
+ * A negative amount keeps its minus sign in front: `"-$1.50"` when the
+ * symbol goes before the amount (before 0.7.0 it was `"$ -1.50"`),
+ * `"-1,50 ₼"` when it goes after.
+ *
  * Whether a space separates the symbol from the amount comes from the
  * locale's `currency.symbolSpacing` unless `symbolSpacing` is passed: `en`
  * and `enGB` write `"$1,234.50"`, `az`, `ru` and `es` `"1 234,50 ₼"`. Before
@@ -33,6 +37,7 @@ import { getCurrency } from './currency'
  * formatMoney(1234.5); // "$1,234.50"
  * formatMoney(1234.5, { symbolSpacing: true }); // "$ 1,234.50"
  * formatMoney(1.005); // "$1.01"
+ * formatMoney(-1.5); // "-$1.50"
  * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
  * formatMoney(1234.5, { currency: 'EUR' }); // "€1,234.50"
  * formatMoney(1234.5, { locale: az, currency: 'EUR' }); // "1 234,50 €"
@@ -66,9 +71,11 @@ export function formatMoney(value: number | bigint, options: MoneyFormatOptions 
         roundingMode,
       })
       const space = symbolSpacing ? ' ' : ''
-      return symbolPosition === 'before'
-        ? `${symbol}${space}${formattedNumber}`
-        : `${formattedNumber}${space}${symbol}`
+      if (symbolPosition === 'after') return `${formattedNumber}${space}${symbol}`
+      // A symbol in front goes after the minus sign: "-$1.50", not "$-1.50".
+      return formattedNumber.startsWith('-')
+        ? `-${symbol}${space}${formattedNumber.slice(1)}`
+        : `${symbol}${space}${formattedNumber}`
     },
     [value],
     options,
@@ -99,6 +106,9 @@ function resolveSymbolSpacing(option: unknown, locale: Locale): boolean {
   return fromLocale
 }
 
+/** A leading sign followed by whitespace, left behind when a symbol between them is stripped. */
+const SIGN_GAP = /^([+-])\s+/
+
 /**
  * Parses a string produced by {@link formatMoney} (or an equivalent format)
  * back into a JavaScript number, stripping the currency symbol — the
@@ -111,8 +121,9 @@ function resolveSymbolSpacing(option: unknown, locale: Locale): boolean {
  * `bigint` cannot carry the fifty cents, and truncating them silently would
  * be the wrong answer). Any other `output` value is a `RangeError` too.
  *
- * The symbol is stripped with or without a space next to it, so every
- * locale reads both `"$1,234.50"` and `"$ 1,234.50"`.
+ * The symbol is stripped with or without a space next to it, and a minus
+ * sign may stand before or after it, so every locale reads `"$1,234.50"`,
+ * `"$ 1,234.50"`, `"-$1.50"`, `"-$ 1.50"` and `"$-1.50"`.
  *
  * @example
  * parseMoney("$1,234.50"); // 1234.5
@@ -137,7 +148,8 @@ export function parseMoney(value: string, options: MoneyParseOptions = {}): numb
       output,
     } = options
 
-    const withoutSymbol = value.split(symbol).join('').trim()
+    // "-$ 1.50" loses its symbol as "- 1.50"; the sign is joined back on.
+    const withoutSymbol = value.split(symbol).join('').trim().replace(SIGN_GAP, '$1')
     return parseNumber(withoutSymbol, { locale, thousandsSeparator, decimalSeparator, output })
   }, options)
 }

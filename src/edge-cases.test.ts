@@ -102,7 +102,7 @@ describe('a non-finite value', () => {
 describe('negative zero', () => {
   it('keeps its sign through every renderer', () => {
     expect(numFns.formatNumber(-0)).toBe('-0')
-    expect(numFns.formatMoney(-0)).toBe('$-0.00')
+    expect(numFns.formatMoney(-0)).toBe('-$0.00')
     expect(numFns.formatPercentage(-0)).toBe('-0%')
     expect(numFns.numberToWords(-0)).toBe('negative zero')
     expect(numFns.moneyToWords(-0)).toBe('negative zero dollars')

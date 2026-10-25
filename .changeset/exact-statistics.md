@@ -19,3 +19,7 @@ check any test that pinned a float-rounded value. The overflow error of
 Cost: `sum` of 100 000 two-decimal values is about 11× slower than the float
 loop (1.9 ms vs 0.18 ms on the baseline machine); lists with a few fraction
 digits take a fast path that never touches `BigInt`. See `bench/BASELINE.md`.
+
+Size: rounding every statistic once (a shared exact-decimal helper) and the
+money sign rule add about 0.33 kB brotli to the root entry (8.94 → 9.27 kB);
+the `index` `size-limit` budget goes 9 → 9.5 KB.

@@ -25,7 +25,7 @@ describe('formatMoney', () => {
     expect(formatMoney(1.005)).toBe('$1.01')
     expect(formatMoney(2.675, { locale: az })).toBe('2,68 ₼')
     expect(formatMoney(1.005, { decimals: 2, roundingMode: 'halfEven' })).toBe('$1.00')
-    expect(formatMoney(-1.005, { decimals: 2 })).toBe('$-1.01')
+    expect(formatMoney(-1.005, { decimals: 2 })).toBe('-$1.01')
     expect(formatMoney(1234.5, { decimals: 0, roundingMode: 'halfDown' })).toBe('$1,234')
   })
 
@@ -54,6 +54,28 @@ describe('formatMoney', () => {
       expect(() => formatMoney(1, { currency: 'XYZ' as CurrencyCode })).toThrow(
         'unknown currency code "XYZ"',
       )
+    })
+  })
+
+  describe('negative amounts', () => {
+    it('put the minus sign in front of a leading symbol', () => {
+      expect(formatMoney(-1.5)).toBe('-$1.50')
+      expect(formatMoney(-1234.5, { locale: enGB })).toBe('-£1,234.50')
+      expect(formatMoney(-1.5, { symbolSpacing: true })).toBe('-$ 1.50')
+      expect(formatMoney(-9.99, { locale: az, symbolPosition: 'before' })).toBe('-₼ 9,99')
+      expect(formatMoney(BigInt(-5))).toBe('-$5.00')
+    })
+
+    it('keep the minus sign on the number when the symbol follows', () => {
+      expect(formatMoney(-1.5, { locale: az })).toBe('-1,50 ₼')
+      expect(formatMoney(-1.5, { symbolPosition: 'after' })).toBe('-1.50$')
+    })
+
+    it('parse with the sign before or after a leading symbol, spaced or not', () => {
+      for (const text of ['-$1.50', '-$ 1.50', '$-1.50', '$ -1.50']) {
+        expect(parseMoney(text)).toBe(-1.5)
+      }
+      expect(parseMoney('-$5.00', { output: 'bigint' })).toBe(BigInt(-5))
     })
   })
 
@@ -115,7 +137,7 @@ describe('formatMoney', () => {
     })
 
     it('keeps the sign and honours the locale placement', () => {
-      expect(formatMoney(BigInt(-1234))).toBe('$-1,234.00')
+      expect(formatMoney(BigInt(-1234))).toBe('-$1,234.00')
       expect(formatMoney(BigInt(-5), { locale: az })).toBe('-5,00 ₼')
       expect(formatMoney(BigInt('-1234567890123456789'), { locale: ru, currency: 'EUR' })).toBe(
         '-1 234 567 890 123 456 789,00 €',
