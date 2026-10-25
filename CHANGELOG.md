@@ -1,5 +1,128 @@
 # num-fns
 
+## 0.7.0
+
+### Minor Changes
+
+- [`22cc00a`](https://github.com/aykhanhuseyn/num-fns/commit/22cc00a63da2653a9602dcc674d328f9e012dfff) - **Breaking:** make the statistics exact in decimal, the same way `add`/`divide` are.
+  `sum([0.1, 0.2])` is now `0.3` (it was `0.30000000000000004`),
+  `mean([0.1, 0.2])` is `0.15`, and `median`, `percentile`, `quantile` and
+  `variance` keep every middle step exact and round only the result — so
+  `percentile(xs, 50)` always equals `median(xs)`, and a total that would
+  overflow no longer breaks `mean`/`median` (`mean([Number.MAX_VALUE,
+Number.MAX_VALUE])` is `Number.MAX_VALUE`). `standardDeviation` takes
+  `Math.sqrt` of an exact variance. `min`, `max` and `mode` are unchanged.
+
+  Results can differ from `0.6.0` in the last digits — that is the fix, but
+  check any test that pinned a float-rounded value. The overflow error of
+  `sum`/`variance` now names the size of the exact result
+  (`sum: result (about 2e+308) is outside the range of a JavaScript number`).
+
+  Cost: `sum` of 100 000 two-decimal values is about 11× slower than the float
+  loop (1.9 ms vs 0.18 ms on the baseline machine); lists with a few fraction
+  digits take a fast path that never touches `BigInt`. See `bench/BASELINE.md`.
+
+  Size: rounding every statistic once (a shared exact-decimal helper) and the
+  money sign rule add about 0.33 kB brotli to the root entry (8.94 → 9.27 kB);
+  the `index` `size-limit` budget goes 9 → 9.5 KB.
+
+- [`7292ef3`](https://github.com/aykhanhuseyn/num-fns/commit/7292ef3c6c1bc19d89a60f583783dc5b6a55ae43) - Let a `Locale` describe its numbering system (task 0.7-1). Three new
+  **optional** fields; no shipped locale sets them, and the output of `az`,
+  `en`, `enGB`, `ru` and `es` is byte-identical to 0.6.0 (pinned by the new
+  `src/locale/golden.test.ts`).
+
+  - `formatDefaults.grouping` — digit-group sizes for `formatNumber` (and so
+    `formatMoney`/`formatPercentage`). Default `[3]`; `[3, 2]` writes Indian
+    `12,34,567`.
+  - `words.grouping` — the groups each scale word counts in `numberToWords`,
+    `moneyToWords`, `toLongNotation` and `parseLongNotation`. Default `[3]`;
+    `[3, 2]` gives thousand/lakh/crore, `[4]` gives 万/亿.
+  - `digits` — the ten characters a locale writes for 0-9 (for example
+    Arabic-Indic `٠`…`٩`). The formatters and notation functions write them;
+    `parseNumber`, `parseMoney`, `parsePercentage` and the notation parsers
+    read them back, ASCII digits too.
+
+  A malformed value throws `RangeError` at the first call that reads it.
+
+  **Breaking (types only):** `PluralCategory` is now all six CLDR categories,
+  `'zero' | 'one' | 'two' | 'few' | 'many' | 'other'` — Arabic needs `'zero'` and
+  `'two'`. Code that handles every member of the old four must handle two
+  more. No runtime output changes.
+
+  Why and what is still missing: `docs/decisions/0007-locale-grouping.md`.
+
+  Performance: `formatNumber` groups digits in one pass instead of a regex
+  lookahead, so it is a little faster for short numbers and much faster for
+  long ones (`formatNumber(Number.MAX_VALUE)` 3.7 µs, was 161 µs, measured
+  before and after on one machine). `numberToWords` is unchanged within noise.
+
+  Size: the grouping, digit and validation code adds about 0.5 kB brotli to the
+  root entry (8.25 → 8.74 kB) and about 0.2 kB to `locale/az`, `locale/en-gb`
+  and the locale barrel, which pull in the word engine. `size-limit` budgets:
+  `index` 8.5 → 9 KB, `locale` 7 → 7.2 KB, `locale/az` 3.3 → 3.6 KB,
+  `locale/en-gb` 3 → 3.3 KB.
+
+- [`a062b19`](https://github.com/aykhanhuseyn/num-fns/commit/a062b19a229be7a93d35a3dd94d815c3dfdb996a) - **Breaking:** `formatMoney` takes the space between the currency symbol and
+  the amount from the locale (task 0.7-4). English no longer puts one there;
+  Azerbaijani, Russian and Spanish keep it. Pass `{ symbolSpacing: true }` to
+  keep the old English spacing. A negative amount now puts its minus sign in
+  front of a leading symbol (`"-$1.50"`, not `"$-1.50"`) in every locale.
+
+  | Call                                    | 0.6.0          | 0.7.0          |
+  | --------------------------------------- | -------------- | -------------- |
+  | `formatMoney(1234.5)`                   | `"$ 1,234.50"` | `"$1,234.50"`  |
+  | `formatMoney(1234.5, { locale: enGB })` | `"£ 1,234.50"` | `"£1,234.50"`  |
+  | `formatMoney(-1.5)`                     | `"$ -1.50"`    | `"-$1.50"`     |
+  | `formatMoney(-1.5, { locale: az })`     | `"-1,50 ₼"`    | `"-1,50 ₼"`    |
+  | `formatMoney(1234.5, { locale: az })`   | `"1 234,50 ₼"` | `"1 234,50 ₼"` |
+
+  New option `symbolSpacing` on `formatMoney` overrides the locale. The locale's spacing
+  also applies when you move the symbol: `formatMoney(9.99, { symbolPosition: 'after' })`
+  is `"9.99$"` in `en`; add `symbolSpacing: true` for `"9.99 $"`. `parseMoney`
+  reads every form (`"$1,234.50"`, `"$ 1,234.50"`, `"-$1.50"`, `"$-1.50"`) in
+  every locale.
+
+  **Breaking for custom locales:** `Locale.currency.symbolSpacing: boolean` is
+  required. A locale written against 0.6 without it makes `formatMoney` throw
+  `TypeError` (naming the locale) unless the caller passes `symbolSpacing`.
+
+- [`8849508`](https://github.com/aykhanhuseyn/num-fns/commit/8849508363aeae4da66d64c771e4b45e529d8e3f) - **Breaking:** require Node.js 20 or newer (`engines.node: >=20`). Node 18 is end-of-life
+  and is no longer in the smoke matrix (now 20, 22, 24). The README has a new
+  "Runtime support" section: ES2018 output, `BigInt` required, which browsers,
+  Bun, Deno, edge runtimes and React Native (Hermes 0.70+) that covers. Nothing
+  in the code changed; a Node 18 user very likely still works, but is no longer
+  promised.
+
+- [`c8499f3`](https://github.com/aykhanhuseyn/num-fns/commit/c8499f3a66a482281a6ca259c9ce6420921caa6a) - **Breaking:** `toOrdinal` takes the text between the digits and the suffix
+  from the locale, not a fixed `'-'` (task 0.7-3). English is now `"3rd"`
+  (was `"3-rd"`), and Spanish `"3º"` (was `"3-º"`); Azerbaijani `"3-cü"` and
+  Russian `"3-й"` do not change. Pass `{ separator: '-' }` to keep the old
+  output.
+
+  | Call                             | 0.6.0    | 0.7.0    |
+  | -------------------------------- | -------- | -------- |
+  | `toOrdinal(3)`                   | `"3-rd"` | `"3rd"`  |
+  | `toOrdinal(3, { locale: enGB })` | `"3-rd"` | `"3rd"`  |
+  | `toOrdinal(3, { locale: es })`   | `"3-º"`  | `"3º"`   |
+  | `toOrdinal(3, { locale: az })`   | `"3-cü"` | `"3-cü"` |
+  | `toOrdinal(3, { locale: ru })`   | `"3-й"`  | `"3-й"`  |
+
+  **Breaking for custom locales:** `Locale.ordinal.separator: string` is
+  required. A locale written against 0.6 without it makes `toOrdinal` throw
+  `TypeError` (naming the locale) instead of writing `"3undefinedrd"`; an
+  explicit `separator` option still works.
+
+  New optional `Locale.ordinal.prefix`, written before the digits, for a
+  language that marks the ordinal in front (Chinese `第3`). No shipped locale
+  sets it.
+
+### Patch Changes
+
+- [`227427c`](https://github.com/aykhanhuseyn/num-fns/commit/227427cde866308cc3f171253a8b14bfb6ebb0f8) - Add a benchmark suite (`bun run bench`, mitata) with a committed baseline in
+  `bench/BASELINE.md`. It measures `formatNumber` across magnitudes,
+  `numberToWords`, the exact `add`, `sum` and `parseNumber`. CI runs it and
+  keeps the table as an artifact. No runtime change.
+
 ## 0.6.0
 
 ### Minor Changes
