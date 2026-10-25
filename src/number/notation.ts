@@ -192,8 +192,9 @@ export function parseShortNotation(
  *
  * A `bigint` is expanded exactly at any magnitude (`todo.md` §4's BigInt
  * input path) — the natural input for a custom locale whose scale words go
- * past `Number.MAX_SAFE_INTEGER`; the same `1000 ** scales.length - 1` cap
- * applies, computed exactly.
+ * past `Number.MAX_SAFE_INTEGER`; the same cap as `numberToWords` applies
+ * (`1000 ** scales.length - 1` under the default grouping, the matching
+ * power of ten under a custom `words.grouping`), computed exactly.
  *
  * @example
  * toLongNotation(1234567); // "1 million 234 thousand 567"

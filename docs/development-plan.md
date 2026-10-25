@@ -43,6 +43,8 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 
 ### 0.7-0 Benchmarks (M)
 
+- **Status:** done (`227427c`).
+
 - **What:** `bench/` with [`mitata`](https://github.com/evanwashere/mitata).
   Cases: `formatNumber` on `1`, `1e6`, `1234567.891`, `1e21`,
   `Number.MAX_VALUE`; `numberToWords(1e15)` in `en` and `ru`; `add` ×
@@ -57,6 +59,13 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 - **Done when:** baseline table is committed; CI uploads the artifact.
 
 ### 0.7-1 `Locale` extensibility spike (L)
+
+- **Status:** done (`c38d4d6`, `7292ef3`). **Deviation:** one `words.grouping`
+  list (`[3]`, `[3, 2]`, `[4]`) replaced `scaleStep` plus per-scale
+  exponents, and `toScaleGroups(value, grouping)` replaced the planned
+  `toScaleGroups(value, step)`. `PluralCategory` was completed to CLDR's six
+  (types-only break). Finding and open gaps:
+  `docs/decisions/0007-locale-grouping.md`.
 
 - **What:** on a local branch (not pushed), write the smallest possible
   `hi-IN`, `zh`, `ar` locales and run the conformance suite. Record, per
@@ -88,6 +97,8 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 
 ### 0.7-2 Exact statistics (M)
 
+- **Status:** done (`22cc00a`). `sum` fast path taken (≈ 11× the float loop).
+
 - **What:** `sum`, `mean`, `median`, `percentile`, `quantile` accumulate
   with `arithmetic/add` and divide with `arithmetic/divide`. `variance` and
   `standardDeviation` build the sum of squares with
@@ -106,6 +117,9 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 
 ### 0.7-3 Locale-driven ordinal separator (S)
 
+- **Status:** done (`c8499f3`). Also added optional `ordinal.prefix` for
+  Chinese `第3` (0007 finding). `es` `"3º"` still to confirm in 0.9-3.
+
 - **What:** `LocaleOrdinal.separator: string` (required; every shipped
   locale sets it). `toOrdinal` uses it when the caller passes none.
   `en`/`enGB`: `''` → `"3rd"`. `az`: `'-'` → `"3-cü"`. `ru`: `'-'` →
@@ -119,6 +133,8 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 
 ### 0.7-4 Locale-driven money spacing (S)
 
+- **Status:** done (`a062b19`).
+
 - **What:** `LocaleCurrency.symbolSpacing: boolean`. `en`/`enGB`: `false`
   → `"$1,234.50"`, `"£1,234.50"`. `az`, `ru`, `es`: `true`. New option
   `symbolSpacing` on `MoneyFormatOptions` overrides it. `parseMoney`
@@ -131,6 +147,8 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 
 ### 0.7-5 Node and runtime support policy (S)
 
+- **Status:** done (`8849508`).
+
 - **What:** `engines.node` → `>=20`. Smoke matrix → 20, 22, 24. README gets
   a "Runtime support" section: Node 20+; Bun; Deno; browsers with `BigInt`
   (Chrome 67+, Firefox 68+, Safari 14+); ES2018 output; no polyfill
@@ -140,6 +158,9 @@ Order matters. 0.7-0 before 0.7-2. 0.7-1 before anything that touches
 - **Files:** `package.json`, `.github/workflows/ci.yml`, README.
 
 ### 0.7-6 Release 0.7.0 (S)
+
+- **Status:** CHANGELOG preview read (`10cab01`); push, "version packages"
+  PR and `npm publish` pending.
 
 - `bun run version`, read the CHANGELOG as a user, publish.
 

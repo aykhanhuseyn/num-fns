@@ -75,6 +75,8 @@ function buildPreview(): HTMLElement {
       ['currency.code (default)', locale.currency.code],
       ['getCurrency(currency.code).symbol', getCurrency(locale.currency.code).symbol],
       ['currency.symbolPosition', locale.currency.symbolPosition],
+      ['currency.symbolSpacing', String(locale.currency.symbolSpacing)],
+      ['ordinal.separator', JSON.stringify(locale.ordinal.separator)],
       [
         'currency.units (major / minor)',
         Object.entries(locale.currency.units)

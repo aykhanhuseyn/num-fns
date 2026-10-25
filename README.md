@@ -141,7 +141,7 @@ ordinalToWords(3); // "third"
 withSuffix(120, 'kg'); // "120 kg"
 
 formatMoney(1234.5); // "$1,234.50"
-parseMoney('$ 1,234.50'); // 1234.5
+parseMoney('$1,234.50'); // 1234.5 ("$ 1,234.50" parses too)
 moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
 formatMoney(1234.5, { currency: 'GBP' }); // "£1,234.50"
 moneyToWords(1.5, { currency: 'GBP' }); // "one pound fifty pence"
@@ -342,10 +342,10 @@ Two rules keep the `bigint` side honest:
 
 Deliberately not included: `add`/`subtract`/`multiply`/`divide`/`round` and
 `clamp`/`inRange` stay `number`-only — JavaScript already has exact native
-`bigint` operators — as do the float-domain statistics and financial
-functions; `fractionToWords` and `fromRoman` (range ≤ 3999) are unchanged.
-Custom locales are unaffected: `plural`, `ordinal.*` and `words.renderGroup`
-keep their `number` signatures and never receive a `bigint`.
+`bigint` operators — as do the statistics and financial functions;
+`fractionToWords` and `fromRoman` (range ≤ 3999) are unchanged. A custom
+locale's hooks never receive a `bigint`: `plural`, `ordinal.*` and
+`words.renderGroup` keep their `number` signatures.
 
 ### Errors, or empty values
 
@@ -454,7 +454,10 @@ function's JSDoc.
 Adding a locale means implementing one object against the `Locale` interface
 and the shared conformance suite (`src/locale/conformance.test.ts`) every
 locale must pass unmodified — see [`CONTRIBUTING.md`](./CONTRIBUTING.md#how-to-add-a-new-locale)
-for the full locale-authoring guide. Contributions welcome.
+for the full locale-authoring guide. Contributions welcome. A locale written
+against 0.6 needs two new fields for 0.7: `ordinal.separator` and
+`currency.symbolSpacing` (without them `toOrdinal`/`formatMoney` throw
+`TypeError`).
 
 A custom locale can also change the numbering system — all three fields are
 optional and no shipped locale sets them:

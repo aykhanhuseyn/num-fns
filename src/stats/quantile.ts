@@ -4,8 +4,8 @@ import { percentile } from './percentile'
 
 /**
  * Computes the q-th quantile (0-1) of an array of numbers. A thin wrapper
- * over {@link percentile}: `quantile(values, q) === percentile(values, q * 100)`,
- * with the scaling done by {@link multiply} so `q = 0.07` reaches
+ * over {@link percentile}: `quantile(values, q) === percentile(values, multiply(q, 100))`,
+ * the scaling done by {@link multiply} rather than `q * 100` so `q = 0.07` reaches
  * `percentile` as `7`, not `7.000000000000001`.
  *
  * Throws `RangeError` when `q` is outside `0..1`, plus everything

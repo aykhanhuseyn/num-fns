@@ -102,7 +102,7 @@ function buildHero(): HTMLElement {
   const tryLink = document.createElement('a')
   tryLink.className = 'button button-primary'
   tryLink.href = '#playground'
-  tryLink.textContent = `Try all ${exampleCount} functions live`
+  tryLink.textContent = `Try ${exampleCount} functions live`
   cta.appendChild(tryLink)
 
   const repoLink = document.createElement('a')
@@ -192,7 +192,7 @@ function buildPlaygroundSection(): HTMLElement {
   heading.textContent = 'Docs & playground'
   intro.appendChild(heading)
   const description = document.createElement('p')
-  description.textContent = `Every one of the ${exampleCount} public functions below is live — change any input and the result updates immediately, calling the actual function from src/. Invalid input shows the real thrown error instead of a fake message.`
+  description.textContent = `Each of the ${exampleCount} functions below is live — change any input and the result updates immediately, calling the actual function from src/. Invalid input shows the real thrown error instead of a fake message.`
   intro.appendChild(description)
   wrapper.appendChild(intro)
 

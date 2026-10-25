@@ -51,7 +51,7 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * zero, spelled only with `includeZeroMinor`), read at any magnitude the
  * locale can name — `numberToWords` throws `RangeError` beyond
  * `1000 ** locale.words.scales.length - 1` (999 trillion for every launch
- * locale). The unit word is still inflected for the amount's plural
+ * locale; a custom `words.grouping` caps at the matching power of ten). The unit word is still inflected for the amount's plural
  * category (`moneyToWords(2n, { locale: ru })` is `"два рубля"`), and a
  * negative `bigint` is prefixed with `locale.words.negative` like a
  * negative `number`.

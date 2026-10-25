@@ -105,7 +105,8 @@ export function resolveScaleWord(
  * path), and so is a `number`'s whole part: both are chunked with integer
  * arithmetic rather than `Math.floor`, so a custom locale that names scales
  * beyond `Number.MAX_SAFE_INTEGER` (quadrillion and up) gets every digit
- * right, and the `1000 ** scales.length - 1` cap is checked exactly, after
+ * right, and the magnitude cap (`1000 ** scales.length - 1` under the default
+ * grouping) is checked exactly, after
  * rounding (`999999999999.999` does not slip past a 999-billion cap on a
  * carry).
  *

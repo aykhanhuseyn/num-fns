@@ -29,8 +29,8 @@ Why and what is still missing: `docs/decisions/0007-locale-grouping.md`.
 
 Performance: `formatNumber` groups digits in one pass instead of a regex
 lookahead, so it is a little faster for short numbers and much faster for
-long ones (`formatNumber(Number.MAX_VALUE)` 3.7 µs, was 161 µs on the
-baseline machine). `numberToWords` is unchanged within noise.
+long ones (`formatNumber(Number.MAX_VALUE)` 3.7 µs, was 161 µs, measured
+before and after on one machine). `numberToWords` is unchanged within noise.
 
 Size: the grouping, digit and validation code adds about 0.5 kB brotli to the
 root entry (8.25 → 8.74 kB) and about 0.2 kB to `locale/az`, `locale/en-gb`

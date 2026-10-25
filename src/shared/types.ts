@@ -56,7 +56,7 @@ export interface ParseOutputOptions extends NoThrowOptions {
 export interface NumberFormatOptions extends NoThrowOptions {
   /** Number of fractional digits to keep (a non-negative integer, `RangeError` otherwise). Omit to keep the value's natural precision. */
   decimals?: number
-  /** Separator inserted between groups of three integer digits. Defaults to `locale.formatDefaults.thousandsSeparator`. */
+  /** Separator inserted between integer digit groups (groups of three unless the locale's `formatDefaults.grouping` says otherwise). Defaults to `locale.formatDefaults.thousandsSeparator`. */
   thousandsSeparator?: string
   /** Separator between the integer and fractional part. Defaults to `locale.formatDefaults.decimalSeparator`. */
   decimalSeparator?: string

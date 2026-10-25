@@ -66,20 +66,28 @@ Locales are data. More of them come in minor versions.
 
 All breaking changes happen here, early, while we are still `0.x`.
 
+**Status (2026-10-25): all tasks done on `main`; release pending.** The
+CHANGELOG entries (`.changeset/*.md`) list every breaking change with a
+before/after table.
+
 - **Benchmarks first.** `bench/` with a committed baseline. Every change
   below is measured against it.
 - **`Locale` extensibility spike.** Write throw-away `hi-IN`, `zh`, `ar`
   locales to find what the interface cannot say. Land what they need as
-  **optional** fields with `en` defaults: `grouping` (`[3, 2]` for Indian
-  numbering), `scaleBase` (10⁴ for CJK), `digits` (Arabic-Indic). The
-  spike locales do not ship.
+  **optional** fields with `en` defaults. *Outcome:* `formatDefaults.grouping`
+  (`[3, 2]` writes `12,34,567`), `words.grouping` (one CLDR-style list for
+  every scale ladder — `[3, 2]` lakh/crore, `[4]` 万/亿 — instead of a
+  separate `scaleBase`), `digits` (Arabic-Indic), `ordinal.prefix` (第3),
+  and `PluralCategory` completed to CLDR's six. The spike locales did not
+  ship; the finding is `docs/decisions/0007-locale-grouping.md`.
 - **Exact statistics.** `sum`, `mean`, `median`, `percentile`, `quantile`,
   `variance`, `standardDeviation` use `add`/`subtract`/`multiply`/`divide`.
   `sqrt` is the only float step. Fast path for safe integers if the
   benchmark says so.
-- **Locale-driven defaults.** `toOrdinal(3)` → `"3rd"` in `en` (today
-  `"3-rd"`). `formatMoney(1234.5)` → `"$1,234.50"` in `en` (today
-  `"$ 1,234.50"`). `az` keeps `"3-cü"` and `"9,99 ₼"`.
+- **Locale-driven defaults.** `toOrdinal(3)` → `"3rd"` in `en` (was
+  `"3-rd"`). `formatMoney(1234.5)` → `"$1,234.50"` in `en` (was
+  `"$ 1,234.50"`). `az` keeps `"3-cü"` and `"9,99 ₼"`. New required locale
+  fields: `ordinal.separator`, `currency.symbolSpacing`.
 - **Node >= 20.** Node 18 is end-of-life. Smoke matrix becomes 20/22/24.
 
 ### 0.8.0 — docs and proof (Dec 2026)
@@ -91,8 +99,7 @@ No API change.
 - Type-level tests (`expect-type`) for every overloaded parser.
 - `docs/versioning.md`: what is a patch, minor, major — for code and for
   locale data.
-- README "Runtime support": Node 20+, browsers with `BigInt` (Safari 14+,
-  Chrome 67+), Bun, Deno, edge runtimes.
+- ~~README "Runtime support"~~ — done early, in 0.7-5.
 - `todo.md` moves to `docs/archive/todo-2026.md`, frozen. Open items
   become issues. Six ADRs in `docs/decisions/` for the decisions a
   newcomer would re-propose.

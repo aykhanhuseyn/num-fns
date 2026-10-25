@@ -416,11 +416,16 @@ const ordinalCategory: Category = {
         {
           id: 'separator',
           label: 'separator',
-          kind: 'text',
+          kind: 'select',
           valueType: 'string',
-          default: '',
-          placeholder: 'locale default',
+          default: '(locale)',
           omitWhenDefault: true,
+          selectOptions: [
+            { value: '(locale)', label: '(locale default)' },
+            { value: '', label: "'' (none)" },
+            { value: '-', label: "'-'" },
+            { value: ' ', label: "' ' (space)" },
+          ],
           arg: { kind: 'option', key: 'separator' },
         },
       ],
@@ -831,7 +836,7 @@ const moneyCategory: Category = {
           label: 'value',
           kind: 'text',
           valueType: 'string',
-          default: '$ 1,234.50',
+          default: '$1,234.50',
           arg: { kind: 'positional', index: 0 },
         },
         localeField(),
@@ -1705,7 +1710,7 @@ const statsCategory: Category = {
       name: 'quantile',
       signature: '(values: number[], q: number): number',
       description:
-        'Computes the q-th quantile (0-1) of an array of numbers. quantile(v, q) === percentile(v, q * 100).',
+        'Computes the q-th quantile (0-1) of an array of numbers: percentile(v, q × 100), with the scaling done exactly (q = 0.07 is the 7th percentile, not 7.000000000000001). Exact in decimal since 0.7.0.',
       sourceFile: 'src/stats/quantile.ts',
       fn: fn(quantile),
       fields: [

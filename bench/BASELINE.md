@@ -48,3 +48,5 @@ runtime: bun 1.4.2 (x64-linux)
 | Case | Baseline | After | Why |
 | --- | --- | --- | --- |
 | `sum of 100 000 decimals` | `176.59 µs` | `1.89 ms` (≈ 11×) | 0.7-2: `sum` is exact in decimal. The budget was 20×; a fast path for values with a few fraction digits keeps it under. |
+| `formatNumber(Number.MAX_VALUE)` | `146.98 µs` | `~4 µs` (≈ 35× faster) | 0.7-1: digits are grouped in one left-to-right pass; the old `\B(?=(\d{3})+(?!\d))` regex was quadratic on long digit strings. Short numbers are unchanged or slightly faster (`formatNumber(1e6)` ≈ 0.52 µs vs ≈ 0.59 µs, same machine). |
+| `numberToWords(…)` | — | same within noise | 0.7-1: `toScaleGroups` computes a group base only when the group size changes. |

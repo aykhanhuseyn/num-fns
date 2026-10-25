@@ -372,7 +372,7 @@ export interface Locale {
   name?: string
   /** Number formatting separators this locale defaults to, e.g. `en`'s `','`/`'.'` against `az`'s `' '`/`','`. */
   formatDefaults: {
-    /** Separator inserted between groups of three integer digits. */
+    /** Separator inserted between integer digit groups (groups of three unless {@link grouping} says otherwise). */
     thousandsSeparator: string
     /** Separator between the integer and fractional part. */
     decimalSeparator: string
@@ -399,8 +399,9 @@ export interface Locale {
    * locale). When set, `formatNumber` — and so `formatMoney` and
    * `formatPercentage` — `toShortNotation` and `toLongNotation` write these
    * digits, and their parsers read them back (ASCII digits are accepted
-   * too). Each entry must be a single character and the ten must be
-   * distinct (`RangeError` otherwise).
+   * too). Each entry must be a single character, the ten must be
+   * distinct, and none may be whitespace or number syntax (`+ - . , e E`)
+   * (`RangeError` otherwise).
    *
    * @since 0.7.0
    */
@@ -409,13 +410,14 @@ export interface Locale {
   words: LocaleWords
   /**
    * Selects the plural/case category for a cardinal value, per CLDR plural
-   * rules. `az`, `en`, and `es` can return `'other'` unconditionally; `ru`
-   * needs the real `one`/`few`/`many` split to pick the right scale and
-   * currency word forms.
+   * rules. `az` returns `'other'` for every value, `en`/`enGB`/`es` split
+   * `'one'`/`'other'`, and `ru` needs the real `one`/`few`/`many` split to
+   * pick the right scale and currency word forms.
    *
    * Always receives a `number`, even when the public function was given a
-   * `bigint` (2026-09-06): the 0–999 groups `numberToWords` classifies are
-   * plain numbers anyway, and `moneyToWords` passes a `bigint` amount
+   * `bigint` (2026-09-06): the groups `numberToWords` classifies are
+   * plain numbers anyway (0–999 by default, at most `10^15 - 1` under a
+   * custom `words.grouping`), and `moneyToWords` passes a `bigint` amount
    * through `shared/bigint.ts`'s `pluralOperand`, which converts a safe
    * integer directly and folds a larger one to its last six digits plus a
    * million — a reduction every CLDR integer rule (`n % 10`, `n % 100`,

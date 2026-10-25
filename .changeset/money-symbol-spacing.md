@@ -14,7 +14,9 @@ keep the old English output.
 | `formatMoney(-1.5)` | `"$ -1.50"` | `"$-1.50"` |
 | `formatMoney(1234.5, { locale: az })` | `"1 234,50 ₼"` | `"1 234,50 ₼"` |
 
-New option `symbolSpacing` on `formatMoney` overrides the locale. `parseMoney`
+New option `symbolSpacing` on `formatMoney` overrides the locale. The locale's spacing
+also applies when you move the symbol: `formatMoney(9.99, { symbolPosition: 'after' })`
+is `"9.99$"` in `en`; add `symbolSpacing: true` for `"9.99 $"`. `parseMoney`
 reads both forms (`"$1,234.50"` and `"$ 1,234.50"`) in every locale.
 
 **Breaking for custom locales:** `Locale.currency.symbolSpacing: boolean` is
