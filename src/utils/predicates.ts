@@ -4,7 +4,9 @@ import { guardBoolean } from '../shared/no-throw'
 const TWO = BigInt(2)
 
 /**
- * Checks whether an integer is even. Throws for non-integer numbers, since
+ * Checks whether an integer is even.
+ *
+ * Throws for non-integer numbers, since
  * evenness is undefined for fractional values. A `bigint` is always an
  * integer and is tested exactly at any magnitude.
  *
@@ -13,6 +15,12 @@ const TWO = BigInt(2)
  * isEven(3); // false
  * isEven(-4); // true
  * isEven(BigInt('123456789012345678901234567890')); // true
+ *
+ * @param value - The integer to test: a `number` or a `bigint`.
+ * @returns `true` when `value` is even, otherwise `false`.
+ * @throws {TypeError} When `value` is a `number` that is not an integer
+ * (this includes `NaN` and `Infinity`).
+ * @since 0.2.0
  */
 export function isEven(value: number | bigint): boolean {
   return guardBoolean(() => {
@@ -27,7 +35,9 @@ export function isEven(value: number | bigint): boolean {
 }
 
 /**
- * Checks whether an integer is odd. Throws for non-integer numbers, since
+ * Checks whether an integer is odd.
+ *
+ * Throws for non-integer numbers, since
  * oddness is undefined for fractional values. A `bigint` is always an
  * integer and is tested exactly at any magnitude.
  *
@@ -36,6 +46,12 @@ export function isEven(value: number | bigint): boolean {
  * isOdd(4); // false
  * isOdd(-3); // true
  * isOdd(BigInt('123456789012345678901234567891')); // true
+ *
+ * @param value - The integer to test: a `number` or a `bigint`.
+ * @returns `true` when `value` is odd, otherwise `false`.
+ * @throws {TypeError} When `value` is a `number` that is not an integer
+ * (this includes `NaN` and `Infinity`).
+ * @since 0.2.0
  */
 export function isOdd(value: number | bigint): boolean {
   return guardBoolean(() => {

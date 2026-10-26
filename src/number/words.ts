@@ -74,10 +74,13 @@ export function resolveScaleWord(
   return entry[category] ?? entry.other ?? Object.values(entry)[0] ?? ''
 }
 
+// Maintainer notes: the `en` default is `todo.md` §1's "default locale"
+// decision; the exact `bigint` path is `todo.md` §4's BigInt input path.
 /**
- * Spells out a number as cardinal words, in the locale given by
- * `options.locale` (defaults to `en` — see `todo.md` §1's "default locale"
- * decision; pass `{ locale: az }` for the pre-refactor default).
+ * Spells out a number as cardinal words.
+ *
+ * Uses the locale given by `options.locale` (defaults to `en`; pass
+ * `{ locale: az }` for Azerbaijani).
  *
  * Groups the integer into chunks — base-1000 by default, or by the
  * locale's `words.grouping` (Indian lakh/crore `[3, 2]`, CJK 万/亿 `[4]`) —
@@ -95,14 +98,13 @@ export function resolveScaleWord(
  * `locale.words.decimalConnector` when the locale defines one (see
  * `decimalConnector`'s doc comment in `locale/types.ts`), with a leading
  * zero spoken rather than dropped so `1.01` ("one point zero one") stays
- * distinct from `1.1` ("one point ten") — see {@link renderFraction}.
+ * distinct from `1.1` ("one point ten").
  * The rounding is `arithmetic/round`'s, exact in decimal:
  * `numberToWords(2.675)` ends in "sixty-eight" as the value is written,
  * where `Math.round((2.675 - 2) * 100)` gives `67` because the double is
  * stored just below the tie; `1.999` carries into "two".
  *
- * A `bigint` is read exactly at any magnitude (`todo.md` §4's BigInt input
- * path), and so is a `number`'s whole part: both are chunked with integer
+ * A `bigint` is read exactly at any magnitude, and so is a `number`'s whole part: both are chunked with integer
  * arithmetic rather than `Math.floor`, so a custom locale that names scales
  * beyond `Number.MAX_SAFE_INTEGER` (quadrillion and up) gets every digit
  * right, and the magnitude cap (`1000 ** scales.length - 1` under the default
@@ -125,6 +127,15 @@ export function resolveScaleWord(
  * numberToWords(21, { locale: ru, gender: 'feminine' }); // "двадцать одна"
  * numberToWords(200, { locale: es, gender: 'feminine' }); // "doscientas"
  * numberToWords(BigInt('123456789012345')); // "one hundred twenty-three trillion ..."
+ *
+ * @param value - The number or `bigint` to spell out.
+ * @param options - `locale` and the grammatical `gender`.
+ * @returns The number in words.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is not finite, when it is larger than
+ * the locale's largest scale supports, when `gender` is not one the locale
+ * distinguishes, or when the locale's `words.grouping` is not valid.
+ * @since 0.2.0
  */
 export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
   return guardText(

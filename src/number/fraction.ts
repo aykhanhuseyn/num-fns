@@ -27,11 +27,17 @@ function enFractionWords(numerator: number, denominator: number): string {
   return `${numberToWords(numerator, { locale: en })} ${denominatorWord}`
 }
 
+// Maintainer notes: the `ru`/`es` refusal follows the "wrong in
+// embarrassing, specific ways" warning in `todo.md` §5; real `ru`/`es`
+// fraction-noun vocabulary is tracked in `todo.md` §2. `en`'s composer is
+// `enFractionWords` above.
 /**
- * Spells out a proper fraction (`0 < numerator < denominator`) as words, per
+ * Spells out a proper fraction as words.
+ *
+ * Takes a proper fraction (`0 < numerator < denominator`) and uses
  * `options.locale` (defaults to `en`). Every locale but `en` composes its
- * fraction words via its own `Locale.fractions` hook (`az.fractions`, e.g.)
- * — `en`'s composer lives in this module instead, see {@link enFractionWords}.
+ * fraction words via its own `Locale.fractions` hook (`az.fractions`, e.g.);
+ * `en`'s composer is built into this function.
  *
  * Scoped to proper fractions (`0 < numerator < denominator`) — mixed numbers
  * and improper fractions throw `RangeError`, since there's no single
@@ -44,18 +50,25 @@ function enFractionWords(numerator: number, denominator: number): string {
  * the masculine ordinal adjectives `ru.ordinal.words` produces ("третий"),
  * and Spanish's fraction noun for 1/3 ("tercio") differs from its ordinal
  * ("tercero") even though every other denominator's forms coincide.
- * Guessing at these risks exactly the "wrong in embarrassing, specific ways"
- * failure mode `todo.md` §5 calls out for machine-generated `ru`/`es` word
- * lists, so `fractionToWords` throws for these locales (no `Locale.fractions`
- * defined) instead of guessing; building real `ru`/`es` fraction-noun
- * vocabulary is tracked in `todo.md` §2 as follow-up linguistic work, not
- * part of this locale-threading pass.
+ * A guess would be wrong in embarrassing, specific ways, so
+ * `fractionToWords` throws for these locales (no `Locale.fractions`
+ * defined) instead of guessing. Real `ru`/`es` fraction words are planned
+ * follow-up work.
  *
  * @example
  * fractionToWords(1, 3); // "one third"
  * fractionToWords(2, 3); // "two thirds"
  * fractionToWords(1, 2, { locale: az }); // "yarım"
  * fractionToWords(1, 3, { locale: az }); // "üçdə bir"
+ *
+ * @param numerator - An integer from 1 to `denominator - 1`.
+ * @param denominator - An integer of 2 or more.
+ * @param options - The `locale`.
+ * @returns The fraction in words.
+ * @throws {RangeError} When `denominator` is not an integer of 2 or more,
+ * when `numerator` is not an integer from 1 to `denominator - 1`, or when
+ * the locale has no fraction words (`ru`, `es`).
+ * @since 0.2.0
  */
 export function fractionToWords(
   numerator: number,

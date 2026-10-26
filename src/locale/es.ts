@@ -366,21 +366,22 @@ function fusedScaleOrdinal(value: number): string | null {
 }
 
 /**
- * Spanish locale (`todo.md` §1/§2). Two composition irregularities live in
- * `compose` (above): the "cien"/"ciento" split (100 alone is "cien", but
- * "ciento" before more digits or a scale word, e.g. "cien mil" vs "ciento
- * uno") and "uno"/"veintiuno" apocopating to "un"/"veintiún" before a
- * masculine scale noun ("un millón", "veintiún millones") — except "mil",
- * which drops the leading "uno" entirely ("mil", not "un mil"), the same
- * irregularity `az.ts` documents for "min". `1e9` is named "millardo" here
- * rather than the more colloquial "mil millones", per the leaning noted in
- * `todo.md` §1's scale-naming decision — the traditional Spanish "billón"
- * (`1e12`, long scale) is kept distinct from English "billion" (`1e9`).
- * `words.decimalConnector` is `'coma'`, RAE's standard decimal reading
- * ("doce coma treinta y cuatro" for `12.34`) — closing the `todo.md` §2 gap
- * this locale previously left unset (a plain-space join, shared at the time
- * with `en`/`ru`).
+ * Spanish locale. 100 alone is "cien" but "ciento" before more digits
+ * ("ciento uno"); "uno"/"veintiuno" shorten to "un"/"veintiún" before a
+ * masculine scale noun ("un millón", "veintiún millones"), and "mil" drops
+ * the leading "uno" ("mil", not "un mil"). `1e9` is "millardo"; "billón" is
+ * `1e12` (long scale), not English "billion". The decimal word is `'coma'`
+ * ("doce coma treinta y cuatro" for `12.34`).
+ *
+ * @example
+ * numberToWords(100, { locale: es }); // "cien"
+ * numberToWords(21000000, { locale: es }); // "veintiún millones"
+ * formatMoney(1234.5, { locale: es }); // "1.234,50 €"
+ *
+ * @since 0.2.0
  */
+// Maintainers: `todo.md` §1/§2 (scale naming: `todo.md` §1). The
+// "cien"/"ciento" and apocope rules live in `compose`.
 export const es: Locale = {
   code: 'es',
   name: 'Spanish',

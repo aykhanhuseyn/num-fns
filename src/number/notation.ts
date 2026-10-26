@@ -31,14 +31,14 @@ import { assertGroupSeparator, assertNumericValue } from '../shared/validation'
 import { parseNumber } from './format'
 import { resolveScaleWord } from './words'
 
+// Maintainer note: `options.locale` was a bare `'az' | 'en'` string until
+// the `todo.md` §1 locale refactor folded it into the `Locale` objects.
 /**
- * Abbreviates a large number to a short scaled form, using `options.locale`'s
- * `notation.scales` (defaults to `en`: `K`/`M`/`B`/`T`).
+ * Abbreviates a large number to a short scaled form, e.g. `"1.5K"`.
  *
- * Before 2026-08-18 `options.locale` was a bare `'az' | 'en'` string,
- * unrelated to the `Locale` objects in `num-fns/locale` (see `CLAUDE.md`'s
- * note on this). It's now folded into the full `Locale` system per the
- * `todo.md` §1 plan.
+ * Uses `options.locale`'s `notation.scales` (defaults to `en`:
+ * `K`/`M`/`B`/`T`). In 0.2.0 `options.locale` became a `Locale` object
+ * (it was a bare `'az' | 'en'` string before).
  *
  * The scaled value is rounded half up to `decimals` places exactly in
  * decimal (`shared/bigint.ts`'s `scaleToFixed`, on the same shortest-decimal
@@ -56,6 +56,14 @@ import { resolveScaleWord } from './words'
  * toShortNotation(1500, { locale: az }); // "1,5 min"
  * toShortNotation(1500n); // "1.5K"
  * toShortNotation(2675000, { decimals: 2 }); // "2.68M"
+ *
+ * @param value - The number or `bigint` to abbreviate.
+ * @param options - `locale`, `decimals` (default 1) and `decimalSeparator`.
+ * @returns The scaled value with its short scale word, e.g. `"1.5K"`.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is not finite, when `decimals` is not a
+ * non-negative integer, or when the locale's `digits` are not valid.
+ * @since 0.2.0
  */
 export function toShortNotation(
   value: number | bigint,
@@ -124,7 +132,9 @@ function correctFloatingPointNoise(value: number): number {
 }
 
 /**
- * Parses a string produced by {@link toShortNotation} (or an equivalent
+ * Parses a short scaled form such as `"2.5M"` back into a number.
+ *
+ * Reads a string produced by {@link toShortNotation} (or an equivalent
  * format) back into a JavaScript number — or, with `{ output: 'bigint' }`,
  * into an exact `bigint`: the mantissa is multiplied by the scale's
  * threshold in decimal, so `"2.5M"` is `2500000n`, and a value that is not a
@@ -134,15 +144,38 @@ function correctFloatingPointNoise(value: number): number {
  * parseShortNotation("2.5M"); // 2500000
  * parseShortNotation("2,5 mln", { locale: az }); // 2500000
  * parseShortNotation("2.5M", { output: 'bigint' }); // 2500000n
+ *
+ * @param value - The text to parse, e.g. `"2.5M"`.
+ * @param options - `locale`, `decimalSeparator` and `output: 'bigint'`.
+ * @returns The exact value as a `bigint`.
+ * @throws {SyntaxError} When `value` is empty or its number cannot be read.
+ * @throws {RangeError} When `output` is not `'number'` or `'bigint'`, when
+ * the value is not finite, when the locale's `digits` are not valid, or,
+ * with `output: 'bigint'`, when the scaled value is not a whole number.
+ * @since 0.2.0
  */
 export function parseShortNotation(
   value: string,
   options: ShortNotationParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses a short scaled form such as `"2.5M"` back into a number.
+ *
+ * @param value - The text to parse, e.g. `"2.5M"`.
+ * @param options - `locale` and `decimalSeparator`; `output` omitted or `'number'`.
+ * @returns The value as a number.
+ */
 export function parseShortNotation(
   value: string,
   options?: ShortNotationParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a short scaled form when `output` is only known at run time.
+ *
+ * @param value - The text to parse, e.g. `"2.5M"`.
+ * @param options - `locale`, `decimalSeparator` and an `output` of type `ParseOutput`.
+ * @returns A `bigint` for `output: 'bigint'`, otherwise a number.
+ */
 export function parseShortNotation(
   value: string,
   options: ShortNotationParseOptions,
@@ -183,15 +216,17 @@ export function parseShortNotation(
   }, options)
 }
 
+// Maintainer note: the exact `bigint` path is `todo.md` §4's BigInt input path.
 /**
- * Expands an integer into digit groups paired with their scale word (per
+ * Expands an integer into digit groups with scale words, e.g. `"1 million 234 thousand 567"`.
+ *
+ * Pairs each digit group with its scale word (per
  * `options.locale`, defaults to `en`), without spelling every number out —
  * e.g. `1234567` becomes `"1 million 234 thousand 567"`. The groups follow
  * the locale's `words.grouping` (base-1000 unless it says otherwise; Indian
  * `[3, 2]` gives `"12 lakh 34 thousand 567"`), and the digits its `digits`.
  *
- * A `bigint` is expanded exactly at any magnitude (`todo.md` §4's BigInt
- * input path) — the natural input for a custom locale whose scale words go
+ * A `bigint` is expanded exactly at any magnitude — the natural input for a custom locale whose scale words go
  * past `Number.MAX_SAFE_INTEGER`; the same cap as `numberToWords` applies
  * (`1000 ** scales.length - 1` under the default grouping, the matching
  * power of ten under a custom `words.grouping`), computed exactly.
@@ -201,9 +236,17 @@ export function parseShortNotation(
  * toLongNotation(1234567, { locale: az }); // "1 milyon 234 min 567"
  * toLongNotation(BigInt('1234567')); // "1 million 234 thousand 567"
  *
- * @throws {RangeError} when `groupSeparator` is empty or contains a digit —
- * either would run a scale word into the next group's digits, producing a
- * string {@link parseLongNotation} cannot read back.
+ * @param value - An integer, a number or a `bigint`.
+ * @param options - `locale` and the `groupSeparator` (default `" "`).
+ * @returns The digit groups with their scale words.
+ * @throws {TypeError} When `value` is not a number or a `bigint`, or is a
+ * number that is not an integer.
+ * @throws {RangeError} When `value` is not finite or is larger than the
+ * locale's largest scale supports, when the locale's `words.grouping` or
+ * `digits` are not valid, or when `groupSeparator` is empty or contains a
+ * digit — either would run a scale word into the next group's digits,
+ * producing a string {@link parseLongNotation} cannot read back.
+ * @since 0.2.0
  */
 export function toLongNotation(value: number | bigint, options: LongNotationOptions = {}): string {
   return guardText(() => toLongNotationImpl(value, options), [value], options)
@@ -282,7 +325,9 @@ function buildScaleWordIndex(locale: Locale): Map<string, number> {
 }
 
 /**
- * Parses a string produced by {@link toLongNotation} (or an equivalent
+ * Parses digit groups with scale words back into a number.
+ *
+ * Reads a string produced by {@link toLongNotation} (or an equivalent
  * format) back into a JavaScript number — or, with `{ output: 'bigint' }`,
  * into an exact `bigint`.
  *
@@ -297,16 +342,39 @@ function buildScaleWordIndex(locale: Locale): Map<string, number> {
  * parseLongNotation("1 milyon 234 min 567", { locale: az }); // 1234567
  * parseLongNotation("1 million 234 thousand 567", { output: 'bigint' }); // 1234567n
  *
- * @throws {RangeError} when `groupSeparator` is empty or contains a digit.
+ * @param value - The text to parse, e.g. `"1 million 234 thousand 567"`.
+ * @param options - `locale`, `groupSeparator` and `output: 'bigint'`.
+ * @returns The exact value as a `bigint`.
+ * @throws {SyntaxError} When `value` is empty or holds a token that is not a
+ * number or a scale word of the locale.
+ * @throws {RangeError} When `groupSeparator` is empty or contains a digit,
+ * when `output` is not `'number'` or `'bigint'`, when the locale's
+ * `words.grouping` or `digits` are not valid, or, for a number result, when
+ * the value is above `Number.MAX_SAFE_INTEGER`.
+ * @since 0.2.0
  */
 export function parseLongNotation(
   value: string,
   options: LongNotationParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses digit groups with scale words back into a number.
+ *
+ * @param value - The text to parse, e.g. `"1 million 234 thousand 567"`.
+ * @param options - `locale` and `groupSeparator`; `output` omitted or `'number'`.
+ * @returns The value as a number.
+ */
 export function parseLongNotation(
   value: string,
   options?: LongNotationParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses digit groups with scale words when `output` is only known at run time.
+ *
+ * @param value - The text to parse, e.g. `"1 million 234 thousand 567"`.
+ * @param options - `locale`, `groupSeparator` and an `output` of type `ParseOutput`.
+ * @returns A `bigint` for `output: 'bigint'`, otherwise a number.
+ */
 export function parseLongNotation(value: string, options: LongNotationParseOptions): number | bigint
 export function parseLongNotation(
   value: string,

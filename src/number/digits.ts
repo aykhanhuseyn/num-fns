@@ -10,7 +10,9 @@ import type { DigitWordsOptions } from '../shared/types'
 const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
 
 /**
- * Reads a number or numeric string digit by digit, the way phone numbers,
+ * Spells a number or numeric string out digit by digit.
+ *
+ * Reads the value the way phone numbers,
  * PIN codes, and postal/tracking codes are normally read aloud rather than
  * as a single cardinal number — e.g. `"055"` becomes `"zero five five"`, not
  * `"fifty-five"` (which is what {@link numberToWords} would produce).
@@ -37,6 +39,14 @@ const IGNORED_CHARS = new Set([' ', '-', '(', ')', '.', '+'])
  * numberToDigitWords(90); // "nine zero"
  * numberToDigitWords(BigInt('12345678901234567890')); // "one two three ... nine zero"
  * numberToDigitWords("055", { locale: az }); // "sıfır beş beş"
+ *
+ * @param value - A number, a `bigint` or a string of digits.
+ * @param options - `locale` and the word `separator` (default `" "`).
+ * @returns The digit words joined by `separator`.
+ * @throws {SyntaxError} When a string holds a character that is not a digit
+ * or an ignored punctuation mark, or holds no digit at all.
+ * @throws {RangeError} When a number is not finite or is not an integer.
+ * @since 0.2.0
  */
 export function numberToDigitWords(
   value: number | string | bigint,

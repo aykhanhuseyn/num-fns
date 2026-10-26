@@ -68,6 +68,14 @@ function correctFloatingPointNoise(value: number): number {
  * toByteSize(1500, { base: 1000 }); // "1.5 KB"
  * toByteSize(500); // "500 B"
  * toByteSize(BigInt(1536)); // "1.5 KB"
+ *
+ * @param bytes - The byte count, a number or a `bigint`.
+ * @param options - `base` (1024 or 1000), `decimals` and `decimalSeparator`.
+ * @returns The size with its unit, e.g. `"1.5 KB"`.
+ * @throws {TypeError} When `bytes` is not a number or a `bigint`.
+ * @throws {RangeError} When `bytes` is negative or not finite, or when
+ * `decimals` is not a non-negative integer.
+ * @since 0.2.0
  */
 export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}): string {
   return guardText(
@@ -100,7 +108,9 @@ export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}
 }
 
 /**
- * Parses a string produced by {@link toByteSize} (or an equivalent format,
+ * Parses a human-readable size string back into a byte count.
+ *
+ * Reads a string produced by {@link toByteSize} (or an equivalent format,
  * with or without a space before the unit) back into a byte count — or, with
  * `{ output: 'bigint' }`, into an exact `bigint`: the size is multiplied by
  * the unit's threshold in decimal, so `"1.5 KB"` is `1536n` and `"2.5 KB"`
@@ -118,15 +128,38 @@ export function toByteSize(bytes: number | bigint, options: ByteSizeOptions = {}
  * parseByteSize("1.5KB", { base: 1000 }); // 1500
  * parseByteSize("500 B"); // 500
  * parseByteSize("1.5 KB", { output: 'bigint' }); // 1536n
+ *
+ * @param value - The text to parse, e.g. `"1.5 KB"`.
+ * @param options - `base`, `decimalSeparator` and `output: 'bigint'`.
+ * @returns The exact byte count as a `bigint`.
+ * @throws {SyntaxError} When `value` is empty or its number cannot be read.
+ * @throws {RangeError} When `output` is not `'number'` or `'bigint'`, when
+ * the value is not finite, or, with `output: 'bigint'`, when the size is not
+ * a whole number of bytes.
+ * @since 0.2.0
  */
 export function parseByteSize(
   value: string,
   options: ByteSizeParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses a human-readable size string back into a byte count.
+ *
+ * @param value - The text to parse, e.g. `"1.5 KB"`.
+ * @param options - `base` and `decimalSeparator`; `output` omitted or `'number'`.
+ * @returns The byte count as a number.
+ */
 export function parseByteSize(
   value: string,
   options?: ByteSizeParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a human-readable size string when `output` is only known at run time.
+ *
+ * @param value - The text to parse, e.g. `"1.5 KB"`.
+ * @param options - `base`, `decimalSeparator` and an `output` of type `ParseOutput`.
+ * @returns A `bigint` for `output: 'bigint'`, otherwise a number.
+ */
 export function parseByteSize(value: string, options: ByteSizeParseOptions): number | bigint
 export function parseByteSize(value: string, options: ByteSizeParseOptions = {}): number | bigint {
   return guardNumber(() => {

@@ -13,6 +13,10 @@ import { exactSum, integerDecimal, toNumber, validateValues } from './exact'
  * Throws `RangeError` when `values` is empty or a value is not finite.
  * Signed zeros follow {@link sum}: the mean is `-0` only when every value is.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @returns The mean, rounded once to the closest JavaScript number.
+ * @throws {RangeError} When `values` is empty or a value is not finite.
+ *
  * @example
  * mean([1, 2, 3, 4]); // 2.5
  * mean([0.1, 0.2]); // 0.15

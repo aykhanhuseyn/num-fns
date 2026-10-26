@@ -11,6 +11,12 @@ import { percentile } from './percentile'
  * Throws `RangeError` when `q` is outside `0..1`, plus everything
  * `percentile` throws.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @param q - The quantile, from 0 to 1 inclusive.
+ * @returns The interpolated value, the same as `percentile(values, q × 100)`.
+ * @throws {RangeError} When `q` is outside `0..1`, `values` is empty, or a
+ * value is not finite.
+ *
  * @example
  * quantile([1, 2, 3, 4, 5], 0.5); // 3
  * quantile([0.1, 0.2], 0.5); // 0.15

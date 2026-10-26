@@ -21,6 +21,8 @@ import type { CurrencyCode } from '../money/currency'
  * decimals where `toFixed` and `Math.round(x * 100) / 100` both give `1`.
  * Ties are therefore exact decimal ties: `2.675` is a tie at two decimals,
  * and `'halfEven'` sends it to `2.68`.
+ *
+ * @since 0.2.0
  */
 export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
 
@@ -44,15 +46,27 @@ export type RoundingMode = 'halfUp' | 'halfDown' | 'halfEven' | 'ceil' | 'floor'
  * `parseNumber("1")` stays `number` — no cast on the consumer's side. The
  * formatters accept `bigint` inputs symmetrically (`formatNumber(10n)` is
  * `"10"`), so a parse/format round trip can stay exact end to end.
+ *
+ * @since 0.4.0
  */
 export type ParseOutput = 'number' | 'bigint'
 
-/** The `output` option every parser accepts — see {@link ParseOutput}. */
+/**
+ * The `output` option every parser accepts — see {@link ParseOutput}.
+ *
+ * @since 0.4.0
+ */
 export interface ParseOutputOptions extends NoThrowOptions {
   /** Return a `bigint` instead of a `number`. Defaults to `'number'`. Any other value throws `RangeError`. */
   output?: ParseOutput
 }
 
+/**
+ * Options for `formatNumber`, and the base of the money and percentage
+ * formatting options.
+ *
+ * @since 0.2.0
+ */
 export interface NumberFormatOptions extends NoThrowOptions {
   /** Number of fractional digits to keep (a non-negative integer, `RangeError` otherwise). Omit to keep the value's natural precision. */
   decimals?: number
@@ -66,10 +80,22 @@ export interface NumberFormatOptions extends NoThrowOptions {
   locale?: Locale
 }
 
+/**
+ * Options for `parseNumber`: the separators and locale of
+ * {@link NumberFormatOptions}, plus the `output` type.
+ *
+ * @since 0.2.0
+ */
 export interface NumberParseOptions
   extends Pick<NumberFormatOptions, 'thousandsSeparator' | 'decimalSeparator' | 'locale'>,
     ParseOutputOptions {}
 
+/**
+ * Options for `formatMoney`: {@link NumberFormatOptions} plus the currency
+ * and its symbol.
+ *
+ * @since 0.2.0
+ */
 export interface MoneyFormatOptions extends NumberFormatOptions {
   /**
    * ISO 4217 code of the currency to format, e.g. `'EUR'`. Defaults to
@@ -93,6 +119,12 @@ export interface MoneyFormatOptions extends NumberFormatOptions {
   symbolSpacing?: boolean
 }
 
+/**
+ * Options for `parseMoney`: {@link NumberParseOptions} plus the currency
+ * symbol to strip.
+ *
+ * @since 0.2.0
+ */
 export interface MoneyParseOptions extends NumberParseOptions {
   /** ISO 4217 code whose symbol to strip before parsing. Defaults to `locale.currency.code`. Throws `RangeError` for an unknown code. */
   currency?: CurrencyCode
@@ -100,6 +132,11 @@ export interface MoneyParseOptions extends NumberParseOptions {
   symbol?: string
 }
 
+/**
+ * Options for `moneyToWords`.
+ *
+ * @since 0.2.0
+ */
 export interface MoneyWordsOptions extends NoThrowOptions {
   /**
    * ISO 4217 code of the currency to spell, e.g. `'EUR'`. Defaults to
@@ -123,9 +160,17 @@ export interface MoneyWordsOptions extends NoThrowOptions {
  * Which fractional unit `formatPercentage`/`parsePercentage` render or parse:
  * `'percent'` (`%`, scale ×100), `'permille'` (`‰`, scale ×1000), or
  * `'basisPoint'` (`‱`, scale ×10000).
+ *
+ * @since 0.2.0
  */
 export type PercentageUnit = 'percent' | 'permille' | 'basisPoint'
 
+/**
+ * Options for `formatPercentage`: {@link NumberFormatOptions} plus the unit
+ * and its scaling.
+ *
+ * @since 0.2.0
+ */
 export interface PercentageFormatOptions extends NumberFormatOptions {
   /** Insert a space between the number and the unit sign. Defaults to `false`. */
   space?: boolean
@@ -140,6 +185,12 @@ export interface PercentageFormatOptions extends NumberFormatOptions {
   unit?: PercentageUnit
 }
 
+/**
+ * Options for `parsePercentage`: {@link NumberParseOptions} plus the unit
+ * and its scaling.
+ *
+ * @since 0.2.0
+ */
 export interface PercentageParseOptions extends NumberParseOptions {
   /**
    * Divide the parsed value by the unit's scale factor, so `"50%"` returns
@@ -150,6 +201,11 @@ export interface PercentageParseOptions extends NumberParseOptions {
   unit?: PercentageUnit
 }
 
+/**
+ * Options for `toShortNotation`.
+ *
+ * @since 0.2.0
+ */
 export interface ShortNotationOptions extends NoThrowOptions {
   /** Number of fractional digits to keep. Defaults to `1`. */
   decimals?: number
@@ -158,21 +214,31 @@ export interface ShortNotationOptions extends NoThrowOptions {
    * default decimal separator. Defaults to `en` (`K`/`M`/`B`/`T`); pass
    * `{ locale: az }` for the pre-refactor default (`min`/`mln`/`mlrd`/`trln`).
    *
-   * Before 2026-08-18 this was a bare `'az' | 'en'` string, unrelated to the
-   * `Locale` objects in `num-fns/locale` (see `CLAUDE.md`'s note on this).
-   * That string option is now folded into the full `Locale` system, per the
-   * `todo.md` §1 plan — pass a `Locale` object (`az`, `en`, `ru`, `es`, or a
-   * custom one), not the old string.
+   * Pass a `Locale` object (`az`, `en`, `ru`, `es`, or a custom one). Early
+   * versions took a bare `'az' | 'en'` string here; that form is gone.
    */
+  // Maintainers: the string option was folded into the `Locale` system on
+  // 2026-08-18, per the `todo.md` §1 plan.
   locale?: Locale
   /** Separator between the integer and fractional part. Defaults to `locale.formatDefaults.decimalSeparator`. */
   decimalSeparator?: string
 }
 
+/**
+ * Options for `parseShortNotation`: the locale and decimal separator of
+ * {@link ShortNotationOptions}, plus the `output` type.
+ *
+ * @since 0.2.0
+ */
 export interface ShortNotationParseOptions
   extends Pick<ShortNotationOptions, 'locale' | 'decimalSeparator'>,
     ParseOutputOptions {}
 
+/**
+ * Options for `toLongNotation`.
+ *
+ * @since 0.2.0
+ */
 export interface LongNotationOptions extends NoThrowOptions {
   /**
    * Separator inserted between each scale group. Defaults to `' '`. Must be a
@@ -185,20 +251,40 @@ export interface LongNotationOptions extends NoThrowOptions {
   locale?: Locale
 }
 
-/** `parseLongNotation`'s options: {@link LongNotationOptions} plus the `output` type. */
+/**
+ * `parseLongNotation`'s options: {@link LongNotationOptions} plus the
+ * `output` type.
+ *
+ * @since 0.4.0
+ */
 export interface LongNotationParseOptions extends LongNotationOptions, ParseOutputOptions {}
 
+/**
+ * Options for `withSuffix`.
+ *
+ * @since 0.2.0
+ */
 export interface SuffixOptions extends NoThrowOptions {
   /** String inserted between the value and the suffix. Defaults to `' '`. */
   separator?: string
 }
 
-/** Shared shape for the ordinal-family options (`getOrdinalSuffix`, `ordinalToWords`). */
+/**
+ * Shared shape for the ordinal-family options (`getOrdinalSuffix`,
+ * `ordinalToWords`).
+ *
+ * @since 0.2.0
+ */
 export interface OrdinalOptions extends NoThrowOptions {
   /** Locale supplying the ordinal suffix/word rules (`locale.ordinal`). Defaults to `en`. */
   locale?: Locale
 }
 
+/**
+ * Options for `toOrdinal`: {@link OrdinalOptions} plus the separator.
+ *
+ * @since 0.2.0
+ */
 export interface ToOrdinalOptions extends OrdinalOptions {
   /**
    * String inserted between the value and the suffix. Defaults to the
@@ -208,6 +294,11 @@ export interface ToOrdinalOptions extends OrdinalOptions {
   separator?: string
 }
 
+/**
+ * Options for `numberToWords`.
+ *
+ * @since 0.2.0
+ */
 export interface NumberWordsOptions extends NoThrowOptions {
   /** Locale supplying the cardinal word data (`locale.words`). Defaults to `en`. */
   locale?: Locale
@@ -222,20 +313,30 @@ export interface NumberWordsOptions extends NoThrowOptions {
    * where the scale word is gender-transparent (Spanish `doscientas mil`).
    * Throws a `RangeError` for a gender the locale's words don't distinguish
    * (`az`/`en` have none, `es` has no neuter) rather than silently ignoring
-   * it — see `locale/types.ts`'s `GrammaticalGender`.
+   * it — see {@link GrammaticalGender}.
    */
   gender?: GrammaticalGender
 }
 
+/**
+ * Options for `fractionToWords`.
+ *
+ * @since 0.2.0
+ */
 export interface FractionWordsOptions extends NoThrowOptions {
   /**
    * Locale supplying the fraction-word composition. Defaults to `en`.
-   * Currently only `az` and `en` are implemented — see `number/fraction.ts`'s
-   * doc comment for why `ru`/`es` throw instead of guessing.
+   * A locale without fraction words (today `ru` and `es`) throws
+   * `RangeError` instead of guessing.
    */
   locale?: Locale
 }
 
+/**
+ * Options for `toByteSize`.
+ *
+ * @since 0.2.0
+ */
 export interface ByteSizeOptions extends NoThrowOptions {
   /** Number of fractional digits to keep. Defaults to `2`. */
   decimals?: number
@@ -249,13 +350,29 @@ export interface ByteSizeOptions extends NoThrowOptions {
   decimalSeparator?: string
 }
 
+/**
+ * Options for `parseByteSize`: the base and decimal separator of
+ * {@link ByteSizeOptions}, plus the `output` type.
+ *
+ * @since 0.2.0
+ */
 export interface ByteSizeParseOptions
   extends Pick<ByteSizeOptions, 'base' | 'decimalSeparator'>,
     ParseOutputOptions {}
 
-/** `fromBase`'s trailing options: only the `output` type — see {@link ParseOutput}. */
+/**
+ * `fromBase`'s trailing options: only the `output` type — see
+ * {@link ParseOutput}.
+ *
+ * @since 0.4.0
+ */
 export type BaseParseOptions = ParseOutputOptions
 
+/**
+ * Options for `numberToDigitWords`.
+ *
+ * @since 0.2.0
+ */
 export interface DigitWordsOptions extends NoThrowOptions {
   /** String inserted between each spoken digit. Defaults to `' '`. */
   separator?: string
@@ -263,6 +380,11 @@ export interface DigitWordsOptions extends NoThrowOptions {
   locale?: Locale
 }
 
+/**
+ * Options for `compoundInterest`.
+ *
+ * @since 0.2.0
+ */
 export interface CompoundInterestOptions extends NoThrowOptions {
   /**
    * Number of times interest compounds within each unit of `time` (e.g. `12`

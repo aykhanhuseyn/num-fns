@@ -16,13 +16,14 @@ export type { CurrencyCode } from '../money/currency'
  * adding members to a union is a type-level break for code that handles
  * every member, so the set was completed while a break is still a minor
  * bump. It is CLDR's complete list and will not grow again.
+ *
+ * @since 0.2.0 (six CLDR categories since 0.7.0)
  */
 export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other'
 
 /**
  * Grammatical gender of the noun a cardinal number agrees with, for locales
- * whose number words inflect (`todo.md` §1's "Grammatical gender" decision):
- * Russian `один`/`одна`/`одно` and `два`/`две`, Spanish `uno`/`una` and
+ * whose number words inflect: Russian `один`/`одна`/`одно` and `два`/`две`, Spanish `uno`/`una` and
  * `doscientos`/`doscientas`. Kept to the three genders the launch locales
  * need; a later locale needing `'common'` (Scandinavian) extends this union.
  *
@@ -32,15 +33,21 @@ export type PluralCategory = 'zero' | 'one' | 'two' | 'few' | 'many' | 'other'
  * validates a requested gender against that declaration and throws a
  * `RangeError` rather than silently returning a form the language doesn't
  * have.
+ *
+ * @since 0.2.0
  */
+// Maintainers: `todo.md` §1's "Grammatical gender" decision.
 export type GrammaticalGender = 'masculine' | 'feminine' | 'neuter'
 
 /**
  * One chunk of a number's cardinal reading — a base-1000 group under the
- * default {@link LocaleWords.grouping} — produced while grouping
- * right-to-left the same way `integerToWords` in `number/words.ts` does. `Locale.words.compose` receives an ordered array of these
- * (largest scale first) instead of raw digits, so a locale only has to
- * decide word order, spacing, hyphenation and elision — never arithmetic.
+ * default {@link LocaleWords.grouping} — produced while `numberToWords`
+ * groups the number right to left. `Locale.words.compose` receives an
+ * ordered array of these (largest scale first) instead of raw digits, so a
+ * locale only has to decide word order, spacing, hyphenation and elision —
+ * never arithmetic.
+ *
+ * @since 0.2.0
  */
 export interface WordChunk {
   /**
@@ -63,6 +70,8 @@ export interface WordChunk {
  * mirror the vocabulary every launch locale needs, from the irregular
  * teens Azerbaijani doesn't have (`eleven`, `once`) to the scale-word
  * inflection Russian does (`тысяча`/`тысячи`/`тысяч`).
+ *
+ * @since 0.2.0
  */
 export interface LocaleWords {
   /** Word for `0`, e.g. az `'sıfır'`, en `'zero'`, ru `'ноль'`, es `'cero'`. */
@@ -112,26 +121,25 @@ export interface LocaleWords {
   /**
    * Connector word inserted between a hundreds/tens group and the trailing
    * ones digit within a single 0-999 group, e.g. Spanish `'y'` in `"treinta
-   * y cinco"` (35), or (unimplemented here) British English `'and'` in
-   * `"one hundred and one"`. Consumed by {@link renderGroup}, not `compose` —
-   * `compose` only ever sees already-built chunk words. Omit for locales
-   * that never need a connector here (az, en-US, ru).
+   * y cinco"` (35), or British English `'and'` in `"one hundred and one"`.
+   * Consumed by {@link renderGroup}, not `compose` — `compose` only ever
+   * sees already-built chunk words. Omit for locales that never need a
+   * connector here (az, en, ru).
    *
-   * Before 2026-08-18 this field also doubled as the integer/fraction
-   * decimal connector; that meaning was split out into
-   * {@link decimalConnector} once `numberToWords` actually threaded a
-   * `locale` option (`todo.md` §1) and the double duty became ambiguous —
-   * a locale that sets one now doesn't accidentally get it misused for the
-   * other purpose.
+   * This is not the integer/fraction joiner: that is
+   * {@link decimalConnector}.
    */
+  // Maintainers: until 2026-08-18 this field also served as the decimal
+  // connector; it was split when `numberToWords` took a `locale` option
+  // (`todo.md` §1).
   and?: string
   /**
    * Word or phrase joining the spelled-out integer and fractional parts of
    * a decimal number, e.g. Azerbaijani `'tam'` (`12.34` -> `"on iki tam
-   * otuz dörd"`). Omit for locales that haven't defined a decimal-reading
-   * convention yet (`en`/`ru`/`es` — see `todo.md` §2); `numberToWords`
-   * then joins the two parts with a plain space, which is a placeholder,
-   * not a claim of linguistic correctness.
+   * otuz dörd"`), English `'point'`, Russian `'запятая'`, Spanish `'coma'`.
+   * Every shipped locale sets it. When it is omitted, `numberToWords` joins
+   * the two parts with a plain space, which is a placeholder, not a claim
+   * of linguistic correctness.
    */
   decimalConnector?: string
   /**
@@ -205,7 +213,11 @@ export interface LocaleWords {
   compose: (chunks: readonly WordChunk[], gender?: GrammaticalGender) => string
 }
 
-/** Suffix and full-word derivation for `toOrdinal` / `ordinalToWords`. */
+/**
+ * Suffix and full-word derivation for `toOrdinal` / `ordinalToWords`.
+ *
+ * @since 0.2.0
+ */
 export interface LocaleOrdinal {
   /**
    * What `toOrdinal` puts between the digits and the {@link suffix} when the
@@ -233,8 +245,8 @@ export interface LocaleOrdinal {
    * Used by `toOrdinal` (`5` -> `'5-ci'` / `'5th'`).
    *
    * Like {@link words} below, always receives a `number`: the ordinal
-   * functions accept a `bigint` but narrow it with `shared/bigint.ts`'s
-   * `toSafeNumber` first, throwing `RangeError` beyond
+   * functions accept a `bigint` but narrow it first, throwing `RangeError`
+   * beyond
    * `Number.MAX_SAFE_INTEGER` — no launch locale can spell a cardinal that
    * large anyway (they stop at 999 trillion), so a locale never sees a
    * `bigint` here.
@@ -251,7 +263,12 @@ export interface LocaleOrdinal {
   words: (value: number, cardinalWords: string) => string
 }
 
-/** One magnitude's short/long notation for `toShortNotation` / `toLongNotation`. */
+/**
+ * One magnitude's short/long notation for `toShortNotation` /
+ * `toLongNotation`.
+ *
+ * @since 0.2.0
+ */
 export interface LocaleNotationScale {
   /** Magnitude this entry applies from, e.g. `1e3`, `1e6`, `1e9`, `1e12`. */
   threshold: number
@@ -261,7 +278,11 @@ export interface LocaleNotationScale {
   long: string
 }
 
-/** Short/long scale notation for `toShortNotation` / `toLongNotation`. */
+/**
+ * Short/long scale notation for `toShortNotation` / `toLongNotation`.
+ *
+ * @since 0.2.0
+ */
 export interface LocaleNotation {
   /** Notation scales, largest magnitude first. Each locale declares its own table (see `locale/en.ts`, `locale/az.ts`). */
   scales: readonly LocaleNotationScale[]
@@ -269,7 +290,12 @@ export interface LocaleNotation {
   spaceBeforeShort: boolean
 }
 
-/** One currency unit's word and, where the locale inflects it, its plural forms. */
+/**
+ * One currency unit's word and, where the locale inflects it, its plural
+ * forms.
+ *
+ * @since 0.2.0
+ */
 export interface LocaleCurrencyUnit {
   /** Unit word, e.g. az major `'manat'` / minor `'qəpik'`, en major `'dollar'` / minor `'cent'`. */
   word: string
@@ -292,7 +318,12 @@ export interface LocaleCurrencyUnit {
   gender?: GrammaticalGender
 }
 
-/** The major (whole) and minor (subunit) words a locale uses for one currency. */
+/**
+ * The major (whole) and minor (subunit) words a locale uses for one
+ * currency.
+ *
+ * @since 0.4.0
+ */
 export interface LocaleCurrencyUnits {
   /** Major unit (whole currency), e.g. az `'manat'`, en `'dollar'`. */
   major: LocaleCurrencyUnit
@@ -306,15 +337,15 @@ export interface LocaleCurrencyUnits {
  * where the symbol goes, and how the locale *names* each currency it can
  * spell. The symbol itself and the minor-unit exponent are not here — they
  * are facts about the currency, not the language, and live in
- * `money/currency.ts`'s registry (`getCurrency(code)`), keyed by the same
- * codes.
+ * the currency registry (`getCurrency(code)`), keyed by the same codes.
  *
- * Before 2026-09-06 this held a single `symbol`/`major`/`minor` triple for
- * the default currency, so formatting anything else meant passing a manual
- * `symbol` string and hand-written unit words (`todo.md` §4's
- * multi-currency item). Callers now pass `{ currency: 'EUR' }` and both the
- * symbol and the words resolve from this table.
+ * Callers pass `{ currency: 'EUR' }` and both the symbol and the words
+ * resolve from this table.
+ *
+ * @since 0.2.0 (per-currency `units` since 0.4.0)
  */
+// Maintainers: until 2026-09-06 this held one `symbol`/`major`/`minor`
+// triple for the default currency (`todo.md` §4's multi-currency item).
 export interface LocaleCurrency {
   /** ISO 4217 code assumed when no `currency` option is passed, e.g. `'AZN'`, `'USD'`, `'GBP'`. Must have an entry in {@link units}. */
   code: CurrencyCode
@@ -337,8 +368,7 @@ export interface LocaleCurrency {
   symbolSpacing: boolean
   /**
    * Unit words per ISO 4217 code this locale can spell an amount in. Every
-   * launch locale covers every {@link CurrencyCode} (pinned by
-   * `locale/conformance.test.ts`); `moneyToWords` throws `RangeError` for a
+   * shipped locale covers every {@link CurrencyCode}; `moneyToWords` throws `RangeError` for a
    * code a locale leaves out rather than borrowing another language's words.
    */
   units: Readonly<Partial<Record<CurrencyCode, LocaleCurrencyUnits>>>
@@ -346,25 +376,24 @@ export interface LocaleCurrency {
 
 /**
  * A complete set of linguistic and formatting data for one locale, in the
- * spirit of `date-fns`'s `Locale` object (see `CLAUDE.md` and `todo.md` §1).
- * Every public function that used to hardcode Azerbaijani —
+ * spirit of `date-fns`'s `Locale` object. These functions accept a
+ * `{ locale?: Locale }` option that **defaults to `en`**:
  * `numberToWords`, `formatNumber`/`parseNumber`, `formatMoney`/`parseMoney`/
  * `moneyToWords`, `formatPercentage`/`parsePercentage`,
  * `toShortNotation`/`parseShortNotation`/`toLongNotation`/`parseLongNotation`,
  * `toOrdinal`/`ordinalToWords`/`getOrdinalSuffix`, `numberToDigitWords`, and
- * (partially — see `number/fraction.ts`'s doc comment) `fractionToWords` —
- * accepts a `{ locale?: Locale }` option that **defaults to `en`**, not
- * `az`, per the explicit direction recorded in `todo.md` §1's "default
- * locale" decision. `az` remains fully supported as an explicit
- * `{ locale: az }` — it is the reference implementation these functions are
- * verified against (`locale/az.test.ts`), not a fallback.
+ * `fractionToWords` (only for locales with fraction words). `az` is fully
+ * supported as an explicit `{ locale: az }`.
  *
  * `toRoman`/`fromRoman` and `toByteSize`/`parseByteSize` are deliberately
- * excluded: both are locale-independent and stay outside this system (see
- * `todo.md` §3 and `number/byte-size.ts`'s doc comment). Financial, stats,
- * arithmetic, and utils functions are excluded too, per `todo.md` §4's
- * "raw numbers, no locale" decision.
+ * excluded: both are locale-independent. Financial, stats, arithmetic and
+ * utils functions are excluded too: they take and return raw numbers.
+ *
+ * @since 0.2.0
  */
+// Maintainers: the default-locale decision is `todo.md` §1, the exclusions
+// are `todo.md` §3 and §4. `az` is the reference implementation the other
+// locales are checked against (`locale/az.test.ts`).
 export interface Locale {
   /** BCP 47 language tag, e.g. `'az'`, `'en'`, `'ru'`, `'es'`. */
   code: string
@@ -372,7 +401,7 @@ export interface Locale {
   name?: string
   /** Number formatting separators this locale defaults to, e.g. `en`'s `','`/`'.'` against `az`'s `' '`/`','`. */
   formatDefaults: {
-    /** Separator inserted between integer digit groups (groups of three unless {@link grouping} says otherwise). */
+    /** Separator inserted between integer digit groups (groups of three unless `grouping` says otherwise). */
     thousandsSeparator: string
     /** Separator between the integer and fractional part. */
     decimalSeparator: string
@@ -415,12 +444,11 @@ export interface Locale {
    * pick the right scale and currency word forms.
    *
    * Always receives a `number`, even when the public function was given a
-   * `bigint` (2026-09-06): the groups `numberToWords` classifies are
-   * plain numbers anyway (0–999 by default, at most `10^15 - 1` under a
-   * custom `words.grouping`), and `moneyToWords` passes a `bigint` amount
-   * through `shared/bigint.ts`'s `pluralOperand`, which converts a safe
-   * integer directly and folds a larger one to its last six digits plus a
-   * million — a reduction every CLDR integer rule (`n % 10`, `n % 100`,
+   * `bigint`: the groups `numberToWords` classifies are plain numbers
+   * anyway (0–999 by default, at most `10^15 - 1` under a custom
+   * `words.grouping`), and `moneyToWords` converts a `bigint` amount first.
+   * It passes a safe integer as it is and folds a larger one to its last
+   * six digits plus a million — a reduction every CLDR integer rule (`n % 10`, `n % 100`,
    * `n % 1000`, Breton's `n % 1000000`, comparisons against small
    * constants) is invariant under. A locale never has to handle `bigint`.
    */
@@ -432,19 +460,23 @@ export interface Locale {
   /** Default currency, symbol placement and per-currency unit words for `formatMoney`/`parseMoney`/`moneyToWords`. */
   currency: LocaleCurrency
   /**
-   * Fraction-word composition for `fractionToWords`. Optional — only `az`
-   * implements this today; `ru`/`es` don't yet have verified fraction-noun
-   * vocabulary (see `number/fraction.ts`'s doc comment for why guessing is
-   * riskier than throwing). `en`, the structural default `number/words.ts`
-   * itself falls back to, is deliberately excluded from this field too: its
-   * composer needs `numberToWords`, and `number/words.ts` depends on `en`
-   * for its default, so `en` can never import back from `number/` without a
-   * cycle — `number/fraction.ts` special-cases `en` directly instead.
+   * Fraction-word composition for `fractionToWords`. Optional: `az` and
+   * `enGB` set it; `ru`/`es` don't yet have verified fraction-noun
+   * vocabulary, so `fractionToWords` throws `RangeError` for them rather
+   * than guess. `en` has fraction words but does not use this field.
    */
+  // Maintainers: `en` is the structural default of `number/words.ts`, so it
+  // cannot import back from `number/` without a cycle; `number/fraction.ts`
+  // special-cases it instead.
   fractions?: LocaleFractions
 }
 
-/** Fraction-word composition for a locale that implements it (see `Locale.fractions`). */
+/**
+ * Fraction-word composition for a locale that implements it (see
+ * `Locale.fractions`).
+ *
+ * @since 0.2.0
+ */
 export interface LocaleFractions {
   /** Idiomatic word for exactly 1/2, e.g. az `'yarım'`, if this locale has one. */
   half?: string

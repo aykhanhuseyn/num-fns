@@ -4,7 +4,9 @@ import { assertFinite } from '../shared/validation'
 import { alignScales, fromDecimal, toDecimal } from './decimal'
 
 /**
- * Adds two numbers exactly in decimal, so the classic floating-point traps
+ * Adds two numbers exactly in decimal.
+ *
+ * The classic floating-point traps
  * don't apply: `add(0.1, 0.2)` is `0.3`, not `0.30000000000000004`. Each
  * operand is taken at its shortest decimal reading, the sum is computed
  * exactly, and the result is the closest JavaScript number to that sum.
@@ -18,6 +20,13 @@ import { alignScales, fromDecimal, toDecimal } from './decimal'
  * add(1.15, 2.3); // 3.45
  * add(-1.5, 1.5); // 0
  * add(-0, -0); // -0
+ *
+ * @param a - The first addend.
+ * @param b - The second addend.
+ * @returns The closest JavaScript number to the exact sum `a + b`.
+ * @throws {RangeError} When `a` or `b` is not finite, or when the sum is too
+ * large for a JavaScript number.
+ * @since 0.4.0
  */
 export function add(a: number, b: number): number {
   return guardNumber(() => {

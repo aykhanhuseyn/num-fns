@@ -15,7 +15,9 @@ import type { NumberFormatOptions, NumberParseOptions } from '../shared/types'
 import { assertDistinctSeparators, assertNumericValue } from '../shared/validation'
 
 /**
- * Formats a number using `options.locale`'s conventions by default (`en`:
+ * Formats a number as a string with thousands and decimal separators.
+ *
+ * Uses `options.locale`'s conventions by default (`en`:
  * comma thousands separator, period decimal separator — pass
  * `{ locale: az }` for the pre-refactor default of a space and a comma).
  * An explicit `thousandsSeparator`/`decimalSeparator` always overrides the
@@ -52,6 +54,15 @@ import { assertDistinctSeparators, assertNumericValue } from '../shared/validati
  * formatNumber(1.005, { decimals: 2 }); // "1.01"
  * formatNumber(-1.5, { decimals: 0, roundingMode: 'ceil' }); // "-1"
  * formatNumber(1234567890123456789n); // "1,234,567,890,123,456,789"
+ *
+ * @param value - The number or `bigint` to format.
+ * @param options - Locale, separators, `decimals` and `roundingMode`.
+ * @returns The formatted string.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is not finite, when `decimals` is not a
+ * non-negative integer, when the two separators are the same, or when the
+ * locale's `grouping` or `digits` are not valid.
+ * @since 0.2.0
  */
 export function formatNumber(value: number | bigint, options: NumberFormatOptions = {}): string {
   return guardText(
@@ -154,7 +165,9 @@ function splitBigInt(value: bigint, decimals: number | undefined): SplitDigits {
 }
 
 /**
- * Parses a string produced by {@link formatNumber} (or an equivalent format)
+ * Parses a formatted number string back into a number or a `bigint`.
+ *
+ * Reads a string produced by {@link formatNumber} (or an equivalent format)
  * back into a JavaScript number — or, with `{ output: 'bigint' }`, into an
  * exact `bigint` (the string must then be a whole number: `"1,234.00"` is
  * `1234n`, `"1.5"` throws `RangeError`).
@@ -168,17 +181,39 @@ function splitBigInt(value: bigint, decimals: number | undefined): SplitDigits {
  * parseNumber("1 234 567,89", { locale: az }); // 1234567.89
  * parseNumber("1,234,567,890,123,456,789", { output: 'bigint' }); // 1234567890123456789n
  *
- * @throws {RangeError} when `thousandsSeparator` equals `decimalSeparator`,
- * which would strip both and silently return the wrong number.
+ * @param value - The text to parse.
+ * @param options - Locale, separators and `output: 'bigint'`.
+ * @returns The exact `bigint` the text spells.
+ * @throws {SyntaxError} When `value` is empty or is not a number.
+ * @throws {RangeError} When `thousandsSeparator` equals `decimalSeparator`
+ * (which would strip both and silently return the wrong number), when the
+ * value is not finite, when `output` is not `'number'` or `'bigint'`, when
+ * the locale's `digits` are not valid, or, with `output: 'bigint'`, when the
+ * value is not a whole number.
+ * @since 0.2.0
  */
 export function parseNumber(
   value: string,
   options: NumberParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses a formatted number string back into a number.
+ *
+ * @param value - The text to parse.
+ * @param options - Locale and separators; `output` omitted or `'number'`.
+ * @returns The parsed number.
+ */
 export function parseNumber(
   value: string,
   options?: NumberParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a formatted number string when `output` is only known at run time.
+ *
+ * @param value - The text to parse.
+ * @param options - Locale, separators and an `output` of type `ParseOutput`.
+ * @returns A `bigint` for `output: 'bigint'`, otherwise a number.
+ */
 export function parseNumber(value: string, options: NumberParseOptions): number | bigint
 export function parseNumber(value: string, options: NumberParseOptions = {}): number | bigint {
   return guardNumber(() => {

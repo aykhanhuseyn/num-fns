@@ -8,6 +8,8 @@ import { assertNumericValue } from '../shared/validation'
 const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
 
 /**
+ * Converts an integer to its string form in a radix from 2 to 36.
+ *
  * Converts an integer from base 10 into its string representation in an
  * arbitrary radix between 2 and 36 (binary, octal, hex, base36, etc.).
  *
@@ -31,6 +33,17 @@ const BASE_DIGIT_CHARS = '0123456789abcdefghijklmnopqrstuvwxyz'
  * toBase(-8, 8); // "-10"
  * toBase(-0, 2); // "-0"
  * toBase(BigInt('123456789012345678901'), 16); // "6b14e9f812f366c35"
+ *
+ * @param value - The integer to convert: a safe-integer `number` or a
+ * `bigint` of any size.
+ * @param radix - The target radix, an integer from 2 to 36.
+ * @returns The digits of `value` in `radix`, lowercase, with a leading `-`
+ * when `value` is negative.
+ * @throws {RangeError} When `radix` is not an integer from 2 to 36, when
+ * `value` is not finite, or when a `number` is not a safe integer.
+ * @throws {TypeError} When `value` is not a number or `bigint`, or when a
+ * `number` is not an integer.
+ * @since 0.2.0
  */
 export function toBase(value: number | bigint, radix: number): string {
   return guardText(() => {
@@ -50,6 +63,8 @@ export function toBase(value: number | bigint, radix: number): string {
 }
 
 /**
+ * Parses a string in a radix from 2 to 36 into an integer.
+ *
  * Parses a string in an arbitrary radix between 2 and 36 back into a base-10
  * integer. Inverse of {@link toBase}. Case-insensitive; accepts a leading
  * `-` or `+` sign.
@@ -67,17 +82,48 @@ export function toBase(value: number | bigint, radix: number): string {
  * fromBase("1010", 2); // 10
  * fromBase("-10", 8); // -8
  * fromBase("6b14e9f812f366c35", 16, { output: 'bigint' }); // 123456789012345678901n
+ *
+ * @param value - The digits to parse, case-insensitive, with an optional
+ * leading `-` or `+`.
+ * @param radix - The radix of `value`, an integer from 2 to 36.
+ * @param options - `output: 'bigint'` returns a `bigint`.
+ * @returns The parsed integer as a `bigint`.
+ * @throws {RangeError} When `radix` is not an integer from 2 to 36, when
+ * `output` is not `'number'` or `'bigint'`, or when a `number` result would be
+ * larger than `Number.MAX_SAFE_INTEGER`.
+ * @throws {SyntaxError} When `value` is empty or has a character that is not
+ * a digit of `radix`.
+ * @since 0.2.0
  */
 export function fromBase(
   value: string,
   radix: number,
   options: BaseParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses a string in a radix from 2 to 36 into a `number`.
+ *
+ * @param value - The digits to parse, case-insensitive, with an optional
+ * leading `-` or `+`.
+ * @param radix - The radix of `value`, an integer from 2 to 36.
+ * @param options - Omit `output`, or set it to `'number'`, for a `number`.
+ * @returns The parsed integer as a `number`. `"-0"` gives `-0`.
+ */
 export function fromBase(
   value: string,
   radix: number,
   options?: BaseParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a string in a radix from 2 to 36 into a `number` or a `bigint`,
+ * when `output` is known only at run time.
+ *
+ * @param value - The digits to parse, case-insensitive, with an optional
+ * leading `-` or `+`.
+ * @param radix - The radix of `value`, an integer from 2 to 36.
+ * @param options - `output` selects the result type.
+ * @returns The parsed integer as the type that `output` selects.
+ */
 export function fromBase(value: string, radix: number, options: BaseParseOptions): number | bigint
 export function fromBase(
   value: string,

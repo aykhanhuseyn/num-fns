@@ -33,6 +33,11 @@ import { getCurrency } from './currency'
  * (`formatMoney(10n)` is `"$10.00"`); `roundingMode` has nothing to round
  * and is ignored.
  *
+ * @param value - The amount. A `bigint` is a whole amount of the major unit.
+ * @param options - `locale`, `currency`, `decimals`, separators, `roundingMode`,
+ * `symbol`, `symbolPosition`, `symbolSpacing` and `noThrow`.
+ * @returns The amount with its currency symbol, e.g. `"$1,234.50"`.
+ *
  * @example
  * formatMoney(1234.5); // "$1,234.50"
  * formatMoney(1234.5, { symbolSpacing: true }); // "$ 1,234.50"
@@ -44,9 +49,15 @@ import { getCurrency } from './currency'
  * formatMoney(9.99, { symbol: 'US$', symbolPosition: 'after', symbolSpacing: true }); // "9.99 US$"
  * formatMoney(1234567890123456789n); // "$1,234,567,890,123,456,789.00"
  *
- * @throws {TypeError} when `symbolSpacing` is not a boolean, or when the
- * locale has no `currency.symbolSpacing` (a locale written against 0.6) and
- * the caller passes none.
+ * @throws {TypeError} When `value` is not a number or a `bigint`, when
+ * `symbolSpacing` is not a boolean, or when the locale has no
+ * `currency.symbolSpacing` (a locale written against 0.6) and the caller
+ * passes none.
+ * @throws {RangeError} When `value` is not finite, `decimals` is not a
+ * non-negative integer, the two separators are the same, or `currency` is not
+ * a known code.
+ *
+ * @since 0.2.0
  */
 export function formatMoney(value: number | bigint, options: MoneyFormatOptions = {}): string {
   return guardText(
@@ -125,18 +136,45 @@ const SIGN_GAP = /^([+-])\s+/
  * sign may stand before or after it, so every locale reads `"$1,234.50"`,
  * `"$ 1,234.50"`, `"-$1.50"`, `"-$ 1.50"` and `"$-1.50"`.
  *
+ * @param value - The text to read, e.g. `"$1,234.50"`.
+ * @param options - `output: 'bigint'` for an exact whole amount, plus `locale`,
+ * `currency`, `symbol`, separators and `noThrow`.
+ * @returns The amount as a `bigint`.
+ * @throws {SyntaxError} When the text is empty or is not a number once the
+ * symbol is removed.
+ * @throws {RangeError} When the number is not finite, the two separators are
+ * the same, `currency` is not a known code, `output` is not `'number'` or
+ * `'bigint'`, or `output` is `'bigint'` and the amount is not whole.
+ *
  * @example
  * parseMoney("$1,234.50"); // 1234.5
  * parseMoney("$ 1,234.50"); // 1234.5
  * parseMoney("1 234,50 ₼", { locale: az }); // 1234.5
  * parseMoney("€1,234.50", { currency: 'EUR' }); // 1234.5
  * parseMoney("$1,234,567,890,123,456,789.00", { output: 'bigint' }); // 1234567890123456789n
+ *
+ * @since 0.2.0
  */
 export function parseMoney(value: string, options: MoneyParseOptions & { output: 'bigint' }): bigint
+/**
+ * Parses a money string into a `number`.
+ *
+ * @param value - The text to read, e.g. `"$1,234.50"`.
+ * @param options - `locale`, `currency`, `symbol`, separators and `noThrow`;
+ * `output` is `'number'` or omitted.
+ * @returns The amount as a `number`.
+ */
 export function parseMoney(
   value: string,
   options?: MoneyParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a money string when `output` is only known at run time.
+ *
+ * @param value - The text to read, e.g. `"$1,234.50"`.
+ * @param options - As for the other overloads; `output` is `'number'` or `'bigint'`.
+ * @returns A `bigint` when `output` is `'bigint'`, else a `number`.
+ */
 export function parseMoney(value: string, options: MoneyParseOptions): number | bigint
 export function parseMoney(value: string, options: MoneyParseOptions = {}): number | bigint {
   return guardNumber(() => {

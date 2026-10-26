@@ -36,6 +36,15 @@ const PERCENTAGE_UNITS: Record<PercentageUnit, { sign: string; scale: number }> 
  * (`formatPercentage(45n, { decimals: 1 })` is `"45.0%"`); `roundingMode`
  * has nothing to round and is ignored.
  *
+ * @param value - The value, in the target unit, or a ratio with `multiplyBy100`.
+ * @param options - `multiplyBy100`, `unit`, `space`, `decimals`, separators,
+ * `roundingMode`, `locale` and `noThrow`.
+ * @returns The formatted value with its unit sign, e.g. `"45.5%"`.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is not finite, the scaled value is too
+ * large for a JavaScript number, `decimals` is not a non-negative integer, or
+ * the two separators are the same.
+ *
  * @example
  * formatPercentage(45.5, { decimals: 1 }); // "45.5%"
  * formatPercentage(0.455, { decimals: 1, multiplyBy100: true }); // "45.5%"
@@ -43,6 +52,8 @@ const PERCENTAGE_UNITS: Record<PercentageUnit, { sign: string; scale: number }> 
  * formatPercentage(125, { unit: 'basisPoint' }); // "125‱"
  * formatPercentage(45.5, { decimals: 1, locale: az }); // "45,5%"
  * formatPercentage(3n, { multiplyBy100: true }); // "300%"
+ *
+ * @since 0.2.0
  */
 export function formatPercentage(
   value: number | bigint,
@@ -101,21 +112,48 @@ function scaleUp(value: number | bigint, scale: number): number | bigint {
  * so the pair throws `RangeError` up front rather than truncating `"50%"`
  * to `0n`. Any other `output` value is a `RangeError` too.
  *
+ * @param value - The text to read, e.g. `"45.5%"`.
+ * @param options - `output: 'bigint'` for an exact whole value, plus `unit`,
+ * separators, `locale` and `noThrow`. `asRatio` cannot be used with `'bigint'`.
+ * @returns The value as a `bigint`.
+ * @throws {SyntaxError} When the text is empty or is not a number once the
+ * sign is removed.
+ * @throws {RangeError} When the number is not finite, the two separators are
+ * the same, `output` is not `'number'` or `'bigint'`, `asRatio` is combined
+ * with `output: 'bigint'`, or `output` is `'bigint'` and the value is not whole.
+ *
  * @example
  * parsePercentage("45.5%"); // 45.5
  * parsePercentage("45.5%", { asRatio: true }); // 0.455
  * parsePercentage("45.5‰", { unit: 'permille', asRatio: true }); // 0.0455
  * parsePercentage("45,5%", { locale: az }); // 45.5
  * parsePercentage("1,234,567,890,123,456,789%", { output: 'bigint' }); // 1234567890123456789n
+ *
+ * @since 0.2.0
  */
 export function parsePercentage(
   value: string,
   options: PercentageParseOptions & { output: 'bigint' },
 ): bigint
+/**
+ * Parses a percentage string into a `number`.
+ *
+ * @param value - The text to read, e.g. `"45.5%"`.
+ * @param options - `asRatio`, `unit`, separators, `locale` and `noThrow`;
+ * `output` is `'number'` or omitted.
+ * @returns The value as a `number` (divided by the unit's scale with `asRatio`).
+ */
 export function parsePercentage(
   value: string,
   options?: PercentageParseOptions & { output?: 'number' },
 ): number
+/**
+ * Parses a percentage string when `output` is only known at run time.
+ *
+ * @param value - The text to read, e.g. `"45.5%"`.
+ * @param options - As for the other overloads; `output` is `'number'` or `'bigint'`.
+ * @returns A `bigint` when `output` is `'bigint'`, else a `number`.
+ */
 export function parsePercentage(value: string, options: PercentageParseOptions): number | bigint
 export function parsePercentage(
   value: string,

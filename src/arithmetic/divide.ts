@@ -4,7 +4,9 @@ import { assertFinite } from '../shared/validation'
 import { divideDecimals, fromDecimal, toDecimal } from './decimal'
 
 /**
- * Divides `dividend` by `divisor` exactly in decimal: `divide(0.3, 0.1)` is
+ * Divides `dividend` by `divisor` exactly in decimal.
+ *
+ * `divide(0.3, 0.1)` is
  * `3`, not `2.9999999999999996`. Both operands are taken at their shortest
  * decimal reading and the quotient is computed on integers, carried to 25
  * significant digits, then converted to the closest JavaScript number. A
@@ -23,6 +25,14 @@ import { divideDecimals, fromDecimal, toDecimal } from './decimal'
  * divide(1, 3); // 0.3333333333333333
  * divide(1999, 100); // 19.99
  * divide(0, -5); // -0
+ *
+ * @param dividend - The number to divide.
+ * @param divisor - The number to divide by. Must not be `0`.
+ * @returns The closest JavaScript number to the true quotient
+ * `dividend / divisor`.
+ * @throws {RangeError} When an operand is not finite, when `divisor` is `0`,
+ * or when the quotient is too large for a JavaScript number.
+ * @since 0.4.0
  */
 export function divide(dividend: number, divisor: number): number {
   return guardNumber(() => {

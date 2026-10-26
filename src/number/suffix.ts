@@ -7,15 +7,12 @@ import { assertNumericValue } from '../shared/validation'
 import { numberToWords } from './words'
 
 /**
- * Returns the ordinal suffix for a non-negative integer, per `options.locale`
- * (defaults to `en`: `'st'`/`'nd'`/`'rd'`/`'th'`). Delegates to
+ * Returns the ordinal suffix for a non-negative integer.
+ *
+ * Uses `options.locale` (defaults to `en`: `'st'`/`'nd'`/`'rd'`/`'th'`).
+ * Delegates to
  * `locale.ordinal.suffix`, which each locale implements itself — Azerbaijani
  * vowel harmony (`locale/az.ts`), Spanish's invariant `'º'`, and so on.
- *
- * Before 2026-08-18 this was hardcoded Azerbaijani vowel-harmony logic; that
- * logic now lives in `locale/az.ts` as the `az.ordinal.suffix` implementation
- * (see its doc comment) rather than here, since it's Azerbaijani-specific
- * data, not a generic algorithm.
  *
  * A `bigint` behaves exactly like the equal `number` as long as it is a
  * safe integer: `locale.ordinal.suffix` takes a `number` (see
@@ -27,6 +24,14 @@ import { numberToWords } from './words'
  * getOrdinalSuffix(1); // "st"
  * getOrdinalSuffix(BigInt(22)); // "nd"
  * getOrdinalSuffix(1, { locale: az }); // "ci" (bir -> birinci)
+ *
+ * @param value - A non-negative integer, a number or a `bigint`.
+ * @param options - The `locale`.
+ * @returns The suffix alone, without the digits.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is negative, not an integer, not finite,
+ * or a `bigint` above `Number.MAX_SAFE_INTEGER`.
+ * @since 0.2.0
  */
 export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions = {}): string {
   return guardText(
@@ -41,8 +46,9 @@ export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions
 }
 
 /**
- * Spells out a non-negative integer as a full ordinal word, per
- * `options.locale` (defaults to `en`). Unlike {@link toOrdinal}, which only
+ * Spells out a non-negative integer as a full ordinal word.
+ *
+ * Uses `options.locale` (defaults to `en`). Unlike {@link toOrdinal}, which only
  * appends the short digit suffix (`"5th"`), this replaces (or transforms)
  * the cardinal reading's relevant word(s) via `locale.ordinal.words`.
  *
@@ -56,6 +62,13 @@ export function getOrdinalSuffix(value: number | bigint, options: OrdinalOptions
  * ordinalToWords(3); // "third"
  * ordinalToWords(BigInt(21)); // "twenty-first"
  * ordinalToWords(3, { locale: az }); // "üçüncü"
+ *
+ * @param value - A non-negative integer, a number or a `bigint`.
+ * @param options - The `locale`.
+ * @returns The ordinal in words, e.g. `"third"`.
+ * @throws {RangeError} When `value` is negative, not an integer, a `bigint`
+ * above `Number.MAX_SAFE_INTEGER`, or too large for the locale's words.
+ * @since 0.2.0
  */
 export function ordinalToWords(value: number | bigint, options: OrdinalOptions = {}): string {
   return guardText(
@@ -77,6 +90,8 @@ export function ordinalToWords(value: number | bigint, options: OrdinalOptions =
 }
 
 /**
+ * Turns cardinal words into ordinal words.
+ *
  * Transforms an already-computed cardinal reading directly into its ordinal
  * form, per `options.locale` (defaults to `en`) — without recomputing the
  * cardinal words via `numberToWords` first. Useful when a caller already has
@@ -97,6 +112,13 @@ export function ordinalToWords(value: number | bigint, options: OrdinalOptions =
  * @example
  * cardinalToOrdinalWords('twenty-one'); // "twenty-first"
  * cardinalToOrdinalWords('iyirmi bir', { locale: az }); // "iyirmi birinci"
+ *
+ * @param cardinalWords - A cardinal reading, e.g. `"twenty-one"`.
+ * @param options - The `locale`.
+ * @returns The ordinal reading, e.g. `"twenty-first"`.
+ * @throws {SyntaxError} When the locale cannot read the words (`az`: a word
+ * with no Azerbaijani vowel).
+ * @since 0.2.0
  */
 export function cardinalToOrdinalWords(
   cardinalWords: string,
@@ -113,8 +135,9 @@ export function cardinalToOrdinalWords(
 }
 
 /**
- * Formats a non-negative integer as a short ordinal, e.g. `5` becomes
- * `"5th"` (or, with `{ locale: az }`, `"5-ci"`).
+ * Formats a non-negative integer as a short ordinal.
+ *
+ * For example, `5` becomes `"5th"` (or, with `{ locale: az }`, `"5-ci"`).
  *
  * The text between the digits and the suffix is the locale's
  * `ordinal.separator` unless `options.separator` says otherwise: `''` for
@@ -122,11 +145,9 @@ export function cardinalToOrdinalWords(
  * which gave the un-English `"3-rd"`. A locale with an `ordinal.prefix`
  * writes it before the digits (Chinese `第`).
  *
- * Before 2026-08-18 the separator was a positional second parameter
- * (`toOrdinal(5, ' ')`); it's now part of the options object alongside
- * `locale`, matching the rest of the package's "consistent options object"
- * convention (`CLAUDE.md`'s Package Design Principles) now that this
- * function has more than one optional parameter.
+ * The separator was a positional second parameter before 0.2.0
+ * (`toOrdinal(5, ' ')`); it is now part of the options object alongside
+ * `locale`, like every other option in the package.
  *
  * A `bigint` renders its own digits exactly (`toOrdinal(BigInt(101))` is
  * `"101st"`); only the suffix lookup narrows it to a `number`, via
@@ -140,9 +161,15 @@ export function cardinalToOrdinalWords(
  * toOrdinal(3, { locale: ru }); // "3-й"
  * toOrdinal(5, { separator: ' ' }); // "5 th"
  *
- * @throws {TypeError} when `separator` is not a string, or when the locale
- * has no `ordinal.separator` (a locale written against 0.6) and the caller
- * passes none.
+ * @param value - A non-negative integer, a number or a `bigint`.
+ * @param options - `locale` and the `separator` between digits and suffix.
+ * @returns The digits with their suffix, e.g. `"3rd"`.
+ * @throws {TypeError} When `value` is not a number or a `bigint`, when
+ * `separator` is not a string, or when the locale has no `ordinal.separator`
+ * (a locale written against 0.6) and the caller passes none.
+ * @throws {RangeError} When `value` is negative, not an integer, not finite,
+ * or a `bigint` above `Number.MAX_SAFE_INTEGER`.
+ * @since 0.2.0
  */
 export function toOrdinal(value: number | bigint, options: ToOrdinalOptions = {}): string {
   return guardText(
@@ -182,7 +209,9 @@ function resolveOrdinalSeparator(option: unknown, locale: Locale): string {
 }
 
 /**
- * Attaches an arbitrary suffix to a value, e.g. a unit or label. Not
+ * Attaches an arbitrary suffix to a value, e.g. a unit or label.
+ *
+ * Not
  * locale-dependent — the suffix is caller-supplied text, not derived
  * linguistic data. A `bigint` renders its digits exactly, as a `number` or
  * string does.
@@ -191,6 +220,13 @@ function resolveOrdinalSeparator(option: unknown, locale: Locale): string {
  * withSuffix(120, 'kg'); // "120 kg"
  * withSuffix(BigInt(120), 'kg'); // "120 kg"
  * withSuffix(5, '-cı', { separator: '' }); // "5-cı"
+ *
+ * @param value - A number, a `bigint` or a string.
+ * @param suffix - The text to write after the value.
+ * @param options - The `separator` between value and suffix (default `" "`).
+ * @returns The value, the separator and the suffix joined.
+ * @throws Nothing: the parts are joined as given.
+ * @since 0.2.0
  */
 export function withSuffix(
   value: number | string | bigint,

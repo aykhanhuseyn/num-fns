@@ -1,6 +1,7 @@
+// Decision record: todo.md §4, the 2026-09-20 "global config" decision.
+
 /**
- * The package-wide configuration object (`todo.md` §4, the 2026-09-20
- * "global config" decision).
+ * The package-wide configuration object.
  *
  * Every public function throws on bad input by default — that is the
  * package's oldest rule and it is what `noThrow: false` means. Turning
@@ -17,7 +18,12 @@
  * `isEven`, …) follow the global value alone.
  */
 
-/** The shape of the package-wide configuration. */
+/**
+ * The shape of the package-wide configuration. Read it with
+ * {@link getConfig}, change it with {@link setConfig}.
+ *
+ * @since 0.6.0
+ */
 export interface NumFnsConfig {
   /**
    * Whether every public function should return an empty value instead of
@@ -50,11 +56,13 @@ export interface NumFnsConfig {
 
 /**
  * The `noThrow` option every options object accepts, overriding the
- * package-wide `noThrow` setting (`src/config.ts`) for a single call.
+ * package-wide `noThrow` setting ({@link setConfig}) for a single call.
  *
  * Functions whose parameters are all positional (`add`, `round`, `clamp`,
  * `isEven`, `toBase`, the `stats` and `financial` helpers with no options
  * object) have nowhere to put it and follow the global setting alone.
+ *
+ * @since 0.6.0
  */
 export interface NoThrowOptions {
   /**
@@ -73,17 +81,25 @@ const DEFAULTS: Readonly<NumFnsConfig> = { noThrow: false }
 let active: NumFnsConfig = { ...DEFAULTS }
 
 /**
- * Returns a copy of the current configuration. Mutating the returned object
- * changes nothing — pass a partial to {@link setConfig} instead.
+ * Returns a copy of the current configuration.
+ *
+ * Mutating the returned object changes nothing — pass a partial to
+ * {@link setConfig} instead.
  *
  * @example
  * getConfig().noThrow; // false
+ *
+ * @returns A new object with the current configuration values.
+ * @throws Never. It only copies the current values.
+ * @since 0.6.0
  */
 export function getConfig(): NumFnsConfig {
   return { ...active }
 }
 
 /**
+ * Changes the package-wide configuration.
+ *
  * Merges `partial` into the package-wide configuration and returns the
  * result; a key left out, or explicitly `undefined`, keeps its current
  * value. Unlike the rest of the package this always throws on a bad value,
@@ -94,7 +110,12 @@ export function getConfig(): NumFnsConfig {
  * setConfig({ noThrow: true });
  * formatNumber(Number.NaN); // ""
  *
- * @throws {TypeError} when a known key is given a value of the wrong type.
+ * @param partial - The keys to change. A key left out, or `undefined`, keeps
+ * its current value.
+ * @returns A copy of the configuration after the change.
+ * @throws {TypeError} When a known key is given a value of the wrong type.
+ * The `noThrow` setting does not suppress this error.
+ * @since 0.6.0
  */
 export function setConfig(partial: Partial<NumFnsConfig>): NumFnsConfig {
   if (partial.noThrow === undefined) return getConfig()
@@ -106,11 +127,17 @@ export function setConfig(partial: Partial<NumFnsConfig>): NumFnsConfig {
 }
 
 /**
+ * Restores the default configuration.
+ *
  * Restores the shipped defaults (`noThrow: false`) and returns them. Mostly
  * useful in tests, so one suite's configuration cannot leak into the next.
  *
  * @example
  * resetConfig(); // { noThrow: false }
+ *
+ * @returns A copy of the default configuration.
+ * @throws Never.
+ * @since 0.6.0
  */
 export function resetConfig(): NumFnsConfig {
   active = { ...DEFAULTS }

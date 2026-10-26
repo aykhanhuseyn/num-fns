@@ -6,11 +6,12 @@ import { guardRecord } from '../shared/no-throw'
  * autocompletes and a typo is a compile error; JavaScript callers get the
  * same guarantee at runtime from {@link getCurrency}'s `RangeError`.
  *
- * Adding a code means adding it here, in {@link CURRENCIES}, and — for
- * `moneyToWords` to be able to spell it — in every locale's `currency.units`
- * (`locale/conformance.test.ts` pins that every launch locale covers every
- * code in this union, so a partial addition fails the suite on purpose).
+ * @since 0.4.0
  */
+// Adding a code means adding it here, in `CURRENCIES`, and — for
+// `moneyToWords` to be able to spell it — in every locale's `currency.units`
+// (`locale/conformance.test.ts` pins that every launch locale covers every
+// code in this union, so a partial addition fails the suite on purpose).
 export type CurrencyCode = 'AZN' | 'USD' | 'EUR' | 'RUB' | 'GBP'
 
 /**
@@ -18,6 +19,8 @@ export type CurrencyCode = 'AZN' | 'USD' | 'EUR' | 'RUB' | 'GBP'
  * has an opinion on — the unit words, their plurals and grammatical gender,
  * and which side of the amount the symbol goes — lives in the `Locale`
  * instead (`Locale.currency`), so this record is the same for every locale.
+ *
+ * @since 0.4.0
  */
 export interface Currency {
   /** ISO 4217 alphabetic code, e.g. `'USD'`. */
@@ -48,9 +51,15 @@ const CURRENCIES: Readonly<Record<CurrencyCode, Currency>> = {
  * doesn't know, rather than returning `undefined`, so a JavaScript caller
  * gets the same guarantee the {@link CurrencyCode} union gives TypeScript.
  *
+ * @param code - An ISO 4217 code: `'AZN'`, `'USD'`, `'EUR'`, `'RUB'` or `'GBP'`.
+ * @returns The currency's code, symbol and minor-unit exponent.
+ * @throws {RangeError} When `code` is not a known currency code.
+ *
  * @example
  * getCurrency('EUR'); // { code: 'EUR', symbol: '€', decimals: 2 }
  * getCurrency('XYZ'); // throws RangeError
+ *
+ * @since 0.4.0
  */
 export function getCurrency(code: CurrencyCode): Currency {
   return guardRecord(() => {

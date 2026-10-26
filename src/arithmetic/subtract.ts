@@ -4,7 +4,9 @@ import { assertFinite } from '../shared/validation'
 import { alignScales, fromDecimal, toDecimal } from './decimal'
 
 /**
- * Subtracts `b` from `a` exactly in decimal: `subtract(0.3, 0.1)` is `0.2`,
+ * Subtracts `b` from `a` exactly in decimal.
+ *
+ * `subtract(0.3, 0.1)` is `0.2`,
  * not `0.19999999999999998`. Each operand is taken at its shortest decimal
  * reading, the difference is computed exactly, and the result is the closest
  * JavaScript number to that difference.
@@ -18,6 +20,13 @@ import { alignScales, fromDecimal, toDecimal } from './decimal'
  * subtract(1.5, 1.5); // 0
  * subtract(1, 0.9); // 0.1
  * subtract(-0, 0); // -0
+ *
+ * @param a - The minuend.
+ * @param b - The subtrahend, taken away from `a`.
+ * @returns The closest JavaScript number to the exact difference `a - b`.
+ * @throws {RangeError} When `a` or `b` is not finite, or when the difference
+ * is too large for a JavaScript number.
+ * @since 0.4.0
  */
 export function subtract(a: number, b: number): number {
   return guardNumber(() => {

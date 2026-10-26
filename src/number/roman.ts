@@ -32,6 +32,13 @@ const VALID_ROMAN_PATTERN = /^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0
  * @example
  * toRoman(1994); // "MCMXCIV"
  * toRoman(BigInt(1994)); // "MCMXCIV"
+ *
+ * @param value - An integer from 1 to 3999, a number or a `bigint`.
+ * @returns The roman numeral in capital letters.
+ * @throws {TypeError} When `value` is not a number or a `bigint`, or is a
+ * number that is not an integer.
+ * @throws {RangeError} When `value` is not finite or is outside 1–3999.
+ * @since 0.2.0
  */
 export function toRoman(value: number | bigint): string {
   return guardText(() => {
@@ -64,6 +71,11 @@ export function toRoman(value: number | bigint): string {
  *
  * @example
  * fromRoman("MCMXCIV"); // 1994
+ *
+ * @param roman - The roman numeral. Case and surrounding spaces are ignored.
+ * @returns The integer value, from 1 to 3999.
+ * @throws {SyntaxError} When `roman` is empty or is not a valid roman numeral.
+ * @since 0.2.0
  */
 export function fromRoman(roman: string): number {
   return guardNumber(() => {

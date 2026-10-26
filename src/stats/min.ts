@@ -2,8 +2,14 @@ import { guardNumber } from '../shared/no-throw'
 /**
  * Returns the smallest value in an array of numbers.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @returns The smallest value.
+ * @throws {RangeError} When `values` is empty or a value is not finite.
+ *
  * @example
  * min([3, 1, 4, 1, 5]); // 1
+ *
+ * @since 0.2.0
  */
 export function min(values: readonly number[]): number {
   return guardNumber(() => {

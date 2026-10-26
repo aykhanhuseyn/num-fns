@@ -83,12 +83,18 @@ function renderGroup(value: number): string {
 }
 
 /**
- * English locale (`todo.md` §1/§2). Cardinal composition follows American
- * usage — no `and` before the final group (`"one hundred one"`, not
- * `"one hundred and one"`); the en-GB variant with `and` is listed as future
- * work in `todo.md` §2 and isn't implemented here. Uses short-scale
- * `billion` = `1e9`, matching modern US/UK usage.
+ * English (American) locale, the package default. Cardinal words use no
+ * `and` before the final group (`"one hundred one"`); use {@link enGB} for
+ * the British form. Short scale: `billion` is `1e9`.
+ *
+ * @example
+ * numberToWords(101); // "one hundred one"
+ * formatMoney(1234.5, { locale: en }); // "$1,234.50"
+ * toOrdinal(3, { locale: en }); // "3rd"
+ *
+ * @since 0.2.0
  */
+// Maintainers: `todo.md` §1/§2.
 export const en: Locale = {
   code: 'en',
   name: 'English',

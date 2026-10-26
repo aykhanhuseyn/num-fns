@@ -10,6 +10,11 @@ import type { NoThrowOptions } from '../config'
 import { guardNumber } from '../shared/no-throw'
 import { exactSum, integerDecimal, toNumber, validateValues } from './exact'
 
+/**
+ * Options for {@link variance} and {@link standardDeviation}.
+ *
+ * @since 0.2.0
+ */
 export interface VarianceOptions extends NoThrowOptions {
   /**
    * When true, computes sample variance (divides by n - 1, Bessel's
@@ -33,6 +38,13 @@ export interface VarianceOptions extends NoThrowOptions {
  * Throws `RangeError` when `values` is empty, when `sample` is set with
  * fewer than 2 values, when a value is not finite, or when the variance is
  * too large for a JavaScript number.
+ *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @param options - `sample: true` for sample variance; `noThrow` to return `NaN` instead of throwing.
+ * @returns The variance, rounded once to the closest JavaScript number.
+ * @throws {RangeError} When `values` is empty, `sample` is set with fewer than
+ * 2 values, a value is not finite, or the variance is too large for a
+ * JavaScript number.
  *
  * @example
  * variance([2, 4, 4, 4, 5, 5, 7, 9]); // 4

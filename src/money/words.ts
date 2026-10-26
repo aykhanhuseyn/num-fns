@@ -56,6 +56,15 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * negative `bigint` is prefixed with `locale.words.negative` like a
  * negative `number`.
  *
+ * @param value - The amount. A `bigint` is a whole amount of the major unit.
+ * @param options - `locale`, `currency`, `majorUnit`/`minorUnit` word
+ * overrides, `includeZeroMinor` and `noThrow`.
+ * @returns The amount in words with its unit words.
+ * @throws {TypeError} When `value` is not a number or a `bigint`.
+ * @throws {RangeError} When `value` is not finite or too large for the
+ * locale's scale words, `currency` is not a known code, or the locale has no
+ * unit words for `currency`.
+ *
  * @example
  * moneyToWords(1234.5); // "one thousand two hundred thirty-four dollars fifty cents"
  * moneyToWords(1, { locale: en }); // "one dollar"
@@ -64,6 +73,8 @@ function resolveUnits(locale: Locale, code: CurrencyCode): LocaleCurrencyUnits {
  * moneyToWords(1.01, { locale: ru }); // "один рубль одна копейка"
  * moneyToWords(2.02, { locale: ru, currency: 'USD' }); // "два доллара два цента"
  * moneyToWords(1000000000000n); // "one trillion dollars"
+ *
+ * @since 0.2.0
  */
 export function moneyToWords(value: number | bigint, options: MoneyWordsOptions = {}): string {
   return guardText(

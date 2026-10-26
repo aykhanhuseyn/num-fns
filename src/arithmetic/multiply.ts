@@ -4,7 +4,9 @@ import { assertFinite } from '../shared/validation'
 import { fromDecimal, toDecimal } from './decimal'
 
 /**
- * Multiplies two numbers exactly in decimal: `multiply(0.1, 3)` is `0.3`,
+ * Multiplies two numbers exactly in decimal.
+ *
+ * `multiply(0.1, 3)` is `0.3`,
  * not `0.30000000000000004`, and `multiply(1.1, 1.1)` is `1.21`. Each
  * operand is taken at its shortest decimal reading, the product is computed
  * exactly, and the result is the closest JavaScript number to that product.
@@ -18,6 +20,13 @@ import { fromDecimal, toDecimal } from './decimal'
  * multiply(1.1, 1.1); // 1.21
  * multiply(19.99, 100); // 1999
  * multiply(-1, 0); // -0
+ *
+ * @param a - The first factor.
+ * @param b - The second factor.
+ * @returns The closest JavaScript number to the exact product `a × b`.
+ * @throws {RangeError} When `a` or `b` is not finite, or when the product is
+ * too large for a JavaScript number.
+ * @since 0.4.0
  */
 export function multiply(a: number, b: number): number {
   return guardNumber(() => {

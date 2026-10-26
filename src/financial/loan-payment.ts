@@ -4,6 +4,8 @@ import { assertFinite, assertFiniteRate, assertPositiveInteger } from '../shared
 /**
  * One row of an {@link amortizationSchedule} — the interest/principal split
  * for a single payment period and the balance remaining after it.
+ *
+ * @since 0.2.0
  */
 export interface AmortizationScheduleEntry {
   /** 1-indexed period number. */
@@ -19,7 +21,9 @@ export interface AmortizationScheduleEntry {
 }
 
 /**
- * Computes the fixed periodic payment (`PMT`) that fully repays `principal`
+ * Computes the fixed periodic payment of a loan.
+ *
+ * The payment (`PMT`) fully repays `principal`
  * over `periods` equal payments at a constant per-period `rate` — a
  * fixed-rate mortgage or amortizing-loan payment.
  *
@@ -31,6 +35,10 @@ export interface AmortizationScheduleEntry {
  * per period — for a 6% annual rate paid monthly, pass `0.06 / 12`).
  * @param periods - The total number of payments, e.g. `360` for a 30-year
  * monthly mortgage.
+ * @returns The payment due at the end of each period.
+ * @throws {RangeError} When `principal` is not finite, when `rate` is not
+ * finite or is `-1` or less, or when `periods` is not a positive integer.
+ * @since 0.2.0
  *
  * @example
  * loanPayment(200000, 0.06 / 12, 360); // 1199.100... (30-year, 6% APR mortgage)
@@ -48,8 +56,9 @@ export function loanPayment(principal: number, rate: number, periods: number): n
 }
 
 /**
- * Builds the full period-by-period amortization schedule for a fixed-rate
- * loan — the interest/principal split of each {@link loanPayment} payment and
+ * Builds the period-by-period amortization schedule of a fixed-rate loan.
+ *
+ * Shows the interest/principal split of each {@link loanPayment} payment and
  * the balance remaining afterward.
  *
  * The final row's `principal`/`balance` are adjusted so the schedule always
@@ -59,6 +68,11 @@ export function loanPayment(principal: number, rate: number, periods: number): n
  * @param principal - The loan amount, e.g. `200000`.
  * @param rate - The interest rate per period, as a decimal (see {@link loanPayment}).
  * @param periods - The total number of payments.
+ * @returns One {@link AmortizationScheduleEntry} for each period, in order.
+ * The last row's `balance` is exactly `0`.
+ * @throws {RangeError} When `principal` is not finite, when `rate` is not
+ * finite or is `-1` or less, or when `periods` is not a positive integer.
+ * @since 0.2.0
  *
  * @example
  * amortizationSchedule(1000, 0.01, 3);

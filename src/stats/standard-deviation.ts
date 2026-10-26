@@ -12,6 +12,11 @@ import { variance } from './variance'
  *
  * Throws everything `variance` throws.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @param options - `sample: true` for sample standard deviation; `noThrow` to return `NaN` instead of throwing.
+ * @returns The square root of the variance.
+ * @throws {RangeError} In every case where {@link variance} throws.
+ *
  * @example
  * standardDeviation([2, 4, 4, 4, 5, 5, 7, 9]); // 2
  * standardDeviation([2, 4, 4, 4, 5, 5, 7, 9], { sample: true }); // 2.138089935299395

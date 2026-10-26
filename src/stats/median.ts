@@ -13,6 +13,10 @@ import { integerDecimal, toNumber, validateValues } from './exact'
  *
  * Throws `RangeError` when `values` is empty or a value is not finite.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @returns The middle value, or the exact average of the two middle values.
+ * @throws {RangeError} When `values` is empty or a value is not finite.
+ *
  * @example
  * median([1, 3, 2]); // 2
  * median([1, 2, 3, 4]); // 2.5

@@ -140,30 +140,26 @@ function fractionWords(numerator: number, denominator: number): string {
 }
 
 /**
- * British English locale (`todo.md` §2's en-GB follow-up). Shares every word
- * and rule `en.ts` (en-US) defines — hyphenation, irregular teens, `st`/`nd`/
- * `rd`/`th` suffixes, short-scale `billion`/`trillion`, separators,
- * notation — except the things that actually distinguish the dialects:
- * "and" before the final low part of a number (`"one hundred and one"`,
- * `"one thousand and one"`), per the module-level doc comments on
- * {@link renderGroup} and {@link compose} above, and a default currency of
- * sterling (`GBP`) rather than `en`'s `USD` (2026-09-06, with the
- * multi-currency `Locale.currency.units` table).
+ * British English locale. It shares every word and rule of {@link en}
+ * (hyphenation, irregular teens, `st`/`nd`/`rd`/`th` suffixes, short-scale
+ * `billion`, separators, notation) except two: "and" before the final low
+ * part of a number (`"one hundred and one"`, `"one thousand and one"`), and
+ * a default currency of sterling (`GBP`) instead of `USD`.
  *
- * Deliberately self-contained rather than importing `ONES`/`TEENS`/`TENS`/the
- * ordinal-irregulars table from `en.ts`: `en.ts` doesn't export them (they're
- * file-local), and exporting them would leak through `export * from './en'`
- * in `locale/index.ts` into the public `./locale` barrel — which
- * `locale/index.test.ts` pins as "exactly the launch locale objects". Small,
- * self-contained duplication here (mirroring the fact that `dist/locale/en.js`
- * is itself already zero-import) avoids that surface-area growth and keeps
- * `dist/locale/en-gb.js` independently tree-shakeable, at the cost of the two
- * files' shared vocabulary tables having to be kept in sync by hand if either
- * ever changes — an acceptable tradeoff for a closed, small word list. The
- * `fractions` hook is the one place this file *does* reach into `number/`
- * (see {@link fractionWords}'s doc comment for why that's cycle-free where
- * `en.ts` importing the same thing would not be).
+ * @example
+ * numberToWords(101, { locale: enGB }); // "one hundred and one"
+ * formatMoney(1234.5, { locale: enGB }); // "£1,234.50"
+ *
+ * @since 0.2.0
  */
+// Maintainers (`todo.md` §2's en-GB follow-up; GBP default since
+// 2026-09-06): this file deliberately does not import the word tables from
+// `en.ts`. `en.ts` keeps them file-local, and exporting them would leak
+// through `export * from './en'` into the public `./locale` barrel, which
+// `locale/index.test.ts` pins as "exactly the locale objects". The cost is
+// that the two files' word tables must be kept in sync by hand. The
+// `fractions` hook is the one place this file reaches into `number/`; see
+// the `fractionWords` doc comment for why that is cycle-free here.
 export const enGB: Locale = {
   code: 'en-GB',
   name: 'English (UK)',

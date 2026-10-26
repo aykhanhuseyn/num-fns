@@ -5,9 +5,15 @@ import { guardList } from '../shared/no-throw'
  * ascending, so callers can detect multimodal input rather than silently
  * picking one.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @returns Every value with the highest count, sorted ascending.
+ * @throws {RangeError} When `values` is empty or a value is not finite.
+ *
  * @example
  * mode([1, 2, 2, 3]); // [2]
  * mode([1, 1, 2, 2, 3]); // [1, 2]
+ *
+ * @since 0.2.0
  */
 export function mode(values: readonly number[]): number[] {
   return guardList(() => {

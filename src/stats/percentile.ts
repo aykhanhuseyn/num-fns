@@ -20,6 +20,12 @@ import { toNumber, validateValues } from './exact'
  * Throws `RangeError` when `values` is empty, when `p` is outside `0..100`,
  * or when a value is not finite.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @param p - The percentile, from 0 to 100 inclusive.
+ * @returns The interpolated value, rounded once to the closest JavaScript number.
+ * @throws {RangeError} When `values` is empty, `p` is outside `0..100`, or a
+ * value is not finite.
+ *
  * @example
  * percentile([1, 2, 3, 4, 5], 50); // 3
  * percentile([1, 2, 3, 4], 25); // 1.75

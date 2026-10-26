@@ -342,14 +342,19 @@ function renderGroup(value: number, gender?: GrammaticalGender): string {
 }
 
 /**
- * Russian locale (`todo.md` §1/§2). The two grammar traps called out in the
- * backlog live in `words.compose`: `тысяча` is feminine, so a trailing
- * "один"/"два" in the thousands group must agree ("одна тысяча", "две
- * тысячи"), while "миллион" and above stay masculine ("двадцать один
- * миллион"). Scale and currency words inflect by {@link ruPlural} via the
- * `Partial<Record<PluralCategory, string>>` maps in `words.scales` and
- * `currency`.
+ * Russian locale. Number words agree in gender with the noun they count:
+ * `тысяча` is feminine (`"одна тысяча"`, `"две тысячи"`), `миллион` and
+ * above are masculine (`"двадцать один миллион"`). Scale and currency words
+ * take the CLDR plural forms `one`/`few`/`many`.
+ *
+ * @example
+ * numberToWords(21000, { locale: ru }); // "двадцать одна тысяча"
+ * moneyToWords(2, { locale: ru }); // "два рубля"
+ *
+ * @since 0.2.0
  */
+// Maintainers: `todo.md` §1/§2. The gender agreement lives in
+// `words.compose`; plural forms come from `ruPlural`.
 export const ru: Locale = {
   code: 'ru',
   name: 'Russian',

@@ -19,6 +19,11 @@ import { exactSum, sumFast, toNumber, validateValues } from './exact'
  * or when the total is too large for a JavaScript number. Signed zeros
  * follow IEEE 754: the total is `-0` only when every value is `-0`.
  *
+ * @param values - The numbers. Must not be empty; every value must be finite.
+ * @returns The exact total, rounded once to the closest JavaScript number.
+ * @throws {RangeError} When `values` is empty, a value is not finite, or the
+ * total is too large for a JavaScript number.
+ *
  * @example
  * sum([1, 2, 3]); // 6
  * sum([0.1, 0.2]); // 0.3

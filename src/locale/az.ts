@@ -208,16 +208,21 @@ function azFractionWords(numerator: number, denominator: number): string {
 }
 
 /**
- * Azerbaijani locale — the reference implementation the locale refactor
- * (`todo.md` §1) is built against. Every field is ported unchanged from the
- * constants that `number/words.ts`, `number/notation.ts` and
- * `shared/constants.ts` used to hardcode (they live at the top of this file
- * now, see their doc comment) rather than re-derived, and `numberToWords`,
- * `toOrdinal`/`ordinalToWords`, `toShortNotation`/`toLongNotation`, and
- * `formatMoney`/`moneyToWords` are all verified (`az.test.ts`) to produce
- * byte-identical output to the pre-refactor hardcoded functions when called
- * with `{ locale: az }`.
+ * Azerbaijani locale. Pass it as `{ locale: az }`: the package default is
+ * `en`. `az` is the reference implementation the other locales are checked
+ * against.
+ *
+ * @example
+ * numberToWords(1001, { locale: az }); // "min bir"
+ * formatMoney(1234.5, { locale: az }); // "1 234,50 ₼"
+ * toOrdinal(3, { locale: az }); // "3-cü"
+ *
+ * @since 0.2.0
  */
+// Maintainers: every field is ported unchanged from the constants that
+// `number/words.ts`, `number/notation.ts` and `shared/constants.ts` used to
+// hardcode (`todo.md` §1), and `az.test.ts` checks byte-identical output
+// against the pre-refactor functions.
 export const az: Locale = {
   code: 'az',
   name: 'Azerbaijani',

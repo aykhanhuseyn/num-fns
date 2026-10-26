@@ -8,7 +8,9 @@ import {
 } from '../shared/validation'
 
 /**
- * Computes compound interest — interest that accrues on both the original
+ * Computes the compound interest earned on a principal.
+ *
+ * Compound interest is interest that accrues on both the original
  * principal and previously-accumulated interest.
  *
  * Returns the interest earned, not the resulting balance; add `principal` to
@@ -19,6 +21,13 @@ import {
  * @param principal - The original amount, e.g. `1000`.
  * @param rate - The nominal interest rate per period, as a decimal (`0.05` = 5%).
  * @param time - The number of periods (matching the rate's period, typically years).
+ * @param options - `compoundsPerPeriod`: how many times interest compounds in
+ * one period. Default `1`.
+ * @returns The interest earned, without the principal.
+ * @throws {RangeError} When `principal` is not finite, when `rate` is not
+ * finite or is `-1` or less, when `time` is negative or not finite, or when
+ * `compoundsPerPeriod` is not a finite number greater than `0`.
+ * @since 0.2.0
  *
  * @example
  * compoundInterest(1000, 0.05, 3); // 157.6250000000001 (annual compounding)

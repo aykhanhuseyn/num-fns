@@ -10,7 +10,9 @@ const TWO = BigInt(2)
 const FIVE = BigInt(5)
 
 /**
- * Rounds `value` to `precision` decimal places, exactly in decimal, using
+ * Rounds a number to a given number of decimal places, exactly in decimal.
+ *
+ * Rounds `value` to `precision` decimal places, using
  * `mode` to break ties (`'halfUp'` — half away from zero — by default). This
  * is the one rounding implementation in the package: `formatNumber`,
  * `formatMoney` and `formatPercentage` all delegate to it.
@@ -25,7 +27,7 @@ const FIVE = BigInt(5)
  * integer, or when the result is too large for a JavaScript number (only
  * reachable with an enormous negative `precision` under `'ceil'`/`'floor'`).
  * The sign of the input survives: a negative value that rounds away to zero
- * is `-0`, not `0` (the 2026-09-20 "`-0` is a value" decision).
+ * is `-0`, not `0`.
  *
  * @example
  * round(1.005, 2); // 1.01
@@ -35,6 +37,16 @@ const FIVE = BigInt(5)
  * round(1234, -2); // 1200
  * round(-1.21, 1, 'floor'); // -1.3
  * round(-0.4); // -0
+ *
+ * @param value - The number to round.
+ * @param precision - The number of decimal places to keep. Default `0`. A
+ * negative value rounds to tens, hundreds, and so on. Must be an integer.
+ * @param mode - How to round: `'halfUp'` (default), `'halfDown'`,
+ * `'halfEven'`, `'ceil'` or `'floor'`.
+ * @returns The rounded number. A negative value that rounds to zero is `-0`.
+ * @throws {RangeError} When `value` is not finite, when `precision` is not an
+ * integer, or when the result is too large for a JavaScript number.
+ * @since 0.4.0
  */
 export function round(value: number, precision = 0, mode: RoundingMode = 'halfUp'): number {
   return guardNumber(() => {
