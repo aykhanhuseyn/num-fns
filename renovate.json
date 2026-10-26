@@ -36,6 +36,13 @@
       "dependencyDashboardApproval": true
     },
     {
+      "description": "Bun (package.json packageManager) contains the TypeScript version that `bun check` uses. scripts/check-ts-version.ts fails when Bun's TypeScript and the typescript package are different, so a human bumps Bun and typescript together.",
+      "matchPackageNames": ["bun", "typescript"],
+      "matchDepTypes": ["packageManager", "devDependencies"],
+      "groupName": "bun and typescript",
+      "dependencyDashboardApproval": true
+    },
+    {
       "description": "Vite and its dts plugin need to move together — vite-plugin-dts pins to a Vite major internally.",
       "matchPackageNames": ["vite", "vite-plugin-dts"],
       "groupName": "vite"

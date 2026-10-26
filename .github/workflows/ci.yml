@@ -15,9 +15,11 @@ jobs:
           # Full history so commitlint can walk base..head on PRs.
           fetch-depth: 0
 
+      # The Bun version decides the TypeScript version that `bun check` uses,
+      # so CI takes it from package.json ("packageManager"), never "latest".
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
 
       - run: bun install --frozen-lockfile
 
@@ -36,6 +38,11 @@ jobs:
       - run: bun run check:readme
 
       - run: bun run check:circular
+
+      # JSDoc audit (task 0.8-2): TypeDoc with warnings as errors, then every
+      # public export must have a summary, @param, @returns, @throws,
+      # @example and @since.
+      - run: bun run check:jsdoc
 
       # Non-blocking — check:unused (knip) hits an unverified native-binding
       # crash in at least one sandboxed ARM64 environment; see todo.md §6.

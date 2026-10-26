@@ -32,13 +32,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The Bun version decides the TypeScript version that `bun check` uses,
+      # so CI takes it from package.json ("packageManager"), never "latest".
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
 
       - run: bun install --frozen-lockfile
 
       - run: bun run site:build
+
+      # API reference (task 0.8-1): TypeDoc writes site-dist/api/ beside the
+      # playground. It fails on a missing doc comment or a broken link.
+      - run: bun run docs:api
 
       - uses: actions/configure-pages@v5
 

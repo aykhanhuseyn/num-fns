@@ -1,0 +1,36 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "num-fns",
+  "entryPoints": ["src/index.ts", "src/locale/index.ts"],
+  "entryPointStrategy": "resolve",
+  "tsconfig": "tsconfig.build.json",
+  "out": "site-dist/api",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "sort": ["alphabetical"],
+  "githubPages": false,
+  "treatWarningsAsErrors": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "rewrittenLink": true,
+    "notDocumented": true,
+    "unusedMergeModuleWith": true
+  },
+  "requiredToBeDocumented": [
+    "Function",
+    "Interface",
+    "TypeAlias",
+    "Variable",
+    "Property",
+    "Class",
+    "Enum"
+  ],
+  "navigationLinks": {
+    "Playground": "../",
+    "GitHub": "https://github.com/aykhanhuseyn/num-fns"
+  }
+}

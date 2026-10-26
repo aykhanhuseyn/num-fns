@@ -19,5 +19,5 @@
     "bench/**/*.ts",
     "!scripts/smoke/**"
   ],
-  "ignoreDependencies": ["@typescript/typescript6"]
+  "ignoreDependencies": ["@typescript/typescript6", "@typescript/old"]
 }

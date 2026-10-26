@@ -5,6 +5,9 @@ import type { FunctionExample } from './types'
 
 const REPO_BLOB_URL = 'https://github.com/aykhanhuseyn/num-fns/blob/main'
 
+/** TypeDoc writes one page per function to `site-dist/api/` (`bun run docs:api`, task 0.8-1). */
+const API_URL = './api/functions'
+
 export function renderExampleCard(example: FunctionExample): HTMLElement {
   const state: FieldValues = defaultValues(example.fields)
 
@@ -66,6 +69,12 @@ export function renderExampleCard(example: FunctionExample): HTMLElement {
   sourceLink.rel = 'noreferrer'
   sourceLink.textContent = `Source: ${example.sourceFile}`
   article.appendChild(sourceLink)
+
+  const apiLink = document.createElement('a')
+  apiLink.className = 'fn-source-link'
+  apiLink.href = `${API_URL}/index.${example.name}.html`
+  apiLink.textContent = `API reference: ${example.name}`
+  article.appendChild(apiLink)
 
   function update(): void {
     const result = runExample(example, state)

@@ -36,6 +36,7 @@ function buildHeader(): HTMLElement {
 
   const links: [string, string][] = [
     ['Docs', '#playground'],
+    ['API', './api/'],
     ['Locales', '#locales'],
     ['Review', './review.html'],
     ['GitHub', REPO_URL],
