@@ -1,0 +1,45 @@
+name: Locale (new locale or word correction)
+description: A wrong word in a shipped locale, or a request for a new locale.
+labels: [locale]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Word correction in a shipped locale
+        - New locale
+    validations:
+      required: true
+  - type: input
+    id: locale
+    attributes:
+      label: Locale
+      placeholder: ru, es, tr, hi-IN, …
+    validations:
+      required: true
+  - type: dropdown
+    id: native
+    attributes:
+      label: Are you a native speaker?
+      options:
+        - 'Yes'
+        - 'No'
+    validations:
+      required: true
+  - type: dropdown
+    id: review
+    attributes:
+      label: Will you review the words page (site/review.html) for this locale?
+      options:
+        - 'Yes'
+        - 'No'
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: For a correction, the call, the current output and the correct output. For a new locale, the number rules (grouping, plurals, genders, ordinals) and a source.
+    validations:
+      required: true

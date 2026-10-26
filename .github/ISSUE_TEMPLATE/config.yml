@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or locale discussion
+    url: https://github.com/aykhanhuseyn/num-fns/discussions
+    about: Ask how to use num-fns, or discuss a locale before you open an issue.
+  - name: Security problem
+    url: https://github.com/aykhanhuseyn/num-fns/security/policy
+    about: Do not open a public issue. Read SECURITY.md.

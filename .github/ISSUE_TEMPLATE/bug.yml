@@ -1,0 +1,43 @@
+name: Bug report
+description: A function gives a wrong result, throws when it should not, or does not throw when it should.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: num-fns version
+      placeholder: 0.8.0
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Runtime and version
+      placeholder: Node 22.11, Bun 1.4.4, Chrome 131, …
+    validations:
+      required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code
+      description: The smallest call that shows the problem.
+      render: ts
+      placeholder: |
+        import { formatMoney } from 'num-fns'
+        formatMoney(1234.5)
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+      description: The output, or the full error message.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      description: What you expected, and why (documentation, a standard, a native speaker).
+    validations:
+      required: true
