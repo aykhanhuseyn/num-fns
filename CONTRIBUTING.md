@@ -31,13 +31,13 @@ bun test                              # run the full test suite
 bun test src/number/words.test.ts     # run a single test file
 bun test -t "numberToWords"           # run tests matching a name pattern
 bun run test:coverage                 # the suite plus the coverage gate (what CI runs)
-bun run typecheck                     # tsc --noEmit, gate before publishing
+bun run typecheck                     # bun check on tsconfig.build.json, gate before publishing
 bun run lint                          # biome lint .
 bun run lint:fix                      # biome lint --write .
 bun run format                        # biome format --write .
 bun run format:check                  # biome format .
 bun run check:biome                   # biome check . (lint + format in one pass)
-bun run check:type                    # tsc --noEmit against the full project (incl. tests)
+bun run check:type                    # bun check against the full project (incl. tests)
 bun run check:circular                # dpdm, fails on import cycles
 bun run check:unused                  # knip, reports unused exports/files/deps
 bun run check                         # all of the above; pass file paths to scope check:biome
@@ -142,13 +142,14 @@ a gate — runner noise is too large for a threshold.
      `README.md`'s "BigInt in and out" for the settled boundary — and the
      `Locale` hooks keep their `number` signatures, so narrow with
      `toSafeNumber`/`pluralOperand` before calling one.
-   - Add a JSDoc comment with at least one `@example` — this is what shows up
-     in editor tooltips and is the primary API documentation until a full
-     reference site exists.
+   - Add a JSDoc comment with a one-line summary, `@param`, `@returns`,
+     `@throws`, `@example` and `@since`. It shows up in editor tooltips and
+     is the API reference (`bun run docs:api`); `bun run check:jsdoc` fails
+     when a tag is missing.
 3. **Add a colocated test file** named `<module>.test.ts` next to the module
    it covers, using `bun:test` (`describe`/`it`/`expect`) — there is no
    separate `test/` directory, and that is a settled decision rather than an
-   omission (see `CLAUDE.md`'s "Layout decisions", `todo.md` §3). At minimum,
+   omission (see `docs/decisions/0003-colocated-tests.md`). At minimum,
    cover: the documented default behavior, at least one option override (if
    the function takes options), and every thrown-error case.
 4. **Re-export it flatly from `src/index.ts`**, in alphabetical order by file
@@ -412,7 +413,7 @@ there is no single field to swap.
   from `src/shared/sign.ts`, not `value < 0`, which is `false` for `-0`.
 - **No `Intl`.** Not in `src/`, not in tests. `Intl` output depends on the
   runtime's ICU data, and the package's promise is that it does not
-  (`todo.md` §1, 2026-09-20).
+  (`docs/decisions/0001-no-intl.md`).
 - **`number | bigint` in, `output` out, no BigInt literals.** Integer-domain
   functions take `number | bigint` and parsers take `{ output: 'bigint' }`
   (see "How to add a new function"). `BigInt` is reached only through the

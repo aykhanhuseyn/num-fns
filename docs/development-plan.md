@@ -244,6 +244,31 @@ No API change in this milestone.
   `SECURITY.md` (report by email, 90-day window), `CODE_OF_CONDUCT.md`
   (Contributor Covenant). Enable Discussions for locale questions.
 
+### 0.8-10 Type check with `bun check` (S)
+
+- **What:** replace `tsc` with `bun check` (Bun >= 1.4.3) for type
+  checking only. `check:type` → `bun check -p tsconfig.json`; `typecheck`
+  → `bun check -p tsconfig.build.json`. Drop `--incremental` and delete
+  `tsconfig.tsbuildinfo` (`bun check` writes no build info). Bump
+  `packageManager` to the Bun version used. In `ci.yml`, `release.yml`
+  and `pages.yml`, replace `bun-version: latest` with
+  `bun-version-file: package.json`, because the TypeScript version that
+  `bun check` uses changes with the Bun version.
+- **Keep `typescript`:** `vite-plugin-dts` uses it to write the `.d.ts`
+  files, the editor uses it, and TypeDoc (0.8-1) needs it.
+  `@typescript/typescript6` stays for the `node10` smoke fixture.
+- **Version lock:** add a check that `bun -p process.versions.typescript`
+  equals the `typescript` version in `package.json` (7.0.2 today), so the
+  editor and CI report the same errors. Renovate bumps both together.
+- **Files:** `package.json`, `.github/workflows/{ci,release,pages}.yml`,
+  `lefthook.yml`, `CONTRIBUTING.md`, `CLAUDE.md` (commands), delete
+  `tsconfig.tsbuildinfo`.
+- **Measure:** record the time of `tsc` and `bun check` for both
+  tsconfigs in the PR (rule: measure before you change).
+- **Done when:** `bun check` reports the same errors as `tsc` (put one
+  type error in, both fail on the same line); CI and lefthook pass; no
+  `tsc` call stays in `scripts` except the smoke fixtures.
+
 ### 0.8-9 Release 0.8.0 (S)
 
 ---

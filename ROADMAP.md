@@ -105,6 +105,8 @@ No API change.
   newcomer would re-propose.
 - `CLAUDE.md` cut to rules only (target under 10 KB).
 - Issue and PR templates, `SECURITY.md`, `CODE_OF_CONDUCT.md`.
+- Type check with `bun check` instead of `tsc` (Bun >= 1.4.3). CI uses
+  the Bun version pinned in `package.json`.
 
 ### 0.9.0 — freeze (Jan 2027)
 
