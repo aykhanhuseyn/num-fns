@@ -168,6 +168,11 @@ digit-free, so that anything a formatter emits its matching parser can read
 back. A pair that breaks that throws `RangeError` rather than producing a
 string which parses to the wrong number.
 
+Names follow one pattern: `formatX`/`parseX` for locale text with options,
+`toX`/`parseX` for short forms that can round, `toX`/`fromX` for exact
+conversions with no options, `xToWords` for spelling. The table of every
+export is in [`docs/api-review-1.0.md`](./docs/api-review-1.0.md).
+
 Roman numerals and byte-size notation (`toByteSize`/`parseByteSize`) are
 locale-independent and take no `locale` option, as are the financial,
 statistics, arithmetic, and base-conversion utilities.
@@ -389,6 +394,10 @@ actually need it and leave the global setting alone:
 formatNumber(userInput, { noThrow: true }); // "" rather than a thrown error
 formatNumber(userInput); // still throws
 ```
+
+`setConfig` is for applications, not for libraries. A library that calls
+it changes the behaviour of every other `num-fns` user in the same
+application; a library passes `noThrow` per call.
 
 Every options object accepts `noThrow`, and it wins over the global setting
 in both directions. Functions whose parameters are all positional — `add`,

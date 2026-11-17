@@ -6,6 +6,9 @@ import { guardRecord } from '../shared/no-throw'
  * autocompletes and a typo is a compile error; JavaScript callers get the
  * same guarantee at runtime from {@link getCurrency}'s `RangeError`.
  *
+ * New codes come in minor versions, so do not use an exhaustive `switch`
+ * over `CurrencyCode`: give it a `default` branch.
+ *
  * @since 0.4.0
  */
 // Adding a code means adding it here, in `CURRENCIES`, and — for

@@ -23,8 +23,10 @@ table below applies as written.
 - A new locale.
 - A new optional field on `Locale` or on an options interface. Omitting it
   keeps the old output.
-- A new currency code in `CurrencyCode`. (A wider union can break an
-  exhaustive `switch` in user code. Task 0.9-1 reviews this rule before 1.0.)
+- A new currency code in `CurrencyCode`. A wider union can break an
+  exhaustive `switch` in user code at compile time, so the type's JSDoc says
+  not to write one. Removing a code is a major change. Decided in
+  [`api-review-1.0.md`](./api-review-1.0.md).
 - A change to a locale's default format (separator, symbol position,
   spacing). The changeset shows the output before and after.
 - A new `@deprecated` tag. The old name keeps working until the next major.

@@ -277,6 +277,9 @@ No API change in this milestone.
 
 ### 0.9-1 API review (M)
 
+- **Status:** done. `docs/api-review-1.0.md`: every row says "keep";
+  a new `CurrencyCode` is a minor change.
+
 - **What:** `docs/api-review-1.0.md`: a table of every root and
   `num-fns/locale` export — name, pattern (`formatX/parseX`,
   `toX/fromX`, `xToWords`, verb), options, decision.
