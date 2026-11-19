@@ -39,10 +39,10 @@ assert.strictEqual(mean([1, 2, 3, 4]), 2.5)
 // shipped bundle actually does the exact arithmetic on this Node.
 assert.strictEqual(add(0.1, 0.2), 0.3)
 assert.strictEqual(round(1.005, 2), 1.01)
-// The word and scaled formatters round through the same exact path, so a
-// tie is decided on the value as written and the number and bigint inputs
-// agree on the last digit (`Math.round`/`toFixed` gave 67 / "2.67M" here).
-assert.strictEqual(numberToWords(2.675), 'two point sixty-eight')
+// The word and scaled formatters read the value as written, not the double
+// below it: numberToWords reads every digit, and the rounding formatters
+// decide the tie exactly (`Math.round`/`toFixed` gave 67 / "2.67M" here).
+assert.strictEqual(numberToWords(2.675), 'two point six seven five')
 assert.strictEqual(moneyToWords(2.675), 'two dollars sixty-eight cents')
 assert.strictEqual(toShortNotation(2675000, { decimals: 2 }), '2.68M')
 assert.strictEqual(
