@@ -243,6 +243,7 @@ export const az: Locale = {
     // digit ("otuz dörd", not "otuz tam dörd") — `and` stays unset here;
     // `decimalConnector` (below) is the unrelated integer/fraction joiner.
     decimalConnector: DECIMAL_WORD,
+    decimalStyle: 'fraction',
     renderGroup: azRenderGroup,
     compose: (chunks: readonly WordChunk[]): string =>
       chunks

@@ -80,49 +80,48 @@ describe('numberToWords', () => {
       )
     })
 
-    it('joins decimals with "point"', () => {
-      expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
+    it('joins decimals with "point" and reads them digit by digit', () => {
+      expect(numberToWords(12.34, { locale: en })).toBe('twelve point three four')
+      expect(numberToWords(2.1, { locale: en })).toBe('two point one')
+      expect(numberToWords(0.5, { locale: en })).toBe('zero point five')
     })
 
-    it('rounds the fraction to two places as written, not as the double is stored', () => {
-      // `(2.675 - 2) * 100` is 67.49999999999997 in floating point, so
-      // `Math.round` read this as "sixty-seven"; `round` decides the tie on
-      // the decimal the caller wrote.
-      expect(numberToWords(2.675, { locale: en })).toBe('two point sixty-eight')
-      expect(numberToWords(1.005, { locale: en })).toBe('one point zero one')
-      expect(numberToWords(0.125, { locale: en })).toBe('zero point thirteen')
-      expect(numberToWords(-2.675, { locale: en })).toBe('negative two point sixty-eight')
+    it('reads every fraction digit as written, not as the double is stored', () => {
+      // `2.675` is stored just below the tie; the reading is the decimal the
+      // caller wrote, every digit of it, with nothing rounded away.
+      expect(numberToWords(2.675, { locale: en })).toBe('two point six seven five')
+      expect(numberToWords(1.005, { locale: en })).toBe('one point zero zero five')
+      expect(numberToWords(0.125, { locale: en })).toBe('zero point one two five')
+      expect(numberToWords(0.001, { locale: en })).toBe('zero point zero zero one')
+      expect(numberToWords(-2.675, { locale: en })).toBe('negative two point six seven five')
     })
 
-    it('speaks a leading zero in the fraction, so .01 is not read as .1', () => {
-      // The fraction reaches the reader as a plain integer (`.01` is `1`,
-      // `.1` is `10`), so rendering it on its own dropped the leading zero
-      // and read 1.01 as "one point one" — how a speaker says 1.1. The two
-      // must stay distinguishable.
+    it('keeps .01 and .1 apart', () => {
       expect(numberToWords(1.01, { locale: en })).toBe('one point zero one')
-      expect(numberToWords(1.1, { locale: en })).toBe('one point ten')
-      expect(numberToWords(1.01, { locale: en })).not.toBe(numberToWords(1.1, { locale: en }))
+      expect(numberToWords(1.1, { locale: en })).toBe('one point one')
       expect(numberToWords(0.09, { locale: en })).toBe('zero point zero nine')
       expect(numberToWords(-0.05, { locale: en })).toBe('negative zero point zero five')
-      // A fraction with no leading zero is untouched.
-      expect(numberToWords(0.5, { locale: en })).toBe('zero point fifty')
-      expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
     })
 
-    it('carries a fraction that rounds up to one into the whole part', () => {
-      expect(numberToWords(1.999, { locale: en })).toBe('two')
-      expect(numberToWords(999.995, { locale: en })).toBe('one thousand')
-      expect(numberToWords(-0.999, { locale: en })).toBe('negative one')
+    it('reads at most 20 fraction digits, so a tiny value reads as zero with its sign', () => {
+      expect(numberToWords(1e-30, { locale: en })).toBe('zero')
+      expect(numberToWords(-1e-30, { locale: en })).toBe('negative zero')
+      expect(numberToWords(1e-20, { locale: en })).toBe(`zero point ${'zero '.repeat(19)}one`)
+    })
+
+    it('reads a fraction close to one in full instead of carrying it', () => {
+      expect(numberToWords(1.999, { locale: en })).toBe('one point nine nine nine')
+      expect(numberToWords(-0.999, { locale: en })).toBe('negative zero point nine nine nine')
     })
 
     it('keeps the sign of a value that rounds away to zero', () => {
-      expect(numberToWords(-0.001, { locale: en })).toBe('negative zero')
+      expect(numberToWords(-1e-21, { locale: en })).toBe('negative zero')
       expect(numberToWords(-0, { locale: en })).toBe('negative zero')
-      expect(numberToWords(0.004, { locale: en })).toBe('zero')
+      expect(numberToWords(4e-21, { locale: en })).toBe('zero')
       expect(numberToWords(0, { locale: en })).toBe('zero')
     })
 
-    it('checks the magnitude cap after rounding, so a carry cannot slip past it', () => {
+    it('checks the magnitude cap on the whole part only', () => {
       const fourScales: Locale = {
         ...en,
         words: { ...en.words, scales: en.words.scales.slice(0, 4) },
@@ -130,7 +129,10 @@ describe('numberToWords', () => {
       expect(numberToWords(999999999999, { locale: fourScales })).toBe(
         'nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine',
       )
-      expect(() => numberToWords(999999999999.999, { locale: fourScales })).toThrow(
+      expect(numberToWords(999999999999.999, { locale: fourScales })).toBe(
+        'nine hundred ninety-nine billion nine hundred ninety-nine million nine hundred ninety-nine thousand nine hundred ninety-nine point nine nine nine',
+      )
+      expect(() => numberToWords(1e12, { locale: fourScales })).toThrow(
         'numberToWords: value exceeds the maximum supported magnitude of 999999999999',
       )
     })
@@ -159,10 +161,11 @@ describe('numberToWords', () => {
       expect(numberToWords(1000000000000, { locale: az })).toBe('bir trilyon')
       expect(numberToWords(-5, { locale: az })).toBe('mənfi beş')
       expect(numberToWords(-1234, { locale: az })).toBe('mənfi min iki yüz otuz dörd')
-      expect(numberToWords(12.34, { locale: az })).toBe('on iki tam otuz dörd')
-      expect(numberToWords(0.5, { locale: az })).toBe('sıfır tam əlli')
-      expect(numberToWords(1.01, { locale: az })).toBe('bir tam sıfır bir')
-      expect(numberToWords(0.999, { locale: az })).toBe('bir')
+      expect(numberToWords(12.34, { locale: az })).toBe('on iki tam yüzdə otuz dörd')
+      expect(numberToWords(0.5, { locale: az })).toBe('sıfır tam onda beş')
+      expect(numberToWords(1.01, { locale: az })).toBe('bir tam yüzdə bir')
+      expect(numberToWords(0.999, { locale: az })).toBe('sıfır tam mində doqquz yüz doxsan doqquz')
+      expect(numberToWords(3.125, { locale: az })).toBe('üç tam mində yüz iyirmi beş')
     })
 
     it('throws for non-finite values', () => {
@@ -219,9 +222,9 @@ describe('numberToWords', () => {
 
     it('joins decimal parts with "coma", RAE\'s standard decimal reading (todo.md §2)', () => {
       expect(numberToWords(12.34, { locale: es })).toBe('doce coma treinta y cuatro')
-      expect(numberToWords(0.5, { locale: es })).toBe('cero coma cincuenta')
+      expect(numberToWords(0.5, { locale: es })).toBe('cero coma cinco')
       expect(numberToWords(1.01, { locale: es })).toBe('uno coma cero uno')
-      expect(numberToWords(-3.5, { locale: es })).toBe('menos tres coma cincuenta')
+      expect(numberToWords(-3.5, { locale: es })).toBe('menos tres coma cinco')
     })
   })
 
@@ -476,13 +479,13 @@ describe('Locale.words.grouping (0.7-1)', () => {
     )
     expect(numberToWords(BigInt(100000000), { locale: enIN })).toBe('ten crore')
     expect(numberToWords(-250000.5, { locale: enIN })).toBe(
-      'negative two lakh fifty thousand point fifty',
+      'negative two lakh fifty thousand point five',
     )
   })
 
   it('joins the fraction with a plain space when the locale has no decimal connector', () => {
     const noConnector: Locale = { ...enIN, words: { ...enIN.words, decimalConnector: undefined } }
-    expect(numberToWords(100000.5, { locale: noConnector })).toBe('one lakh fifty')
+    expect(numberToWords(100000.5, { locale: noConnector })).toBe('one lakh five')
   })
 
   it('caps at the grouping-aware maximum', () => {
@@ -499,5 +502,59 @@ describe('Locale.words.grouping (0.7-1)', () => {
     expect(() => numberToWords(1, { locale: bad })).toThrow(
       'numberToWords: locale words.grouping must be a non-empty list of integers from 1 to 15, received []',
     )
+  })
+})
+
+describe('Locale.words.decimalStyle (0.9.0)', () => {
+  it('is set by every shipped locale', () => {
+    expect(en.words.decimalStyle).toBe('digits')
+    expect(enGB.words.decimalStyle).toBe('digits')
+    expect(az.words.decimalStyle).toBe('fraction')
+    expect(ru.words.decimalStyle).toBe('number')
+    expect(es.words.decimalStyle).toBe('number')
+  })
+
+  it('defaults to "number" when the locale leaves it out', () => {
+    const plain: Locale = { ...en, words: { ...en.words, decimalStyle: undefined } }
+    expect(numberToWords(12.34, { locale: plain })).toBe('twelve point thirty-four')
+    expect(numberToWords(1.05, { locale: plain })).toBe('one point zero five')
+  })
+
+  it('reads a "fraction" style through locale.fractions', () => {
+    expect(numberToWords(2.1, { locale: az })).toBe('iki tam onda bir')
+    expect(numberToWords(-0.05, { locale: az })).toBe('mənfi sıfır tam yüzdə beş')
+  })
+
+  it('falls back from "fraction" to "number" when the locale has no fractions', () => {
+    const noFractions: Locale = {
+      ...en,
+      fractions: undefined,
+      words: { ...en.words, decimalStyle: 'fraction' },
+    }
+    expect(numberToWords(12.34, { locale: noFractions })).toBe('twelve point thirty-four')
+  })
+
+  it('falls back from "fraction" to "number" when the power of ten has no scale word', () => {
+    // 15 fraction digits: 10^15 is past az's largest scale, the numerator is not.
+    expect(numberToWords(0.123456789012345, { locale: az })).toBe(
+      'sıfır tam yüz iyirmi üç trilyon dörd yüz əlli altı milyard yeddi yüz səksən doqquz milyon on iki min üç yüz qırx beş',
+    )
+  })
+
+  it('falls back to "digits" when the fraction is longer than the scale words reach', () => {
+    expect(numberToWords(0.1234567890123456, { locale: es })).toBe(
+      'cero coma uno dos tres cuatro cinco seis siete ocho nueve cero uno dos tres cuatro cinco seis',
+    )
+    expect(numberToWords(0.1234567890123456, { locale: az })).toBe(
+      'sıfır tam bir iki üç dörd beş altı yeddi səkkiz doqquz sıfır bir iki üç dörd beş altı',
+    )
+  })
+
+  it('throws RangeError for an unknown style', () => {
+    const bad = { ...en, words: { ...en.words, decimalStyle: 'words' } } as unknown as Locale
+    expect(() => numberToWords(1.5, { locale: bad })).toThrow(
+      'numberToWords: locale words.decimalStyle must be one of "digits", "number", "fraction", received words',
+    )
+    expect(numberToWords(1.5, { locale: bad, noThrow: true })).toBe('')
   })
 })

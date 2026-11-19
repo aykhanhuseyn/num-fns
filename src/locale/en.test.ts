@@ -192,14 +192,14 @@ describe('en.words.decimalConnector', () => {
 
 describe('numberToWords decimal readings with en', () => {
   it('joins integer and fractional parts with "point"', () => {
-    expect(numberToWords(12.34, { locale: en })).toBe('twelve point thirty-four')
+    expect(numberToWords(12.34, { locale: en })).toBe('twelve point three four')
   })
 
-  it('reads 0.5 as "zero point fifty" (the fractional digits)', () => {
-    expect(numberToWords(0.5, { locale: en })).toBe('zero point fifty')
+  it('reads 0.5 as "zero point five", one word per digit', () => {
+    expect(numberToWords(0.5, { locale: en })).toBe('zero point five')
   })
 
   it('prefixes negative decimals with "negative"', () => {
-    expect(numberToWords(-1.23, { locale: en })).toBe('negative one point twenty-three')
+    expect(numberToWords(-1.23, { locale: en })).toBe('negative one point two three')
   })
 })

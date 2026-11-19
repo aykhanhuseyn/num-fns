@@ -179,10 +179,9 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
       expect(() => numberToWords(max + BigInt(1), { locale })).toThrow(RangeError)
     })
 
-    it('keeps a hundredths fraction distinct from a tenths one (leading zero spoken)', () => {
-      // The fraction arrives as a plain integer, so `.01` and `.1` are `1`
-      // and `10`; dropping the leading zero made 1.01 read as a speaker reads
-      // 1.1. Locale-generic, so every locale gets it without its own hook.
+    it('keeps a hundredths fraction distinct from a tenths one', () => {
+      // 1.01 must not read the way a speaker reads 1.1, in every decimal
+      // style (`words.decimalStyle`).
       for (const [hundredths, tenths] of [
         [1.01, 1.1],
         [0.09, 0.9],
@@ -190,7 +189,6 @@ describe.each(LOCALE_ENTRIES)('locale conformance: %s', (_exportName, locale) =>
         const spokenHundredths = numberToWords(hundredths, { locale })
         assertCleanWords(spokenHundredths, `numberToWords(${hundredths})`)
         expect(spokenHundredths).not.toBe(numberToWords(tenths, { locale }))
-        expect(spokenHundredths).toContain(locale.words.zero)
       }
     })
   })

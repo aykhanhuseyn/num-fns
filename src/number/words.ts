@@ -1,6 +1,8 @@
+import { pow10, toDecimal } from '../arithmetic/decimal'
+import { round } from '../arithmetic/round'
 import { en } from '../locale/en'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from '../locale/types'
-import { absBigInt, maxSupportedBigInt, splitFixed, toScaleGroups } from '../shared/bigint'
+import { absBigInt, maxSupportedBigInt, toScaleGroups } from '../shared/bigint'
 import { guardText } from '../shared/no-throw-text'
 import { resolveGrouping } from '../shared/numbering'
 import { isSigned } from '../shared/sign'
@@ -15,11 +17,24 @@ import { assertNumericValue } from '../shared/validation'
 const GRAMMATICAL_GENDERS: readonly GrammaticalGender[] = ['masculine', 'feminine', 'neuter']
 
 /**
- * How many fraction digits `numberToWords` rounds a `number` to before
- * reading its fractional part, and the width that part is padded back to
- * when it is spoken (see {@link renderFraction}).
+ * The most fraction digits `numberToWords` reads. A `number` has at most 17
+ * significant digits, so this only cuts the long run of leading zeros of a
+ * tiny value (`1e-30` reads as zero, with its sign).
  */
-const FRACTION_DIGITS = 2
+const MAX_FRACTION_DIGITS = 20
+
+/** Every value `LocaleWords.decimalStyle` admits. */
+const DECIMAL_STYLES: readonly NonNullable<Locale['words']['decimalStyle']>[] = [
+  'digits',
+  'number',
+  'fraction',
+]
+
+/** The largest fraction width the `'fraction'` style passes to `locale.fractions.words` as a safe `number`. */
+const MAX_FRACTION_STYLE_DIGITS = 15
+
+/** Trailing zeros of a fraction digit string; the shortest decimal has none, but the reading must not depend on that. */
+const TRAILING_ZEROS = /0+$/
 
 /**
  * Validates `options.gender` against `GrammaticalGender` and against the
@@ -93,16 +108,12 @@ export function resolveScaleWord(
  * Supports integers from 0 up to `1000 ** locale.words.scales.length - 1`
  * under the default grouping (999 trillion range for every launch locale;
  * a locale with its own `words.grouping` caps at the matching power of ten), negative numbers (prefixed
- * with `locale.words.negative`), and a fraction rounded to two decimal
- * digits, read as a whole number of hundredths joined by
- * `locale.words.decimalConnector` when the locale defines one (see
- * `decimalConnector`'s doc comment in `locale/types.ts`), with a leading
- * zero spoken rather than dropped so `1.01` ("one point zero one") stays
- * distinct from `1.1` ("one point ten").
- * The rounding is `arithmetic/round`'s, exact in decimal:
- * `numberToWords(2.675)` ends in "sixty-eight" as the value is written,
- * where `Math.round((2.675 - 2) * 100)` gives `67` because the double is
- * stored just below the tie; `1.999` carries into "two".
+ * with `locale.words.negative`), and a fraction. The fraction is every
+ * digit of the number as it is written (`2.675` is `2.675`, not the double
+ * below it), up to 20 fraction digits, joined by
+ * `locale.words.decimalConnector` and read in the locale's
+ * `words.decimalStyle`: digit by digit (`en` "two point one"), as one
+ * number (`es` "dos coma uno") or as a fraction (`az` "iki tam onda bir").
  *
  * A `bigint` is read exactly at any magnitude, and so is a `number`'s whole part: both are chunked with integer
  * arithmetic rather than `Math.floor`, so a custom locale that names scales
@@ -123,6 +134,9 @@ export function resolveScaleWord(
  * @example
  * numberToWords(1234); // "one thousand two hundred thirty-four" (en, the default)
  * numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
+ * numberToWords(12.34); // "twelve point three four"
+ * numberToWords(12.34, { locale: az }); // "on iki tam yüzdə otuz dörd"
+ * numberToWords(12.34, { locale: es }); // "doce coma treinta y cuatro"
  * numberToWords(-5, { locale: ru }); // "минус пять"
  * numberToWords(21, { locale: ru, gender: 'feminine' }); // "двадцать одна"
  * numberToWords(200, { locale: es, gender: 'feminine' }); // "doscientas"
@@ -134,7 +148,8 @@ export function resolveScaleWord(
  * @throws {TypeError} When `value` is not a number or a `bigint`.
  * @throws {RangeError} When `value` is not finite, when it is larger than
  * the locale's largest scale supports, when `gender` is not one the locale
- * distinguishes, or when the locale's `words.grouping` is not valid.
+ * distinguishes, or when the locale's `words.grouping` or
+ * `words.decimalStyle` is not valid.
  * @since 0.2.0
  */
 export function numberToWords(value: number | bigint, options: NumberWordsOptions = {}): string {
@@ -146,9 +161,8 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
       const gender = resolveGender(options.gender, locale)
 
       const { whole, fraction } =
-        typeof value === 'bigint'
-          ? { whole: absBigInt(value), fraction: 0 }
-          : splitFixed(Math.abs(value), FRACTION_DIGITS)
+        typeof value === 'bigint' ? { whole: absBigInt(value), fraction: '' } : splitExact(value)
+      const style = resolveDecimalStyle(locale)
       const grouping = resolveGrouping(
         locale.words.grouping,
         'locale words.grouping',
@@ -162,8 +176,8 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
       }
 
       let words = integerToWords(groups, locale, gender)
-      if (fraction > 0) {
-        const fractionWords = renderFraction(fraction, locale, gender)
+      if (fraction !== '') {
+        const fractionWords = renderFraction(fraction, style, grouping, locale, gender)
         words = locale.words.decimalConnector
           ? `${words} ${locale.words.decimalConnector} ${fractionWords}`
           : `${words} ${fractionWords}`
@@ -179,34 +193,70 @@ export function numberToWords(value: number | bigint, options: NumberWordsOption
 }
 
 /**
- * Reads the already-rounded fraction digits as words.
- *
- * `splitFixed` hands the fractional part back as a plain integer, so `.01`
- * and `.1` arrive as `1` and `10`. Rendering that integer on its own drops
- * the leading zero: `1.01` read as "one point one" is exactly how a speaker
- * says `1.1`, so the two values become indistinguishable in words. Padding
- * the integer back out to {@link FRACTION_DIGITS} and speaking one
- * `locale.words.zero` per leading zero restores the distinction — "one point
- * zero one" against "one point ten" — and it does so in the generic engine,
- * so no locale has to know about it (`az` "bir tam sıfır bir", `ru` "ноль
- * запятая ноль одна", `es` "cero coma cero uno").
- *
- * `fraction` is always non-zero here (the caller checks), so the padded
- * string always has at least one non-zero digit left for `renderGroup`.
+ * Splits `|value|` into its whole part and its fraction digits, exactly in
+ * decimal: `2.675` gives `{ whole: 2n, fraction: '675' }`. The value is
+ * first rounded to {@link MAX_FRACTION_DIGITS} places with
+ * `arithmetic/round`, so a tiny value becomes zero and `0.999…` carries
+ * into the whole part. `fraction` is `''` for a whole number.
+ */
+function splitExact(value: number): { whole: bigint; fraction: string } {
+  const { digits, scale } = toDecimal(round(Math.abs(value), MAX_FRACTION_DIGITS))
+  if (scale <= 0) return { whole: digits * pow10(-scale), fraction: '' }
+  const point = pow10(scale)
+  const fraction = (digits % point).toString().padStart(scale, '0').replace(TRAILING_ZEROS, '')
+  return { whole: digits / point, fraction }
+}
+
+function resolveDecimalStyle(locale: Locale): NonNullable<Locale['words']['decimalStyle']> {
+  const style = locale.words.decimalStyle ?? 'number'
+  if (!DECIMAL_STYLES.includes(style)) {
+    throw new RangeError(
+      `numberToWords: locale words.decimalStyle must be one of ${DECIMAL_STYLES.map((s) => `"${s}"`).join(', ')}, received ${String(style)}`,
+    )
+  }
+  return style
+}
+
+/**
+ * Reads the fraction digits (`'05'` for `1.05`) in the locale's decimal
+ * style, falling back from `'fraction'` to `'number'` to `'digits'` when a
+ * style cannot read the value (see `LocaleWords.decimalStyle`).
  */
 function renderFraction(
-  fraction: number,
+  fraction: string,
+  style: NonNullable<Locale['words']['decimalStyle']>,
+  grouping: readonly number[],
   locale: Locale,
   gender: GrammaticalGender | undefined,
 ): string {
-  const digits = String(fraction).padStart(FRACTION_DIGITS, '0')
-  const spoken: string[] = []
-  for (const digit of digits) {
-    if (digit !== '0') break
-    spoken.push(locale.words.zero)
+  const numerator = BigInt(fraction)
+  const width = fraction.length
+
+  if (
+    style === 'fraction' &&
+    locale.fractions &&
+    width <= MAX_FRACTION_STYLE_DIGITS &&
+    toScaleGroups(pow10(width), grouping).length <= locale.words.scales.length
+  ) {
+    return locale.fractions.words(Number(numerator), Number(pow10(width)))
   }
-  spoken.push(locale.words.renderGroup(fraction, gender))
-  return spoken.join(' ')
+
+  if (style !== 'digits') {
+    const groups = toScaleGroups(numerator, grouping)
+    if (groups.length <= locale.words.scales.length) {
+      const spoken: string[] = []
+      for (const digit of fraction) {
+        if (digit !== '0') break
+        spoken.push(locale.words.zero)
+      }
+      spoken.push(integerToWords(groups, locale, gender))
+      return spoken.join(' ')
+    }
+  }
+
+  return Array.from(fraction, (digit) =>
+    digit === '0' ? locale.words.zero : locale.words.renderGroup(Number(digit), gender),
+  ).join(' ')
 }
 
 /** Renders scale `groups` (least significant first, as `toScaleGroups` returns them; `[]` is zero). */

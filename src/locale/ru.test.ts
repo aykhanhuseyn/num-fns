@@ -65,8 +65,8 @@ describe('ru.words', () => {
   it('names the decimal comma with "запятая", the standard spoken reading (`todo.md` §2)', () => {
     expect(ru.words.decimalConnector).toBe('запятая')
     expect(numberToWords(12.34, { locale: ru })).toBe('двенадцать запятая тридцать четыре')
-    expect(numberToWords(0.5, { locale: ru })).toBe('ноль запятая пятьдесят')
-    expect(numberToWords(-3.7, { locale: ru })).toBe('минус три запятая семьдесят')
+    expect(numberToWords(0.5, { locale: ru })).toBe('ноль запятая пять')
+    expect(numberToWords(-3.7, { locale: ru })).toBe('минус три запятая семь')
   })
 
   describe('renderGroup', () => {

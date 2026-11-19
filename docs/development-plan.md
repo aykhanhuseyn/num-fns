@@ -321,6 +321,10 @@ No API change in this milestone.
 - **Status:** page ready. `review.html?lang=ru` / `?lang=es` open one locale
   with the UI in that language; the reviewer downloads a file and sends it
   by messenger. Steps: `docs/locale-review.md`. Waiting for reviewers.
+- **Found by the first az review:** `numberToWords` read decimals as
+  rounded hundredths in every locale ("two point ten"). Fixed in 0.9.0 with
+  `Locale.words.decimalStyle`; the page now has a Decimals section and
+  about twice the entries.
 
 - **What:** send `site/review.html` to one speaker per locale. Apply fixes
   as patches. Record `reviewed: <date> by <handle>` in the locale file

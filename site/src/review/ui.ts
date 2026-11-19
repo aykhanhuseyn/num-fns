@@ -89,7 +89,7 @@ const en: UiStrings = {
     ],
     [
       'Send it back',
-      'Download your review as a file and send it to the person who asked you, or open a GitHub issue.',
+      'Send at any time, even after one answer: download your review as a file and send it to the person who asked you, or open a GitHub issue.',
     ],
   ],
   privacy:
@@ -159,7 +159,7 @@ const ru: UiStrings = {
     ],
     [
       'Отправьте файл',
-      'Нажмите «Готово», скачайте файл и отправьте его тому, кто дал вам эту ссылку.',
+      'Можно отправить в любой момент, даже после одного ответа: нажмите «Готово», скачайте файл и отправьте его тому, кто дал вам эту ссылку.',
     ],
   ],
   privacy:
@@ -223,6 +223,11 @@ const ru: UiStrings = {
       title: 'Числа целиком',
       blurb: 'Целые числа и дроби так, как их читают вслух.',
     },
+    decimals: {
+      title: 'Десятичные дроби',
+      blurb:
+        'Числа с дробной частью так, как их произносят. Проверьте слово после целой части и как читаются цифры после запятой.',
+    },
     ordinals: {
       title: 'Порядковые числительные',
       blurb: 'Первый, второй, … и короткая запись вроде «3-й».',
@@ -279,7 +284,7 @@ const es: UiStrings = {
     ],
     [
       'Envía el archivo',
-      'Pulsa «Terminar», descarga el archivo y envíalo a quien te dio este enlace.',
+      'Puedes enviarlo en cualquier momento, incluso con una sola respuesta: pulsa «Terminar», descarga el archivo y envíalo a quien te dio este enlace.',
     ],
   ],
   privacy:
@@ -342,6 +347,11 @@ const es: UiStrings = {
     readings: {
       title: 'Números completos',
       blurb: 'Números enteros y decimales tal como se leen en voz alta.',
+    },
+    decimals: {
+      title: 'Decimales',
+      blurb:
+        'Números con parte decimal, como se dicen en voz alta. Revisa la palabra después de la parte entera y cómo se leen las cifras después de la coma.',
     },
     ordinals: {
       title: 'Ordinales',

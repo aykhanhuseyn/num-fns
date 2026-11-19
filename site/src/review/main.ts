@@ -51,6 +51,32 @@ function visibleItems(): ReviewItem[] {
   return all.filter((item) => !state.verdicts[item.id])
 }
 
+/**
+ * Drops verdicts that no longer apply: the item text changed since it was
+ * judged, or (for answers saved before `seen` existed) the suggested fix is
+ * now the current text. Returns the verdicts to keep.
+ */
+function prune(review: LocaleReview, verdicts: Verdicts): Verdicts {
+  const kept: Verdicts = { ...verdicts }
+  for (const item of review.sections.flatMap((section) => section.items)) {
+    const verdict = kept[item.id]
+    if (!verdict) continue
+    const changed = verdict.seen !== undefined && verdict.seen !== item.current
+    const fixed =
+      verdict.seen === undefined &&
+      verdict.status === 'wrong' &&
+      verdict.suggestion?.trim() === item.current
+    if (changed || fixed) delete kept[item.id]
+  }
+  return kept
+}
+
+function loadReview(review: LocaleReview): Verdicts {
+  const verdicts = prune(review, loadVerdicts(review.code))
+  saveVerdicts(review.code, verdicts)
+  return verdicts
+}
+
 function persist(): void {
   saveVerdicts(state.review.code, state.verdicts)
   refreshProgress()
@@ -61,7 +87,7 @@ function setVerdict(item: ReviewItem, status: 'ok' | 'wrong'): void {
   if (existing?.status === status) {
     delete state.verdicts[item.id]
   } else {
-    state.verdicts[item.id] = { ...existing, status }
+    state.verdicts[item.id] = { ...existing, status, seen: item.current }
   }
   state.views.get(item.id)?.update(state.verdicts[item.id])
   persist()
@@ -69,7 +95,7 @@ function setVerdict(item: ReviewItem, status: 'ok' | 'wrong'): void {
 
 function editVerdict(item: ReviewItem, suggestion: string, note: string): void {
   const existing = state.verdicts[item.id] ?? { status: 'wrong' as const }
-  state.verdicts[item.id] = { ...existing, status: 'wrong', suggestion, note }
+  state.verdicts[item.id] = { ...existing, status: 'wrong', suggestion, note, seen: item.current }
   state.views.get(item.id)?.update(state.verdicts[item.id])
   persist()
 }
@@ -327,7 +353,7 @@ function refreshProgress(): void {
 
 function selectLocale(review: LocaleReview): void {
   state.review = review
-  state.verdicts = loadVerdicts(review.code)
+  state.verdicts = loadReview(review)
   renderList()
   refreshProgress()
 }
@@ -494,7 +520,7 @@ function mount(): void {
   if (!app) throw new Error('review: #app root element not found')
 
   state.reviewer = loadReviewer()
-  state.verdicts = loadVerdicts(state.review.code)
+  state.verdicts = loadReview(state.review)
 
   elements.list.className = 'rv-list'
   elements.dialog.className = 'rv-dialog'

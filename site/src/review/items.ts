@@ -284,8 +284,9 @@ function buildScales(builder: Builder): ReviewSection {
 // --- Section 3: whole readings ---------------------------------------------
 
 const READING_VALUES: readonly number[] = [
-  21, 101, 115, 200, 999, 1000, 1001, 2000, 21000, 100000, 1000000, 2500000, 1000000000, -45, 0.5,
-  1.01, 12.34, 2.675,
+  0, 7, 13, 15, 17, 21, 40, 70, 90, 99, 101, 110, 111, 115, 200, 300, 500, 700, 900, 999, 1000,
+  1001, 1100, 1999, 2000, 2026, 10000, 11000, 21000, 100000, 101000, 123456, 1000000, 1000001,
+  2000000, 2500000, 1000000000, 1500000000, 1000000000000, -1, -45, 0.5, 1.01, 12.34, 2.675,
 ]
 
 /** Values whose reading depends on a composition rule rather than a single word. */
@@ -333,10 +334,36 @@ function buildReadings(builder: Builder): ReviewSection {
   }
 }
 
+// --- Section 3b: decimals --------------------------------------------------
+
+/** Every decimal style path: tenths, hundredths, thousandths, leading zeros, a long tail, a sign. */
+const DECIMAL_VALUES: readonly number[] = [
+  1.5, 2.1, 0.05, 0.001, 3.125, 10.25, 99.99, 1.005, 0.000001, 123.456, -2.5, -0.75,
+]
+
+function buildDecimals(builder: Builder): ReviewSection {
+  builder.section('decimals')
+  return {
+    id: 'decimals',
+    title: 'Decimals',
+    blurb:
+      'Numbers with a fraction, read the way a person says them. Check the word after the whole part and how the digits after the mark are read.',
+    items: DECIMAL_VALUES.map((value) =>
+      builder.output(
+        `decimal-${value}`,
+        `numberToWords(${value})`,
+        () => numberToWords(value, { locale: builder.locale }),
+        true,
+      ),
+    ),
+  }
+}
+
 // --- Section 4: ordinals ----------------------------------------------------
 
 const ORDINAL_VALUES: readonly number[] = [
-  1, 2, 3, 4, 5, 8, 11, 12, 13, 20, 21, 30, 40, 100, 101, 1000, 2000, 25000, 1000000,
+  1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+  28, 29, 30, 31, 40, 50, 60, 70, 80, 90, 100, 101, 200, 500, 1000, 1001, 2000, 25000, 1000000,
 ]
 
 const PRIORITY_ORDINALS: ReadonlySet<number> = new Set([1, 2, 3, 11, 21, 1000, 2000])
@@ -396,6 +423,20 @@ function buildNotation(builder: Builder): ReviewSection {
       ),
     )
   })
+  for (const value of [999, 1500, 25000, 999999, 1250000000, 3000000000000]) {
+    items.push(
+      builder.output(`short-${value}`, `toShortNotation(${value})`, () =>
+        toShortNotation(value, { locale: builder.locale }),
+      ),
+    )
+  }
+  for (const value of [1500, 2000000, 1234567, 3000000000]) {
+    items.push(
+      builder.output(`long-${value}`, `toLongNotation(${value})`, () =>
+        toLongNotation(value, { locale: builder.locale }),
+      ),
+    )
+  }
   items.push(
     builder.value(
       'notation.spaceBeforeShort',
@@ -489,7 +530,12 @@ function buildCurrency(builder: Builder): ReviewSection {
 
 // --- Section 7: money readings ---------------------------------------------
 
-const MONEY_VALUES: readonly number[] = [1, 2, 5, 11, 21, 100, 0.99, 1.01, 2.5, 1000000]
+const MONEY_VALUES: readonly number[] = [
+  1, 2, 5, 11, 21, 25, 100, 101, 1001, 0.01, 0.05, 0.99, 1.01, 2.5, 1000000,
+]
+
+/** Amounts read in every other currency: one, few, many, a minor unit alone, and both units. */
+const FOREIGN_MONEY_VALUES: readonly number[] = [1, 2, 5, 21, 0.01, 1.5]
 
 function buildMoney(builder: Builder): ReviewSection {
   builder.section('money')
@@ -503,14 +549,23 @@ function buildMoney(builder: Builder): ReviewSection {
       value === 1.01 || value === 21 || value === 0.99,
     ),
   )
-  for (const value of [1, 2, 21]) {
-    items.push(
-      builder.output(
-        `money-${foreign}-${value}`,
-        `moneyToWords(${value}, { currency: '${foreign}' })`,
-        () => moneyToWords(value, { locale: builder.locale, currency: foreign }),
-      ),
-    )
+  // `foreign` keeps its first item ids (`money-USD-1`, …) so saved answers survive.
+  const currencies = [
+    foreign,
+    ...(Object.keys(builder.locale.currency.units) as CurrencyCode[]).filter(
+      (code) => code !== own && code !== foreign,
+    ),
+  ]
+  for (const currency of currencies) {
+    for (const value of FOREIGN_MONEY_VALUES) {
+      items.push(
+        builder.output(
+          `money-${currency}-${value}`,
+          `moneyToWords(${value}, { currency: '${currency}' })`,
+          () => moneyToWords(value, { locale: builder.locale, currency }),
+        ),
+      )
+    }
   }
   return {
     id: 'money',
@@ -558,6 +613,20 @@ function buildFormatting(builder: Builder): ReviewSection {
       'percentage',
       'formatPercentage(0.4567, { multiplyBy100: true, decimals: 1 })',
       () => formatPercentage(0.4567, { locale: builder.locale, multiplyBy100: true, decimals: 1 }),
+    ),
+    builder.output('percentage-negative', 'formatPercentage(-12.5)', () =>
+      formatPercentage(-12.5, { locale: builder.locale }),
+    ),
+    builder.output('number-negative', 'formatNumber(-1234567.5)', () =>
+      formatNumber(-1234567.5, { locale: builder.locale }),
+    ),
+    builder.output('money-negative', 'formatMoney(-1234.5)', () =>
+      formatMoney(-1234.5, { locale: builder.locale }),
+    ),
+    ...(Object.keys(currency.units) as CurrencyCode[]).map((code) =>
+      builder.output(`money-format-${code}`, `formatMoney(1234.5, { currency: '${code}' })`, () =>
+        formatMoney(1234.5, { locale: builder.locale, currency: code }),
+      ),
     ),
   ]
   return {
@@ -640,6 +709,7 @@ function buildLocale(code: string, locale: Locale, fractionsSupported: boolean):
     buildNumerals(builder),
     buildScales(builder),
     buildReadings(builder),
+    buildDecimals(builder),
     buildOrdinals(builder),
     buildNotation(builder),
     buildCurrency(builder),

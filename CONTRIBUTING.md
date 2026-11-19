@@ -198,7 +198,11 @@ conformance suite (step 8) and, ultimately, a native speaker (step 7).
      purely the intra-group tens+ones connector — and should stay unset
      until you've settled your locale's real decimal-reading convention,
      since leaving it unset falls back to a plain space, not a claim of
-     linguistic correctness. `infinity` is required: it is the word a
+     linguistic correctness. `decimalStyle` says how the digits after it
+     are read: `'digits'` one word per digit (en "two point one"),
+     `'number'` as one number (the default; es "dos coma uno") or
+     `'fraction'` over their power of ten through `fractions` (az "iki tam
+     onda bir"). `infinity` is required: it is the word a
      renderer emits for `Infinity` under `noThrow` (prefixed with
      `negative` for `-Infinity`), and it has no default precisely so that no
      locale can quietly borrow another language's word.

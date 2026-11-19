@@ -143,6 +143,27 @@ export interface LocaleWords {
    */
   decimalConnector?: string
   /**
+   * How `numberToWords` reads the digits after the decimal mark. Every
+   * digit of the number is read; nothing is rounded to a fixed width.
+   *
+   * - `'digits'` — one word per digit: English `2.1` → `"two point one"`,
+   *   `12.34` → `"twelve point three four"`.
+   * - `'number'` (the default) — the digits as one number, each leading
+   *   zero spoken: Spanish `12.34` → `"doce coma treinta y cuatro"`,
+   *   `1.05` → `"uno coma cero cinco"`.
+   * - `'fraction'` — the digits over their power of ten, through
+   *   {@link Locale.fractions}: Azerbaijani `12.34` → `"on iki tam yüzdə
+   *   otuz dörd"`, `1.5` → `"bir tam onda beş"`.
+   *
+   * When a style cannot read a value (no `fractions`, or more fraction
+   * digits than the scale words reach), `'fraction'` falls back to
+   * `'number'` and `'number'` falls back to `'digits'`. Any other value
+   * throws `RangeError` at the first call that reads it.
+   *
+   * @since 0.9.0
+   */
+  decimalStyle?: 'digits' | 'number' | 'fraction'
+  /**
    * Grammatical genders this locale's cardinal words actually distinguish
    * (`ru` all three, `es` masculine/feminine). Omit for locales with no
    * grammatical gender (`az`, `en`) — `numberToWords` then rejects any

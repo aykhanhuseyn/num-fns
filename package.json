@@ -217,7 +217,7 @@
     {
       "name": "locale/az (single locale, subpath import)",
       "path": "dist/locale/az.js",
-      "limit": "3.6 KB"
+      "limit": "3.7 KB"
     },
     {
       "name": "locale/en (single locale, subpath import)",
@@ -227,7 +227,7 @@
     {
       "name": "locale/en-gb (single locale, subpath import)",
       "path": "dist/locale/en-gb.js",
-      "limit": "3.3 KB"
+      "limit": "3.4 KB"
     },
     {
       "name": "locale/ru (single locale, subpath import)",

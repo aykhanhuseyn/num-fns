@@ -74,6 +74,8 @@ formatNumber(1234567.89, { locale: az, decimals: 2 }); // "1 234 567,89"
 formatNumber(1234567.89, { locale: en, decimals: 2 }); // "1,234,567.89"
 
 numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
+numberToWords(12.34); // "twelve point three four"
+numberToWords(12.34, { locale: az }); // "on iki tam yüzdə otuz dörd"
 numberToWords(1234, { locale: en }); // "one thousand two hundred thirty-four"
 numberToWords(1234, { locale: ru }); // "одна тысяча двести тридцать четыре"
 numberToWords(1234, { locale: es }); // "mil doscientos treinta y cuatro"
@@ -127,6 +129,8 @@ parseNumber('1,234,567,890,123,456,789', { output: 'bigint' }); // 1234567890123
 
 numberToWords(1234); // "one thousand two hundred thirty-four"
 numberToWords(1234, { locale: az }); // "min iki yüz otuz dörd"
+numberToWords(12.34); // "twelve point three four"
+numberToWords(12.34, { locale: az }); // "on iki tam yüzdə otuz dörd"
 
 toRoman(1994); // "MCMXCIV"
 fromRoman('MCMXCIV'); // 1994
@@ -240,7 +244,7 @@ rounding implementation in the package: `formatNumber`, `formatMoney` and
 `formatPercentage` all delegate to it, so `formatNumber(1.005, { decimals: 2 })`
 is `"1.01"` and the `roundingMode` option behaves identically everywhere. The
 same exact-decimal reading drives every other place a value is rounded —
-`numberToWords(2.675)` ends in "sixty-eight", `moneyToWords(2.675)` is
+`moneyToWords(2.675)` is
 sixty-eight cents, `toShortNotation(2675000, { decimals: 2 })` is `"2.68M"` —
 so a `number` and the equal `bigint` always format to the same digits.
 `divide` carries the quotient to 25 significant digits before converting it
@@ -408,8 +412,8 @@ follow the global setting only.
 
 `-0` is a value, not a rounding artefact: `formatNumber(-0)` is `"-0"`, a
 negative amount that rounds away to zero keeps its sign
-(`formatNumber(-0.4, { decimals: 0 })` is `"-0"`), `numberToWords(-0.001)` is
-`"negative zero"`, and `add`/`subtract`/`multiply`/`divide`/`round` follow the
+(`formatNumber(-0.4, { decimals: 0 })` is `"-0"`), `numberToWords(-1e-21)` is
+`"negative zero"` (it reads up to 20 fraction digits), and `add`/`subtract`/`multiply`/`divide`/`round` follow the
 IEEE 754 sign rules (`multiply(-1, 0)` is `-0`, `add(-1.5, 1.5)` is `0`).
 There is no negative zero `bigint`, so the `bigint` paths never produce one.
 

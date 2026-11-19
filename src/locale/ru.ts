@@ -381,6 +381,7 @@ export const ru: Locale = {
     // The standard spoken reading names the decimal comma itself: `12.34`
     // -> "двенадцать запятая тридцать четыре" (`todo.md` §2).
     decimalConnector: 'запятая',
+    decimalStyle: 'number',
     // Russian distinguishes all three genders in "один"/"два" ("одна
     // книга", "одно окно", "две книги"); masculine is the citation form.
     genders: ['masculine', 'feminine', 'neuter'],

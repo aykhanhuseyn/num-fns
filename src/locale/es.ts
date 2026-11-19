@@ -406,6 +406,7 @@ export const es: Locale = {
     // RAE's standard reading of the decimal point ("doce coma treinta y
     // cuatro" for 12.34) — see the module doc comment's `todo.md` §2 note.
     decimalConnector: 'coma',
+    decimalStyle: 'number',
     // Spanish cardinals distinguish masculine/feminine ("una casa",
     // "doscientas casas") but have no neuter counting form; masculine is
     // the citation form.

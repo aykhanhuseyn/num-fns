@@ -80,6 +80,11 @@ export interface Verdict {
   suggestion?: string
   /** Free-text explanation. */
   note?: string
+  /**
+   * The text the reviewer judged. When the library output changes, the
+   * verdict no longer applies and the page asks again (`prune` in `main.ts`).
+   */
+  seen?: string
 }
 
 export type Verdicts = Record<string, Verdict>
