@@ -1,4 +1,7 @@
 import type { ReviewExample, ReviewItem, Verdict } from './types'
+import type { UiStrings } from './ui'
+
+type CardText = UiStrings['card']
 
 /**
  * One reviewable entry, rendered. The card is deliberately loud about a single
@@ -8,8 +11,8 @@ import type { ReviewExample, ReviewItem, Verdict } from './types'
  */
 
 /** Renders values a browser would otherwise show as nothing at all. */
-function displayValue(value: string): string {
-  if (value === '') return '(empty)'
+function displayValue(value: string, text: CardText): string {
+  if (value === '') return text.empty
   if (value.trim() === '') return `␣ (${value.length} space${value.length === 1 ? '' : 's'})`
   return value
 }
@@ -65,7 +68,7 @@ function buildField(caption: string, placeholder: string, value: string): HTMLLa
   return label
 }
 
-function buildHeader(item: ReviewItem): HTMLElement {
+function buildHeader(item: ReviewItem, text: CardText): HTMLElement {
   const header = document.createElement('div')
   header.className = 'rv-card-head'
 
@@ -77,16 +80,15 @@ function buildHeader(item: ReviewItem): HTMLElement {
   if (item.priority) {
     const badge = document.createElement('span')
     badge.className = 'rv-badge'
-    badge.textContent = 'needs a native eye'
+    badge.textContent = text.needsNativeEye
     header.appendChild(badge)
   }
 
   if (item.kind === 'output') {
     const badge = document.createElement('span')
     badge.className = 'rv-badge is-muted'
-    badge.title =
-      'Composed from several fields — a correction here tells us a rule is wrong, not a single word.'
-    badge.textContent = 'composed'
+    badge.title = text.composedHint
+    badge.textContent = text.composed
     header.appendChild(badge)
   }
 
@@ -107,25 +109,27 @@ export function renderCard(
   lang: string,
   verdict: Verdict | undefined,
   handlers: CardHandlers,
+  text: CardText,
+  question: string | undefined = item.question,
 ): CardView {
   const card = document.createElement('article')
   card.className = 'rv-card'
   card.tabIndex = -1
   card.dataset.itemId = item.id
 
-  card.appendChild(buildHeader(item))
+  card.appendChild(buildHeader(item, text))
 
   const current = document.createElement('p')
   current.className = 'rv-current'
   current.lang = lang
-  current.textContent = displayValue(item.current)
+  current.textContent = displayValue(item.current, text)
   card.appendChild(current)
 
-  if (item.question) {
-    const question = document.createElement('p')
-    question.className = 'rv-question'
-    question.textContent = item.question
-    card.appendChild(question)
+  if (question) {
+    const asked = document.createElement('p')
+    asked.className = 'rv-question'
+    asked.textContent = question
+    card.appendChild(asked)
   }
 
   if (item.examples.length > 0) {
@@ -137,19 +141,19 @@ export function renderCard(
 
   const actions = document.createElement('div')
   actions.className = 'rv-actions'
-  const approve = buildButton('rv-btn-ok', 'Correct', handlers.onApprove)
-  const flag = buildButton('rv-btn-flag', 'Needs fixing', handlers.onFlag)
+  const approve = buildButton('rv-btn-ok', text.correct, handlers.onApprove)
+  const flag = buildButton('rv-btn-flag', text.needsFixing, handlers.onFlag)
   actions.append(approve, flag)
   card.appendChild(actions)
 
   const fix = document.createElement('div')
   fix.className = 'rv-fix'
   const suggestion = buildField(
-    item.kind === 'value' ? 'Correct word' : 'Correct phrase',
-    'what it should say',
+    item.kind === 'value' ? text.correctWord : text.correctPhrase,
+    text.suggestionPlaceholder,
     verdict?.suggestion ?? '',
   )
-  const note = buildField('Why (optional)', 'anything we should know', verdict?.note ?? '')
+  const note = buildField(text.why, text.whyPlaceholder, verdict?.note ?? '')
   fix.append(suggestion, note)
   card.appendChild(fix)
 

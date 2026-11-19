@@ -318,6 +318,10 @@ No API change in this milestone.
 
 ### 0.9-3 Native-speaker review of `ru` and `es` (M + external wait)
 
+- **Status:** page ready. `review.html?lang=ru` / `?lang=es` open one locale
+  with the UI in that language; the reviewer downloads a file and sends it
+  by messenger. Steps: `docs/locale-review.md`. Waiting for reviewers.
+
 - **What:** send `site/review.html` to one speaker per locale. Apply fixes
   as patches. Record `reviewed: <date> by <handle>` in the locale file
   header and in the README locale table. Include the `es` `"3º"` ordinal

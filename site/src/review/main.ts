@@ -10,20 +10,20 @@ import {
 import './review.css'
 import { clearVerdicts, loadReviewer, loadVerdicts, saveReviewer, saveVerdicts } from './storage'
 import type { LocaleReview, ReviewItem, Verdicts } from './types'
+import { itemQuestion, resolveMode, reviewFileName, sectionText } from './ui'
 
 const REPO_URL = 'https://github.com/aykhanhuseyn/num-fns'
 
 type Filter = 'priority' | 'todo' | 'flagged' | 'all'
 
-const FILTERS: readonly { id: Filter; label: string; hint: string }[] = [
-  { id: 'priority', label: 'Start here', hint: 'The entries we cannot check ourselves' },
-  { id: 'todo', label: 'Not yet reviewed', hint: 'Everything you have not judged' },
-  { id: 'flagged', label: 'Flagged', hint: 'What you marked as needing a fix' },
-  { id: 'all', label: 'Everything', hint: 'The full vocabulary sweep' },
-]
+const FILTERS: readonly Filter[] = ['priority', 'todo', 'flagged', 'all']
+
+/** `?lang=ru` locks the page to one locale and speaks its language (`ui.ts`). */
+const mode = resolveMode(window.location.search, reviews)
+const ui = mode.ui
 
 const state = {
-  review: reviews[0] as LocaleReview,
+  review: mode.locked ?? (reviews[0] as LocaleReview),
   filter: 'priority' as Filter,
   verdicts: {} as Verdicts,
   reviewer: '',
@@ -94,7 +94,7 @@ function buildHeader(): HTMLElement {
   const nav = document.createElement('nav')
   nav.className = 'rv-nav'
   for (const [label, href] of [
-    ['Docs', './index.html'],
+    [ui.navDocs, './index.html'],
     ['GitHub', REPO_URL],
   ] as [string, string][]) {
     const link = document.createElement('a')
@@ -111,38 +111,22 @@ function buildHeader(): HTMLElement {
   return header
 }
 
-const INTRO_STEPS: readonly [string, string][] = [
-  [
-    'Pick your language',
-    'Only review a language you actually speak — guessing is worse than a gap.',
-  ],
-  [
-    'Judge each entry',
-    'Every word below is what the library outputs right now. Mark it correct, or say what it should be.',
-  ],
-  [
-    'Send it back',
-    'One button turns your corrections into a GitHub issue we can apply directly to the next release.',
-  ],
-]
-
 function buildIntro(): HTMLElement {
   const section = document.createElement('section')
   section.className = 'rv-intro'
 
   const heading = document.createElement('h1')
-  heading.textContent = 'Help us get the words right'
+  heading.textContent = ui.heading
   section.appendChild(heading)
 
   const lead = document.createElement('p')
   lead.className = 'rv-lead'
-  lead.textContent =
-    'num-fns spells numbers, ordinals and money out in five languages. The engineering is tested; the vocabulary is not — it came from dictionaries, not from speakers. If one of these is your language, ten minutes here stops a wrong word shipping to everyone who installs the package.'
+  lead.textContent = ui.lead
   section.appendChild(lead)
 
   const steps = document.createElement('ol')
   steps.className = 'rv-steps'
-  for (const [title, body] of INTRO_STEPS) {
+  for (const [title, body] of ui.steps) {
     const li = document.createElement('li')
     const strong = document.createElement('strong')
     strong.textContent = title
@@ -153,8 +137,7 @@ function buildIntro(): HTMLElement {
 
   const privacy = document.createElement('p')
   privacy.className = 'rv-privacy'
-  privacy.textContent =
-    'Nothing is sent anywhere as you work. Your answers stay in this browser until you press Submit, which opens a GitHub issue you can read and edit before posting.'
+  privacy.textContent = ui.privacy
   section.appendChild(privacy)
 
   section.appendChild(buildReviewerField())
@@ -166,12 +149,12 @@ function buildReviewerField(): HTMLElement {
   label.className = 'rv-reviewer'
 
   const caption = document.createElement('span')
-  caption.textContent = 'Your name or GitHub handle (optional, for the credit line)'
+  caption.textContent = ui.reviewerCaption
   label.appendChild(caption)
 
   const input = document.createElement('input')
   input.type = 'text'
-  input.placeholder = '@handle'
+  input.placeholder = ui.reviewerPlaceholder
   input.value = state.reviewer
   input.addEventListener('input', () => {
     state.reviewer = input.value
@@ -213,11 +196,11 @@ function buildToolbar(): HTMLElement {
     const chip = document.createElement('button')
     chip.type = 'button'
     chip.className = 'rv-chip'
-    chip.dataset.filter = filter.id
-    chip.title = filter.hint
-    chip.textContent = filter.label
+    chip.dataset.filter = filter
+    chip.title = ui.filters[filter].hint
+    chip.textContent = ui.filters[filter].label
     chip.addEventListener('click', () => {
-      state.filter = filter.id
+      state.filter = filter
       renderList()
     })
     elements.filters.appendChild(chip)
@@ -236,7 +219,7 @@ function buildToolbar(): HTMLElement {
 
   elements.submit.type = 'button'
   elements.submit.className = 'rv-submit'
-  elements.submit.textContent = 'Submit corrections'
+  elements.submit.textContent = ui.submit
   elements.submit.addEventListener('click', openSubmitDialog)
   bar.appendChild(elements.submit)
 
@@ -281,7 +264,8 @@ function renderList(): void {
 
     const wrapper = document.createElement('section')
     wrapper.className = 'rv-section'
-    wrapper.appendChild(buildSectionHeading(section.title, section.blurb, items.length))
+    const text = sectionText(ui, section) ?? section
+    wrapper.appendChild(buildSectionHeading(text.title, text.blurb, items.length))
 
     const grid = document.createElement('div')
     grid.className = 'rv-grid'
@@ -293,14 +277,21 @@ function renderList(): void {
 }
 
 function mountCard(item: ReviewItem): HTMLElement {
-  const view = renderCard(item, state.review.tag, state.verdicts[item.id], {
-    onApprove: () => setVerdict(item, 'ok'),
-    onFlag: () => {
-      setVerdict(item, 'wrong')
-      if (state.verdicts[item.id]?.status === 'wrong') view.suggestionInput.focus()
+  const view = renderCard(
+    item,
+    state.review.tag,
+    state.verdicts[item.id],
+    {
+      onApprove: () => setVerdict(item, 'ok'),
+      onFlag: () => {
+        setVerdict(item, 'wrong')
+        if (state.verdicts[item.id]?.status === 'wrong') view.suggestionInput.focus()
+      },
+      onEdit: (suggestion, note) => editVerdict(item, suggestion, note),
     },
-    onEdit: (suggestion, note) => editVerdict(item, suggestion, note),
-  })
+    ui.card,
+    itemQuestion(ui, item.id) ?? item.question,
+  )
   state.views.set(item.id, view)
   return view.element
 }
@@ -308,10 +299,7 @@ function mountCard(item: ReviewItem): HTMLElement {
 function buildEmptyState(): HTMLElement {
   const empty = document.createElement('p')
   empty.className = 'rv-empty'
-  empty.textContent =
-    state.filter === 'flagged'
-      ? 'Nothing flagged yet — mark an entry as “Needs fixing” and it will show up here.'
-      : 'Nothing left under this filter. Try “Everything”.'
+  empty.textContent = state.filter === 'flagged' ? ui.emptyFlagged : ui.emptyFilter
   return empty
 }
 
@@ -333,7 +321,7 @@ function refreshProgress(): void {
   const percent = total === 0 ? 0 : Math.round((reviewed / total) * 100)
 
   elements.progressBar.style.width = `${percent}%`
-  elements.progress.textContent = `${reviewed} of ${total} reviewed · ${flagged} flagged`
+  elements.progress.textContent = ui.progress(reviewed, total, flagged)
   elements.submit.disabled = reviewed === 0
 }
 
@@ -355,12 +343,12 @@ function dialogButton(label: string, primary: boolean, onClick: () => void): HTM
   return button
 }
 
-function downloadPatch(json: string, localeCode: string): void {
+function downloadPatch(json: string, fileName: string): void {
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
-  link.download = `num-fns-review-${localeCode}.json`
+  link.download = fileName
   link.click()
   URL.revokeObjectURL(url)
 }
@@ -370,49 +358,73 @@ function buildDialogBody(): HTMLElement {
   const title = buildIssueTitle(state.review, patch.counts.corrections)
   const body = buildIssueBody(patch, state.review)
   const link = buildIssueLink(title, body)
+  const fileName = reviewFileName(state.review.code, state.reviewer, new Date())
 
   const wrapper = document.createElement('div')
 
   const heading = document.createElement('h2')
-  heading.textContent = `${patch.counts.corrections} correction${patch.counts.corrections === 1 ? '' : 's'} to ${state.review.name}`
+  heading.textContent = ui.dialog.heading(patch.counts.corrections, state.review.name)
   wrapper.appendChild(heading)
 
   const summary = document.createElement('p')
-  summary.textContent = `You reviewed ${patch.counts.reviewed} of ${patch.counts.total} entries and confirmed ${patch.counts.approved} as correct. The report below is what gets posted.`
+  summary.textContent = ui.dialog.summary(
+    patch.counts.reviewed,
+    patch.counts.total,
+    patch.counts.approved,
+  )
   wrapper.appendChild(summary)
 
-  if (link.needsPaste) {
-    const warning = document.createElement('p')
-    warning.className = 'rv-warning'
-    warning.textContent =
-      'This report is too long to fit in a link, so it has been copied to your clipboard — paste it into the issue body after GitHub opens.'
-    wrapper.appendChild(warning)
-  }
+  const howTo = document.createElement('p')
+  howTo.className = 'rv-send-how'
+  howTo.textContent = ui.dialog.howToSend
+  wrapper.appendChild(howTo)
+
+  const file = document.createElement('p')
+  file.className = 'rv-send-file'
+  const code = document.createElement('code')
+  code.textContent = fileName
+  file.appendChild(code)
+  wrapper.appendChild(file)
+
+  const actions = document.createElement('div')
+  actions.className = 'rv-dialog-actions'
+  const copy = dialogButton(ui.dialog.copy, false, () => {
+    void navigator.clipboard?.writeText(body).then(() => {
+      copy.textContent = ui.dialog.copied
+    })
+  })
+  actions.append(
+    dialogButton(ui.dialog.download, true, () =>
+      downloadPatch(JSON.stringify(patch, null, 2), fileName),
+    ),
+    copy,
+    dialogButton(ui.dialog.close, false, () => elements.dialog.close()),
+  )
+  wrapper.appendChild(actions)
 
   const preview = document.createElement('pre')
   preview.className = 'rv-preview'
   preview.textContent = body
   wrapper.appendChild(preview)
 
-  const actions = document.createElement('div')
-  actions.className = 'rv-dialog-actions'
-  actions.append(
-    dialogButton('Open GitHub issue', true, () => {
-      if (link.needsPaste) void navigator.clipboard?.writeText(body)
-      window.open(link.url, '_blank', 'noopener')
-    }),
-    dialogButton('Copy report', false, () => void navigator.clipboard?.writeText(body)),
-    dialogButton('Download JSON', false, () =>
-      downloadPatch(JSON.stringify(patch, null, 2), state.review.code),
-    ),
-    dialogButton('Close', false, () => elements.dialog.close()),
-  )
-  wrapper.appendChild(actions)
+  const github = document.createElement('p')
+  github.className = 'rv-send-github'
+  const issue = document.createElement('a')
+  issue.href = link.url
+  issue.target = '_blank'
+  issue.rel = 'noopener'
+  issue.textContent = ui.dialog.github
+  issue.addEventListener('click', () => {
+    if (link.needsPaste) void navigator.clipboard?.writeText(body)
+  })
+  github.append(issue, document.createTextNode(` — ${ui.dialog.githubHint}`))
+  if (link.needsPaste) github.append(document.createTextNode(` ${ui.dialog.tooLong}`))
+  wrapper.appendChild(github)
 
   const reset = document.createElement('button')
   reset.type = 'button'
   reset.className = 'rv-reset'
-  reset.textContent = `Clear my ${state.review.name} answers`
+  reset.textContent = ui.dialog.clear(state.review.name)
   reset.addEventListener('click', () => {
     clearVerdicts(state.review.code)
     state.verdicts = {}
@@ -487,10 +499,14 @@ function mount(): void {
   elements.list.className = 'rv-list'
   elements.dialog.className = 'rv-dialog'
 
+  document.documentElement.lang = ui.htmlLang
+  document.title = ui.docTitle
+  if (mode.locked) document.body.classList.add('rv-locked')
+
   app.append(
     buildHeader(),
     buildIntro(),
-    buildTabs(),
+    ...(mode.locked ? [] : [buildTabs()]),
     buildToolbar(),
     elements.list,
     buildFooter(),
@@ -507,18 +523,11 @@ function buildFooter(): HTMLElement {
   footer.className = 'rv-footer'
 
   const keys = document.createElement('p')
-  keys.textContent =
-    'Keyboard: j / k move · a marks correct · f flags for fixing · Esc leaves a field'
+  keys.textContent = ui.footerKeys
   footer.appendChild(keys)
 
   const thanks = document.createElement('p')
-  thanks.append(document.createTextNode('Thank you. Corrections land in '))
-  const link = document.createElement('a')
-  link.href = `${REPO_URL}/issues`
-  link.target = '_blank'
-  link.rel = 'noreferrer'
-  link.textContent = 'the issue tracker'
-  thanks.append(link, document.createTextNode(' and ship in the next release, with credit.'))
+  thanks.textContent = ui.footerThanks
   footer.appendChild(thanks)
 
   return footer

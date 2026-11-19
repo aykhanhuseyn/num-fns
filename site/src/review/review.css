@@ -504,12 +504,25 @@ input:focus-visible {
   font-size: 1.3rem;
 }
 
-.rv-warning {
+.rv-send-how {
   padding: 10px 12px;
+  border-left: 3px solid var(--accent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--bad) 16%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--text);
-  font-size: 0.88rem;
+}
+
+.rv-send-file {
+  margin: 8px 0 14px;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.rv-send-github {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.85rem;
 }
 
 .rv-preview {
