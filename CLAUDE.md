@@ -53,6 +53,7 @@ bun run check                    # type, circular, unused, readme, biome
 bun run check:type               # bun check on tsconfig.json (incl. tests)
 bun run typecheck                # bun check on tsconfig.build.json
 bun run check:jsdoc              # TypeDoc + JSDoc audit of every export
+bun run check:site               # site types + WCAG AA contrast of both themes
 bun run docs:api                 # API reference -> site-dist/api/
 bun run check:biome              # Biome lint + format (no ESLint/Prettier)
 bun run build                    # vite -> dist/ (ESM + CJS + .d.ts/.d.cts)
@@ -90,7 +91,8 @@ src/
   utils/            toBase/fromBase, isEven/isOdd
   shared/           types, validation, sign, bigint, numbering, no-throw
   locale/           Locale interface (types.ts) + az, en, en-gb, ru, es
-site/               playground + review page (Vite, imports ../src)
+site/               website, React + TS (Vite, imports ../src): landing,
+                    docs, playground, review; options.ts = every option
 scripts/            build fixes, checks, smoke consumers
 docs/               plan, versioning, decisions, archive
 ```

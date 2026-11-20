@@ -9,6 +9,8 @@
  * spreadsheet has after one release.
  */
 
+import type { Grammar } from './grammar'
+
 /**
  * What a reviewer is correcting.
  *
@@ -53,6 +55,12 @@ export interface ReviewItem {
   question?: string
   /** Live calls that put `current` in context. */
   examples: ReviewExample[]
+  /**
+   * Gender, case, number and the counts that select this form, so a reviewer
+   * judges «копейки» as "feminine, genitive singular, after 2–4" and not as
+   * a bare word. See `grammar.ts`.
+   */
+  grammar?: Grammar
 }
 
 export interface ReviewSection {

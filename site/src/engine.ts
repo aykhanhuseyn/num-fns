@@ -1,7 +1,10 @@
+import { resetConfig, setConfig } from '../../src/config'
 import { localeByCode } from './locales'
 import type { FieldDef, FunctionExample, ValueType } from './types'
 
-export type FieldValues = Record<string, string | number | boolean>
+export type FieldValue = string | number | boolean
+
+export type FieldValues = Record<string, FieldValue>
 
 /** Splits a numberArray field's raw text on commas and/or whitespace, e.g. "1, 2  3" -> ["1", "2", "3"]. */
 const NUMBER_ARRAY_SPLIT_REGEX = /[,\s]+/
@@ -163,10 +166,16 @@ function coerceField(field: FieldDef, values: FieldValues): CoercedField {
  * example whose real function takes options as its third parameter
  * (`fromBase(value, radix, { output })`) just declares positionals 0 and 1.
  */
-function buildCallPlan(fields: readonly FieldDef[], values: FieldValues): CallPlan {
+function buildCallPlan(
+  fields: readonly FieldDef[],
+  values: FieldValues,
+  positionalOnly = false,
+): CallPlan {
   const errors: Error[] = []
   const { positionals, positionalLiterals } = planPositionals(fields, values, errors)
-  const { optionsObject, optionEntries } = planOptions(fields, values, errors)
+  const { optionsObject, optionEntries } = positionalOnly
+    ? { optionsObject: {}, optionEntries: [] }
+    : planOptions(fields, values, errors)
 
   const hasOptions = optionEntries.length > 0
   const args = hasOptions ? [...positionals, optionsObject] : positionals
@@ -220,19 +229,91 @@ export interface RunResult {
   error?: string
 }
 
-export function runExample(example: FunctionExample, values: FieldValues): RunResult {
+/**
+ * How a call runs. `positionalOnly` drops every option, so the result shows
+ * the library's own defaults ("default result" in the playground).
+ * `noThrow` is the global `setConfig({ noThrow })`, set for the call and reset
+ * after it, so one card never leaks configuration into another.
+ */
+export interface RunSettings {
+  positionalOnly?: boolean
+  noThrow?: boolean
+}
+
+export function runExample(
+  example: FunctionExample,
+  values: FieldValues,
+  settings: RunSettings = {},
+): RunResult {
+  if (settings.noThrow) setConfig({ noThrow: true })
   try {
-    const { args, error } = buildCallPlan(example.fields, values)
+    const { args, error } = buildCallPlan(example.fields, values, settings.positionalOnly)
     if (error) throw error
     const value = example.fn(...args)
     return { ok: true, value }
   } catch (error) {
     const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
     return { ok: false, error: message }
+  } finally {
+    if (settings.noThrow) resetConfig()
   }
 }
 
-export function buildSnippet(example: FunctionExample, values: FieldValues): string {
-  const { literals } = buildCallPlan(example.fields, values)
+export function buildSnippet(
+  example: FunctionExample,
+  values: FieldValues,
+  positionalOnly = false,
+): string {
+  const { literals } = buildCallPlan(example.fields, values, positionalOnly)
   return `${example.name}(${literals.join(', ')})`
+}
+
+/** The locale export the call uses, if the call names one (`ru` in `{ locale: ru }`). */
+function usedLocale(example: FunctionExample, values: FieldValues): string | undefined {
+  const field = example.fields.find((entry) => entry.valueType === 'locale')
+  if (!field) return undefined
+  const raw = values[field.id] ?? field.default
+  return isOmittedWhenDefault(field, raw) ? undefined : String(raw)
+}
+
+/**
+ * A complete, paste-ready program: the imports the call needs, the global
+ * configuration (when set) and the call with its result as a comment.
+ */
+export function buildProgram(
+  example: FunctionExample,
+  values: FieldValues,
+  settings: RunSettings & { result?: string } = {},
+): string {
+  const names = settings.noThrow ? [example.name, 'setConfig'] : [example.name]
+  const lines = [`import { ${names.sort().join(', ')} } from 'num-fns'`]
+  const locale = usedLocale(example, values)
+  if (locale) lines.push(`import { ${locale} } from 'num-fns/locale'`)
+  lines.push('')
+  if (settings.noThrow) lines.push('setConfig({ noThrow: true })', '')
+  const call = buildSnippet(example, values)
+  lines.push(settings.result === undefined ? call : `${call} // ${settings.result}`)
+  return lines.join('\n')
+}
+
+/** A result as a short, typed literal: strings quoted, bigints with `n`, arrays and objects as JSON-like text. */
+export function describeValue(value: unknown): string {
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (Array.isArray(value)) {
+    if (value.length > 0 && typeof value[0] === 'object') return `[${value.length} rows]`
+    return `[${value.map(describeValue).join(', ')}]`
+  }
+  if (typeof value === 'object' && value !== null) {
+    return `{ ${Object.entries(value)
+      .map(([key, entry]) => `${key}: ${describeValue(entry)}`)
+      .join(', ')} }`
+  }
+  return formatScalar(value)
+}
+
+/** `typeof`, except arrays and `null` get their own names. */
+export function typeName(value: unknown): string {
+  if (Array.isArray(value)) return 'array'
+  if (value === null) return 'null'
+  return typeof value
 }

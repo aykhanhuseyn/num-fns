@@ -29,6 +29,9 @@ jobs:
 
       - run: bun run check:type
 
+      # The website (site/): types and the WCAG AA contrast of both themes.
+      - run: bun run check:site
+
       - run: bun run lint
 
       - run: bun run format:check

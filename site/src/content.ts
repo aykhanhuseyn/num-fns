@@ -1,30 +1,17 @@
-// Brand assets live in `site/public/` and are therefore copied verbatim rather
-// than hashed, so they are addressed by URL instead of imported. `BASE_URL` is
-// `./` (see vite.config.ts), which keeps them resolving under the GitHub Pages
-// project subpath as well as at a domain root.
-const asset = (file: string): string => `${import.meta.env.BASE_URL}${file}`
-
-export const brand = {
-  /** Rounded app mark, transparent corners — sits beside the wordmark. */
-  mark: asset('logo.png'),
-  /** Wordmark + mark, trimmed and keyed to transparency — the hero heading. */
-  lockup: asset('lockup.png'),
-  /** Full-bleed 1280x640 lockup on navy — social card and README banner. */
-  banner: asset('banner.png'),
-}
+// Text shared by the landing and docs pages.
 
 export const hero = {
   title: 'num-fns',
-  tagline: 'Number utilities for JavaScript & TypeScript — like date-fns, but for numbers.',
+  tagline: 'Number utilities for JavaScript and TypeScript. Like date-fns, but for numbers.',
   description:
-    "Format and parse numbers, money and percentages; spell numbers out in words; ordinals, short/long notation, roman numerals, decimal-safe arithmetic (0.1 + 0.2 is 0.3), statistics and financial helpers. Every integer-domain function also takes a bigint and every parser can return one ({ output: 'bigint' }), exact past Number.MAX_SAFE_INTEGER. No Intl anywhere, so the output is identical on every runtime. Bad input throws by default; setConfig({ noThrow: true }) returns an empty value instead. Pure, tree-shakeable, written in TypeScript.",
-  statusNote:
-    'Pre-release: the locale system is implemented — az, en, ru, and es are all wired into numberToWords, ordinals, notation, and money/percentage formatting. The default locale is en; pass { locale: az } (or ru/es) on any function card below to see it live. The engine below calls the real, published source in this repo — nothing on this page is mocked.',
+    'Format and parse numbers, money and percentages. Spell numbers in words, with grammatical gender. Ordinals, short and long notation, roman numerals, byte sizes, exact decimal arithmetic, statistics and financial helpers.',
 }
 
 export const install = {
-  bun: 'bun add num-fns',
   npm: 'npm install num-fns',
+  bun: 'bun add num-fns',
+  pnpm: 'pnpm add num-fns',
+  yarn: 'yarn add num-fns',
 }
 
 export const usageSnippet = `import { formatNumber, numberToWords, formatMoney, parseNumber, toRoman } from 'num-fns'
@@ -50,10 +37,10 @@ formatNumber(Number.NaN, { noThrow: true }); // ""
 formatNumber(Number.POSITIVE_INFINITY, { noThrow: true }); // "infinity"`
 
 export const badges = [
-  'MIT licensed',
-  'Bun + TypeScript',
-  'ESM & CJS',
   'Zero dependencies',
-  'bigint in & out',
   'No Intl',
+  'ESM + CJS',
+  'TypeScript',
+  'bigint in and out',
+  'Tree-shakeable',
 ]

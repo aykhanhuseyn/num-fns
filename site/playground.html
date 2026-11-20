@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playground — num-fns</title>
+    <meta
+      name="description"
+      content="Run every num-fns function live in the browser. Change any argument or option, compare locales, and copy the code."
+    />
+
+    <!-- Icons. Paths are public/ assets; Vite rewrites the leading slash to the
+         configured `base` ('./'), so they resolve under the GitHub Pages
+         project subpath as well as at a domain root. -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1724" media="(prefers-color-scheme: dark)" />
+
+    <!-- Social cards. `og:image` is never rewritten by the bundler and link
+         scrapers do not resolve relative URLs, so these stay absolute and must
+         be updated if the site ever moves off GitHub Pages. -->
+    <link rel="canonical" href="https://aykhanhuseyn.github.io/num-fns/playground.html" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="num-fns" />
+    <meta property="og:title" content="Playground — num-fns" />
+    <meta
+      property="og:description"
+      content="Like date-fns, but for numbers. Format and parse numbers, money and percentages; spell numbers out in words; ordinals, notation, roman numerals, arithmetic, statistics and financial helpers."
+    />
+    <meta property="og:url" content="https://aykhanhuseyn.github.io/num-fns/playground.html" />
+    <meta property="og:image" content="https://aykhanhuseyn.github.io/num-fns/banner.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta property="og:image:alt" content="num-fns" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Playground — num-fns" />
+    <meta
+      name="twitter:description"
+      content="Like date-fns, but for numbers. Format and parse numbers, money and percentages; spell numbers out in words; ordinals, notation, roman numerals, arithmetic, statistics and financial helpers."
+    />
+    <meta name="twitter:image" content="https://aykhanhuseyn.github.io/num-fns/banner.png" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Apply the saved theme before first paint, so a dark-mode reader never
+         sees a white flash. The React header owns the toggle afterwards. -->
+    <script>
+      try {
+        const saved = localStorage.getItem('num-fns.theme')
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved
+      } catch {
+        // Storage blocked: follow the system theme.
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./src/pages/playground/main.tsx"></script>
+  </body>
+</html>

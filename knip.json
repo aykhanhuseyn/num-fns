@@ -10,11 +10,12 @@
     "src/locale/es.ts",
     "scripts/*.ts",
     "bench/*.bench.ts",
-    "site/src/review/main.ts"
+    "site/src/pages/*/main.tsx",
+    "site/src/review/main.tsx"
   ],
   "project": [
     "src/**/*.ts",
-    "site/src/**/*.ts",
+    "site/src/**/*.{ts,tsx}",
     "scripts/**/*.ts",
     "bench/**/*.ts",
     "!scripts/smoke/**"
