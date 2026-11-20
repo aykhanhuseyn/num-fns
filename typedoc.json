@@ -30,7 +30,8 @@
     "Enum"
   ],
   "navigationLinks": {
-    "Playground": "../",
+    "Docs": "../docs.html",
+    "Playground": "../playground.html",
     "GitHub": "https://github.com/aykhanhuseyn/num-fns"
   }
 }

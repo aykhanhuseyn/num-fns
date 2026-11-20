@@ -1855,11 +1855,6 @@ export const categories: Category[] = [
   utilsCategory,
 ]
 
-export const exampleCount = categories.reduce(
-  (total, category) => total + category.examples.length,
-  0,
-)
-
 function countExamplesById(): void {
   const seen = new Set<string>()
   for (const category of categories) {

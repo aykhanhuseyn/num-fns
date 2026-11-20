@@ -17,7 +17,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#1f2e45" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1724" media="(prefers-color-scheme: dark)" />
 
     <link rel="canonical" href="https://aykhanhuseyn.github.io/num-fns/review.html" />
     <meta property="og:type" content="website" />
@@ -39,9 +40,18 @@
       content="Ten minutes from a native speaker stops a wrong word shipping. Review the number words, ordinals and currency units num-fns spells out in your language."
     />
     <meta name="twitter:image" content="https://aykhanhuseyn.github.io/num-fns/banner.png" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        const saved = localStorage.getItem('num-fns.theme')
+        if (saved === 'light' || saved === 'dark') document.documentElement.dataset.theme = saved
+      } catch {
+        // Storage blocked: follow the system theme.
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="./src/review/main.ts"></script>
+    <script type="module" src="./src/review/main.tsx"></script>
   </body>
 </html>

@@ -14,6 +14,7 @@ import {
 import type { GrammaticalGender, Locale, PluralCategory } from '../../../src/locale/types'
 import type { CurrencyCode } from '../../../src/money/currency'
 import { localeInfo } from '../locales'
+import { type CountedNoun, countGrammar, type Grammar, valueGrammar } from './grammar'
 import { isPriorityPath, questionFor } from './questions'
 import type { LocaleReview, ReviewExample, ReviewItem, ReviewSection } from './types'
 
@@ -88,6 +89,7 @@ class Builder {
       priority: isPriorityPath(this.code, path),
       question: questionFor(this.code, path),
       examples,
+      grammar: valueGrammar(this.locale, path),
     }
   }
 
@@ -98,6 +100,7 @@ class Builder {
     produce: () => string,
     priority = false,
     question?: string,
+    grammar?: Grammar,
   ): ReviewItem {
     return {
       id: `${this.code}/${this.sectionId}/${slug}`,
@@ -108,6 +111,7 @@ class Builder {
       priority,
       question,
       examples: [],
+      grammar,
     }
   }
 }
@@ -308,6 +312,7 @@ function genderedReadings(builder: Builder): ReviewItem[] {
           () => numberToWords(value, { locale: builder.locale, gender }),
           true,
           `Agreement form used when counting a ${gender} noun.`,
+          { gender },
         ),
       )
     }
@@ -368,6 +373,22 @@ const ORDINAL_VALUES: readonly number[] = [
 
 const PRIORITY_ORDINALS: ReadonlySet<number> = new Set([1, 2, 3, 11, 21, 1000, 2000])
 
+/**
+ * Ordinals are adjectives and the library returns only their dictionary
+ * form: masculine singular, and nominative where the language has case.
+ * Saying so stops a reviewer flagging «первый» for not being «первая».
+ */
+function ordinalGrammar(locale: Locale): Grammar | undefined {
+  if (!locale.words.genders) return undefined
+  const nominative = countGrammar(locale, 1, undefined).case
+  return {
+    gender: locale.words.defaultGender,
+    ...(nominative ? { case: nominative } : {}),
+    number: 'singular',
+    citation: true,
+  }
+}
+
 function buildOrdinals(builder: Builder): ReviewSection {
   builder.section('ordinals')
   const items = ORDINAL_VALUES.map((value) => {
@@ -376,6 +397,8 @@ function buildOrdinals(builder: Builder): ReviewSection {
       `ordinalToWords(${value})`,
       () => ordinalToWords(value, { locale: builder.locale }),
       PRIORITY_ORDINALS.has(value),
+      undefined,
+      ordinalGrammar(builder.locale),
     )
     item.examples = [
       builder.example(`toOrdinal(${value}, ${builder.opts()})`, () =>
@@ -537,6 +560,30 @@ const MONEY_VALUES: readonly number[] = [
 /** Amounts read in every other currency: one, few, many, a minor unit alone, and both units. */
 const FOREIGN_MONEY_VALUES: readonly number[] = [1, 2, 5, 21, 0.01, 1.5]
 
+/**
+ * The form each currency word must take in this reading: after 21 «рубль»
+ * (nominative singular), after 2 «рубля» (genitive singular), after 5
+ * «копеек» (genitive plural). The zero part is left out, as the reading
+ * leaves it out unless it is the only part.
+ */
+function moneyGrammar(locale: Locale, currency: CurrencyCode, value: number): Grammar | undefined {
+  const units = locale.currency.units[currency]
+  if (!units) return undefined
+  const cents = Math.round(Math.abs(value) * 100)
+  const parts: [number, UnitSpec][] = [
+    [Math.floor(cents / 100), { role: 'major', ...units.major }],
+    [cents % 100, { role: 'minor', ...units.minor }],
+  ]
+  const counted: CountedNoun[] = parts
+    .filter(([count]) => count > 0)
+    .map(([count, unit]) => ({
+      count,
+      noun: unit.plurals?.[locale.plural(count)] ?? unit.word,
+      ...countGrammar(locale, count, unit.gender),
+    }))
+  return counted.length > 0 ? { counted } : undefined
+}
+
 function buildMoney(builder: Builder): ReviewSection {
   builder.section('money')
   const own = builder.locale.currency.code
@@ -547,6 +594,8 @@ function buildMoney(builder: Builder): ReviewSection {
       `moneyToWords(${value}) — ${own}`,
       () => moneyToWords(value, { locale: builder.locale, currency: own }),
       value === 1.01 || value === 21 || value === 0.99,
+      undefined,
+      moneyGrammar(builder.locale, own, value),
     ),
   )
   // `foreign` keeps its first item ids (`money-USD-1`, …) so saved answers survive.
@@ -563,6 +612,9 @@ function buildMoney(builder: Builder): ReviewSection {
           `money-${currency}-${value}`,
           `moneyToWords(${value}, { currency: '${currency}' })`,
           () => moneyToWords(value, { locale: builder.locale, currency }),
+          false,
+          undefined,
+          moneyGrammar(builder.locale, currency, value),
         ),
       )
     }

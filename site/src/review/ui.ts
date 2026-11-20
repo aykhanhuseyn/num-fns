@@ -20,6 +20,20 @@ export interface SectionText {
   blurb: string
 }
 
+export interface GrammarText {
+  heading: string
+  gender: string
+  case: string
+  number: string
+  usedAfter: string
+  forms: string
+  citation: string
+  counted: string
+  genders: Readonly<Record<'masculine' | 'feminine' | 'neuter', string>>
+  cases: Readonly<Record<'nominative' | 'genitive', string>>
+  numbers: Readonly<Record<'singular' | 'plural', string>>
+}
+
 export interface UiStrings {
   /** BCP 47 tag for `<html lang>`. */
   htmlLang: string
@@ -63,9 +77,24 @@ export interface UiStrings {
     tooLong: string
     close: string
     clear: (language: string) => string
+    preview: string
   }
   footerKeys: string
   footerThanks: string
+  /** Names for the grammar facts on each card (`grammar.ts`). */
+  grammar: GrammarText
+  /** Labels for the page frame: skip link, theme toggle, dialog close. */
+  frame: {
+    skip: string
+    toDark: string
+    toLight: string
+    menu: string
+    closeDialog: string
+    review: string
+    playground: string
+    home: string
+    language: string
+  }
   /** Section texts by section id; `fractions-missing` is the fractions gap. */
   sections: Readonly<Record<string, SectionText>>
   /** Item questions written by the page itself (not from `questions.ts`), by item slug. */
@@ -135,9 +164,34 @@ const en: UiStrings = {
       'This report is too long for a link. It is copied to your clipboard: paste it into the issue body after GitHub opens.',
     close: 'Close',
     clear: (language) => `Clear my ${language} answers`,
+    preview: 'Show the report text',
   },
   footerKeys: 'Keyboard: j / k move · a marks correct · f flags for fixing · Esc leaves a field',
   footerThanks: 'Thank you. Your corrections ship in the next release, with credit.',
+  grammar: {
+    heading: 'Grammar',
+    gender: 'Gender',
+    case: 'Case',
+    number: 'Number',
+    usedAfter: 'Used after',
+    forms: 'Forms by gender',
+    citation: 'Dictionary form',
+    counted: 'Noun form after the count',
+    genders: { masculine: 'masculine', feminine: 'feminine', neuter: 'neuter' },
+    cases: { nominative: 'nominative', genitive: 'genitive' },
+    numbers: { singular: 'singular', plural: 'plural' },
+  },
+  frame: {
+    skip: 'Skip to content',
+    toDark: 'Switch to dark theme',
+    toLight: 'Switch to light theme',
+    menu: 'Menu',
+    closeDialog: 'Close',
+    review: 'Review',
+    playground: 'Playground',
+    home: 'Home',
+    language: 'Language',
+  },
   sections: {},
   itemQuestions: {},
 }
@@ -205,10 +259,35 @@ const ru: UiStrings = {
       'Отчёт слишком длинный для ссылки. Он скопирован в буфер обмена: вставьте его в текст issue, когда откроется GitHub.',
     close: 'Закрыть',
     clear: () => 'Удалить мои ответы',
+    preview: 'Показать текст отчёта',
   },
   footerKeys:
     'Клавиши: j / k — следующая / предыдущая · a — верно · f — ошибка · Esc — выйти из поля',
   footerThanks: 'Спасибо! Исправления войдут в следующую версию, с указанием вашего имени.',
+  grammar: {
+    heading: 'Грамматика',
+    gender: 'Род',
+    case: 'Падеж',
+    number: 'Число',
+    usedAfter: 'После чисел',
+    forms: 'Формы по роду',
+    citation: 'Начальная форма',
+    counted: 'Форма существительного после числа',
+    genders: { masculine: 'мужской', feminine: 'женский', neuter: 'средний' },
+    cases: { nominative: 'именительный', genitive: 'родительный' },
+    numbers: { singular: 'единственное', plural: 'множественное' },
+  },
+  frame: {
+    skip: 'Перейти к содержанию',
+    toDark: 'Тёмная тема',
+    toLight: 'Светлая тема',
+    menu: 'Меню',
+    closeDialog: 'Закрыть',
+    review: 'Проверка',
+    playground: 'Песочница',
+    home: 'Главная',
+    language: 'Язык',
+  },
   sections: {
     numerals: {
       title: 'Числа',
@@ -331,9 +410,34 @@ const es: UiStrings = {
       'El informe es demasiado largo para un enlace. Está copiado al portapapeles: pégalo en el texto del issue cuando se abra GitHub.',
     close: 'Cerrar',
     clear: () => 'Borrar mis respuestas',
+    preview: 'Ver el texto del informe',
   },
   footerKeys: 'Teclado: j / k mover · a correcto · f error · Esc salir del campo',
   footerThanks: '¡Gracias! Las correcciones saldrán en la próxima versión, con tu nombre.',
+  grammar: {
+    heading: 'Gramática',
+    gender: 'Género',
+    case: 'Caso',
+    number: 'Número',
+    usedAfter: 'Después de',
+    forms: 'Formas por género',
+    citation: 'Forma de diccionario',
+    counted: 'Forma del sustantivo tras el número',
+    genders: { masculine: 'masculino', feminine: 'femenino', neuter: 'neutro' },
+    cases: { nominative: 'nominativo', genitive: 'genitivo' },
+    numbers: { singular: 'singular', plural: 'plural' },
+  },
+  frame: {
+    skip: 'Ir al contenido',
+    toDark: 'Tema oscuro',
+    toLight: 'Tema claro',
+    menu: 'Menú',
+    closeDialog: 'Cerrar',
+    review: 'Revisión',
+    playground: 'Pruebas',
+    home: 'Inicio',
+    language: 'Idioma',
+  },
   sections: {
     numerals: {
       title: 'Números',
