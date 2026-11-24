@@ -138,40 +138,27 @@ function SiteHeader({
   )
 }
 
-function SiteFooter({ children }: { children?: ReactNode }): ReactNode {
+const FOOTER_LINKS: readonly { label: string; href: string }[] = [
+  { label: 'Source', href: REPO_URL },
+  { label: 'npm', href: NPM_URL },
+  { label: 'Changelog', href: `${REPO_URL}/blob/main/CHANGELOG.md` },
+  { label: 'Roadmap', href: `${REPO_URL}/blob/main/ROADMAP.md` },
+  { label: 'Contributing', href: `${REPO_URL}/blob/main/CONTRIBUTING.md` },
+]
+
+function SiteFooter(): ReactNode {
   return (
     <footer className="site-footer">
       <div className="container site-footer-inner">
-        <p>
-          num-fns {VERSION && `v${VERSION}`} · MIT licensed
-          {children}
-        </p>
+        <p>num-fns {VERSION && `v${VERSION}`} · MIT license</p>
         <ul>
-          <li>
-            <a href={REPO_URL} target="_blank" rel="noreferrer">
-              Source
-            </a>
-          </li>
-          <li>
-            <a href={NPM_URL} target="_blank" rel="noreferrer">
-              npm
-            </a>
-          </li>
-          <li>
-            <a href={`${REPO_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noreferrer">
-              Changelog
-            </a>
-          </li>
-          <li>
-            <a href={`${REPO_URL}/blob/main/ROADMAP.md`} target="_blank" rel="noreferrer">
-              Roadmap
-            </a>
-          </li>
-          <li>
-            <a href={`${REPO_URL}/blob/main/CONTRIBUTING.md`} target="_blank" rel="noreferrer">
-              Contributing
-            </a>
-          </li>
+          {FOOTER_LINKS.map((link) => (
+            <li key={link.label}>
+              <a href={link.href} target="_blank" rel="noreferrer">
+                {link.label}
+              </a>
+            </li>
+          ))}
         </ul>
       </div>
     </footer>

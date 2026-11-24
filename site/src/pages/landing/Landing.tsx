@@ -10,7 +10,7 @@ import { categories, entries } from '../../catalog'
 import { badges, hero, install, usageSnippet } from '../../content'
 import { localeInfo } from '../../locales'
 import { CodeBlock, CopyButton } from '../../ui/CodeBlock'
-import { asset, REPO_URL } from '../../ui/Layout'
+import { asset } from '../../ui/Layout'
 
 type Locale = (typeof localeInfo)[number]['locale']
 
@@ -109,27 +109,27 @@ function LiveDemo(): ReactNode {
 const FEATURES: readonly { title: string; text: string; fns: string[] }[] = [
   {
     title: 'Format and parse',
-    text: 'Numbers, money and percentages with locale separators and symbols, and the way back.',
+    text: 'Format numbers, money and percentages with the separators and symbols of the locale. Parse the text back to a number.',
     fns: ['formatNumber', 'formatMoney', 'parsePercentage'],
   },
   {
     title: 'Numbers in words',
-    text: 'Cardinals, ordinals, money and fractions, with gender agreement where the language has it.',
+    text: 'Write cardinals, ordinals, money and fractions in words. The words agree in gender if the language has gender.',
     fns: ['numberToWords', 'moneyToWords', 'ordinalToWords'],
   },
   {
     title: 'Notation',
-    text: 'Short (2.5M), long (2.5 million), roman numerals, byte sizes and any base from 2 to 36.',
+    text: 'Short (2.5M) and long (2.5 million) notation, roman numerals, byte sizes and bases from 2 to 36.',
     fns: ['toShortNotation', 'toRoman', 'toByteSize'],
   },
   {
     title: 'Exact arithmetic',
-    text: '0.1 + 0.2 is 0.3. Decimal-safe add, subtract, multiply, divide and round.',
+    text: '0.1 + 0.2 gives 0.3. Add, subtract, multiply, divide and round without floating-point errors.',
     fns: ['add', 'round', 'clamp'],
   },
   {
     title: 'Statistics',
-    text: 'Sum, mean, median, mode, variance, percentiles, computed exactly in decimal.',
+    text: 'Sum, mean, median, mode, variance and percentiles. The library calculates them exactly in decimal.',
     fns: ['mean', 'median', 'percentile'],
   },
   {
@@ -140,7 +140,6 @@ const FEATURES: readonly { title: string; text: string; fns: string[] }[] = [
 ]
 
 export function Landing(): ReactNode {
-  const command = install.npm
   return (
     <>
       <section className="hero">
@@ -151,18 +150,15 @@ export function Landing(): ReactNode {
             <p className="hero-tagline">{hero.tagline}</p>
             <p className="hero-description">{hero.description}</p>
             <div className="hero-install">
-              <code>{command}</code>
-              <CopyButton text={command} label="Copy command" />
+              <code>{install.npm}</code>
+              <CopyButton text={install.npm} label="Copy command" />
             </div>
             <div className="hero-cta">
               <a className="btn btn-primary" href="./docs.html">
-                Read the docs
+                Read the documentation
               </a>
               <a className="btn" href="./playground.html">
                 Open the playground
-              </a>
-              <a className="btn btn-ghost" href={REPO_URL} target="_blank" rel="noreferrer">
-                GitHub
               </a>
             </div>
             <ul className="badge-row" aria-label="Highlights">
@@ -200,20 +196,22 @@ export function Landing(): ReactNode {
 
       <section className="container section two-col" aria-labelledby="start-title">
         <div>
-          <h2 id="start-title">Start in one minute</h2>
+          <h2 id="start-title">Quick start</h2>
           <p>
-            Import a function by name. Pass a locale object when the output depends on language.
-            Nothing else to set up: no <code>Intl</code>, so the output is the same in Node, Bun,
-            Deno and every browser.
+            Import each function by name. Pass a locale object when the output depends on the
+            language. The library does not use <code>Intl</code>, so the output is the same in Node,
+            Bun, Deno and all browsers.
           </p>
           <ul className="check-list">
-            <li>Bad input throws a clear error, or returns an empty value with noThrow.</li>
-            <li>Every integer function takes a bigint, every parser can return one.</li>
-            <li>Import one locale at a time to keep the bundle small.</li>
+            <li>
+              Bad input throws an error. With <code>noThrow</code>, you get an empty value.
+            </li>
+            <li>Each integer function accepts a bigint. Each parser can return a bigint.</li>
+            <li>Import only the locales that you use. This keeps the bundle small.</li>
           </ul>
           <p>
             <a className="btn" href="./docs.html#quick-start">
-              Quick start guide
+              Read the quick start
             </a>
           </p>
         </div>
@@ -221,7 +219,7 @@ export function Landing(): ReactNode {
       </section>
 
       <section className="container section" aria-labelledby="locales-title">
-        <h2 id="locales-title">Five locales, written by hand</h2>
+        <h2 id="locales-title">Five hand-written locales</h2>
         <ul className="locale-grid">
           {localeInfo.map((info) => (
             <li key={info.code} className="locale-card">
@@ -235,8 +233,9 @@ export function Landing(): ReactNode {
         </ul>
         <div className="callout review-callout">
           <p>
-            <strong>Do you speak one of these languages?</strong> Ten minutes on the review page
-            helps us ship correct words: gender, case and plural forms included.
+            <strong>Do you speak one of these languages?</strong> Please review its words on the
+            review page. Examine the words, gender, case and plural forms. This takes approximately
+            ten minutes.
           </p>
           <a className="btn btn-primary" href="./review.html">
             Review the words

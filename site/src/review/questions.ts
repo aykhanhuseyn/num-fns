@@ -61,9 +61,9 @@ const QUESTIONS: Readonly<Record<string, string>> = {
   'ru.currency.units.AZN.minor.word':
     'Is «гяпик» what a Russian speaker writing about Azerbaijani money actually uses? «гяпик» and «гапик» both appear in the wild, and some texts keep «гяпик» only in the plural.',
   'en.currency.units.RUB.minor.word':
-    '“kopek” or “kopeck”? Both are attested in English; pick the one you would expect in a financial string.',
+    '“kopek” or “kopeck”? English uses both spellings. Select the spelling that you expect in a financial text.',
   'enGB.currency.units.RUB.minor.word':
-    '“kopek” or “kopeck”? British usage may differ from the US spelling used in the `en` locale.',
+    '“kopek” or “kopeck”? The `en` locale uses the US spelling. Tell us if British English is different.',
   'es.currency.units.RUB.minor.word':
     '¿«kopek», «kopeck» o «copec»? La RAE y la prensa no coinciden — elige la forma que usarías en una cifra.',
   'es.currency.units.AZN.minor.word':

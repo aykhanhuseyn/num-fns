@@ -77,7 +77,7 @@ function OptionsTable({ entry }: { entry: Entry }): ReactNode {
   if (entry.options.length === 0) {
     return (
       <p className="muted">
-        No options object. Bad input throws, or returns an empty value under{' '}
+        This function has no options object. Bad input throws an error. To get an empty value, use{' '}
         <code>
           setConfig({'{'} noThrow: true {'}'})
         </code>
@@ -139,7 +139,7 @@ function FunctionDoc({ entry }: { entry: Entry }): ReactNode {
       <CodeBlock code={program} wrap />
       {locales.length > 0 && (
         <details className="doc-locales">
-          <summary>Same call in every locale</summary>
+          <summary>The same call in each locale</summary>
           <div className="table-wrap">
             <table>
               <caption className="visually-hidden">{entry.name} in each locale</caption>
@@ -169,7 +169,7 @@ function FunctionDoc({ entry }: { entry: Entry }): ReactNode {
       )}
       <p className="doc-fn-links">
         <a className="btn btn-sm" href={`./playground.html#${entry.id}`}>
-          Try it in the playground
+          Open in the playground
         </a>
         <a href={`./api/functions/index.${entry.name}.html`}>API reference</a>
         <a href={`${REPO_URL}/blob/main/${entry.sourceFile}`} target="_blank" rel="noreferrer">
@@ -186,8 +186,8 @@ function Guides(): ReactNode {
       <section id="install" className="doc-guide" aria-labelledby="install-title">
         <h2 id="install-title">Install</h2>
         <p>
-          num-fns has no runtime dependency and ships ESM, CommonJS and TypeScript types. It needs
-          Node 20 or newer, Bun, Deno or any modern browser.
+          num-fns has no runtime dependency. The package contains ESM, CommonJS and TypeScript
+          types. Use Node 20 or newer, Bun, Deno or a modern browser.
         </p>
         <CodeBlock code={Object.values(install).join('\n')} title="Terminal" />
       </section>
@@ -195,8 +195,8 @@ function Guides(): ReactNode {
       <section id="quick-start" className="doc-guide" aria-labelledby="quick-start-title">
         <h2 id="quick-start-title">Quick start</h2>
         <p>
-          Import each function by name. Anything that depends on language takes a{' '}
-          <code>locale</code> object, passed per call. The default is <code>en</code>.
+          Import each function by name. When the output depends on the language, pass a{' '}
+          <code>locale</code> object in the call. The default locale is <code>en</code>.
         </p>
         <CodeBlock code={usageSnippet} title="example.ts" />
       </section>
@@ -204,8 +204,8 @@ function Guides(): ReactNode {
       <section id="locales" className="doc-guide" aria-labelledby="locales-title">
         <h2 id="locales-title">Locales</h2>
         <p>
-          Import locales from <code>num-fns/locale</code>, or one at a time from{' '}
-          <code>num-fns/locale/ru</code>, so a bundle carries only the languages it uses.
+          Import locales from <code>num-fns/locale</code>. To keep the bundle small, import each
+          locale from its own path, for example <code>num-fns/locale/ru</code>.
         </p>
         <div className="table-wrap">
           <table>
@@ -233,7 +233,8 @@ function Guides(): ReactNode {
           </table>
         </div>
         <p>
-          Native speaker? <a href="./review.html">Review the words for your language</a>.
+          Do you speak one of these languages?{' '}
+          <a href="./review.html">Review the words for your language</a>.
         </p>
       </section>
 
@@ -241,16 +242,17 @@ function Guides(): ReactNode {
         <h2 id="errors-title">Errors and noThrow</h2>
         <p>
           Bad input throws <code>RangeError</code>, <code>TypeError</code> or{' '}
-          <code>SyntaxError</code> with a message that names the function. To get an empty value
-          instead (<code>""</code> for text, <code>NaN</code> for numbers), pass{' '}
-          <code>noThrow: true</code> to one call, or set it for every call:
+          <code>SyntaxError</code>. The error message names the function. To get an empty value, use{' '}
+          <code>noThrow: true</code>. The empty value is <code>""</code> for text and{' '}
+          <code>NaN</code> for numbers. Set it for one call, or for all calls with{' '}
+          <code>setConfig</code>.
         </p>
         <CodeBlock
           code={`import { formatNumber, setConfig } from 'num-fns'
 
 formatNumber(Number.NaN, { noThrow: true }) // ""
 
-setConfig({ noThrow: true }) // every call from now on
+setConfig({ noThrow: true }) // all calls after this line
 formatNumber(Number.NaN) // ""`}
         />
       </section>
@@ -258,12 +260,12 @@ formatNumber(Number.NaN) // ""`}
       <section id="bigint" className="doc-guide" aria-labelledby="bigint-title">
         <h2 id="bigint-title">bigint</h2>
         <p>
-          Every integer function also takes a <code>bigint</code>, and every parser can return one
-          with{' '}
+          Each integer function also accepts a <code>bigint</code>. Each parser can return a{' '}
+          <code>bigint</code> with{' '}
           <code>
             {'{'} output: 'bigint' {'}'}
           </code>
-          . The value stays exact past <code>Number.MAX_SAFE_INTEGER</code>.
+          . The value stays exact above <code>Number.MAX_SAFE_INTEGER</code>.
         </p>
         <CodeBlock
           code={`import { formatNumber, parseNumber } from 'num-fns'
@@ -291,8 +293,8 @@ export function Docs(): ReactNode {
         <header className="docs-intro">
           <h1>Documentation</h1>
           <p className="lead">
-            Every function, with each option, its type and its default. The examples run the real
-            library in your browser, so each result here is what the current source returns.
+            This page shows each function with its options, types and default values. The examples
+            run the library in your browser. Each result is the output of the current source.
           </p>
         </header>
         <Guides />

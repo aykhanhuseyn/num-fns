@@ -233,7 +233,7 @@ function buildNumerals(builder: Builder): ReviewSection {
     id: 'numerals',
     title: 'Counting words',
     blurb:
-      'The raw vocabulary every spelled-out number is built from. A wrong entry here is wrong in thousands of outputs, so it is worth reading even though it looks obvious.',
+      'The library makes every number in words from these basic words. An error here shows in many results. Read all entries. Also read the simple entries.',
     items,
   }
 }
@@ -280,7 +280,7 @@ function buildScales(builder: Builder): ReviewSection {
     id: 'scales',
     title: 'Scale words',
     blurb:
-      'The thousand / million / billion words, including every inflected form this language needs after different counts.',
+      'The words for thousand, million and billion. This includes each form that the language uses after different counts.',
     items,
   }
 }
@@ -311,7 +311,7 @@ function genderedReadings(builder: Builder): ReviewItem[] {
           `numberToWords(${value}, { gender: '${gender}' })`,
           () => numberToWords(value, { locale: builder.locale, gender }),
           true,
-          `Agreement form used when counting a ${gender} noun.`,
+          `The form to use when you count a ${gender} noun.`,
           { gender },
         ),
       )
@@ -332,9 +332,9 @@ function buildReadings(builder: Builder): ReviewSection {
   )
   return {
     id: 'readings',
-    title: 'Whole readings',
+    title: 'Full numbers in words',
     blurb:
-      'Complete numbers as the library composes them — word order, elision, hyphens and spacing. Read each one aloud: if it is not what you would say, flag it.',
+      'Full numbers as the library makes them. Read each number aloud. If you do not say it like this, mark it as incorrect. Also examine word order, hyphens and spaces.',
     items: [...items, ...genderedReadings(builder)],
   }
 }
@@ -352,7 +352,7 @@ function buildDecimals(builder: Builder): ReviewSection {
     id: 'decimals',
     title: 'Decimals',
     blurb:
-      'Numbers with a fraction, read the way a person says them. Check the word after the whole part and how the digits after the mark are read.',
+      'Numbers with a decimal part, as a person says them. Examine the word after the whole part. Examine how a person reads the digits after the decimal mark.',
     items: DECIMAL_VALUES.map((value) =>
       builder.output(
         `decimal-${value}`,
@@ -411,7 +411,7 @@ function buildOrdinals(builder: Builder): ReviewSection {
     id: 'ordinals',
     title: 'Ordinals',
     blurb:
-      'First / second / twenty-first, spelled out and as an abbreviated numeral. Declension and gender are out of scope for v1 — only the citation form is under review.',
+      'First, second, twenty-first: in words and as a short numeral. Only the dictionary form is in this review. Version 1 does not include declension and gender.',
     items,
   }
 }
@@ -474,8 +474,8 @@ function buildNotation(builder: Builder): ReviewSection {
   )
   return {
     id: 'notation',
-    title: 'Abbreviated notation',
-    blurb: 'The abbreviations used in compact output (“2.5M”, «2,5 млн») and their full words.',
+    title: 'Short notation',
+    blurb: 'The abbreviations in short notation (“2.5M”, «2,5 млн») and their full words.',
     items,
   }
 }
@@ -546,7 +546,7 @@ function buildCurrency(builder: Builder): ReviewSection {
     id: 'currency',
     title: 'Currency words',
     blurb:
-      'What this language calls each currency and its subunit. Borrowed names are the likeliest mistakes in the whole package — a plausible-looking transliteration nobody actually writes.',
+      'The name of each currency and its subunit in this language. Borrowed names have the highest risk of errors. A transliteration can look correct, but people do not use it.',
     items,
   }
 }
@@ -621,8 +621,8 @@ function buildMoney(builder: Builder): ReviewSection {
   }
   return {
     id: 'money',
-    title: 'Money read aloud',
-    blurb: 'Full amounts as a person would say them, including the awkward ones near zero and one.',
+    title: 'Money in words',
+    blurb: 'Full amounts as a person says them. This includes amounts near zero and one.',
     items,
   }
 }
@@ -684,7 +684,8 @@ function buildFormatting(builder: Builder): ReviewSection {
   return {
     id: 'formatting',
     title: 'Number and money formatting',
-    blurb: 'Separators and symbol placement — the conventions a reader notices immediately.',
+    blurb:
+      'Separators and the position of the currency symbol. A reader sees errors here immediately.',
     items,
   }
 }
@@ -707,14 +708,14 @@ function buildFractions(builder: Builder, supported: boolean): ReviewSection {
     return {
       id: 'fractions',
       title: 'Fractions',
-      blurb: 'Not implemented for this locale yet — this is the gap we most need filled.',
+      blurb: 'This locale has no fraction words yet. We need help here most.',
       items: [
         builder.output(
           'fractions-missing',
           'fractionToWords — no vocabulary yet',
           () => fractionToWords(1, 2, { locale: builder.locale }),
           true,
-          'The library refuses to guess here rather than invent fraction nouns. If you can write out 1/2, 1/3, 2/3, 3/4 and 5/8 in the suggestion box, we can implement this locale.',
+          'The library does not guess fraction words. Write 1/2, 1/3, 2/3, 3/4 and 5/8 in words in the correction field. Then we can add fractions for this locale.',
         ),
       ],
     }
@@ -722,7 +723,8 @@ function buildFractions(builder: Builder, supported: boolean): ReviewSection {
   return {
     id: 'fractions',
     title: 'Fractions',
-    blurb: 'Proper fractions spelled out, including any idiomatic word for one half.',
+    blurb:
+      'Proper fractions in words. This includes the special word for one half, if the language has one.',
     items: FRACTIONS.map(([numerator, denominator]) =>
       builder.output(
         `fraction-${numerator}-${denominator}`,
@@ -740,8 +742,8 @@ function buildDigits(builder: Builder): ReviewSection {
   builder.section('digits')
   return {
     id: 'digits',
-    title: 'Digit-by-digit reading',
-    blurb: 'How a code or phone number is read out, one digit at a time.',
+    title: 'Digit by digit',
+    blurb: 'How a person reads a code or a phone number, one digit at a time.',
     items: [
       builder.output('digits-2026', 'numberToDigitWords(2026)', () =>
         numberToDigitWords(2026, { locale: builder.locale }),
