@@ -6,42 +6,46 @@
    its theme, and `--accent-fill` clears 4.5:1 against `--on-accent`. Run
    `node scripts/check-site-contrast.mjs` after changing a colour. */
 
+/* Palette: soft nude. Linen, sand and taupe for the frame; warm brown for
+   text; one muted clay accent, kept for the main call to action, the current
+   or selected item, the focus ring and progress. Everything else is neutral. */
+
 :root {
   color-scheme: light;
 
-  /* Brand, from the logo: navy #1f2e45, teal #19c0bd, paper #fdfdfb. */
+  /* Logo colours, kept for reference: navy #1f2e45, teal #19c0bd. */
   --navy: #1f2e45;
   --teal: #19c0bd;
 
-  --bg: #ffffff;
-  --surface: #f4f6f9;
-  --surface-2: #e9edf3;
-  --card: #ffffff;
-  --border: #c9d2de;
-  --border-strong: #7d8ca3;
-  --text: #142033;
-  --text-dim: #3f4e63;
-  --text-faint: #56657a;
-  --link: #0a6664;
-  --accent-fill: #0a6664;
+  --bg: #faf7f2;
+  --surface: #f4efe7;
+  --surface-2: #ece4d8;
+  --card: #fffdf9;
+  --border: #e6ddd0;
+  --border-strong: #9c8b7a;
+  --text: #3b2f27;
+  --text-dim: #5e4f44;
+  --text-faint: #6b5b4e;
+  --link: #4a3a30;
+  --accent-fill: #9a5741;
   --on-accent: #ffffff;
-  --accent-soft: #e0f4f3;
-  --focus: #0b57d0;
-  --good: #156b2f;
-  --good-soft: #e4f4e8;
-  --bad: #b3261e;
-  --bad-soft: #fbe9e7;
-  --warn: #7a4b00;
-  --warn-soft: #fff3d6;
-  --code-bg: #f4f6f9;
-  --shadow: 0 1px 2px rgb(20 32 51 / 8%), 0 4px 16px rgb(20 32 51 / 6%);
+  --accent-soft: #f4e5dd;
+  --focus: #a05a43;
+  --good: #4f6b45;
+  --good-soft: #e8eddf;
+  --bad: #9a4045;
+  --bad-soft: #f7e6e3;
+  --warn: #75561c;
+  --warn-soft: #f5ead2;
+  --code-bg: #f6f1ea;
+  --shadow: 0 1px 2px rgb(59 47 39 / 4%), 0 10px 30px rgb(59 47 39 / 5%);
 
   --mono: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --sans:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --header-h: 60px;
+  --radius: 16px;
+  --radius-sm: 12px;
+  --header-h: 64px;
   --max: 1180px;
 }
 
@@ -49,55 +53,55 @@
    reader has not chosen. Kept as one block, applied by two selectors. */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0f1724;
-  --surface: #152031;
-  --surface-2: #1c2a3f;
-  --card: #18253a;
-  --border: #33465f;
-  --border-strong: #5d7290;
-  --text: #f2f5f9;
-  --text-dim: #c0cbdb;
-  --text-faint: #9fadc2;
-  --link: #5fdedb;
-  --accent-fill: #19c0bd;
-  --on-accent: #0a1622;
-  --accent-soft: #123a44;
-  --focus: #8ab4ff;
-  --good: #7ee29a;
-  --good-soft: #163626;
-  --bad: #ff9a92;
-  --bad-soft: #3d1d1f;
-  --warn: #ffd27a;
-  --warn-soft: #3a2f12;
-  --code-bg: #111b2a;
-  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+  --bg: #1e1916;
+  --surface: #2b2420;
+  --surface-2: #352d27;
+  --card: #26201c;
+  --border: #3a322b;
+  --border-strong: #7d6d5f;
+  --text: #f2e9de;
+  --text-dim: #d4c6b6;
+  --text-faint: #b9a996;
+  --link: #ecdccb;
+  --accent-fill: #d39a80;
+  --on-accent: #2a1c15;
+  --accent-soft: #3d2c24;
+  --focus: #dfa78d;
+  --good: #aac59b;
+  --good-soft: #27301f;
+  --bad: #e9a5a4;
+  --bad-soft: #3a2324;
+  --warn: #e0c283;
+  --warn-soft: #352b18;
+  --code-bg: #1a1613;
+  --shadow: 0 1px 2px rgb(0 0 0 / 18%), 0 10px 30px rgb(0 0 0 / 16%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --bg: #0f1724;
-    --surface: #152031;
-    --surface-2: #1c2a3f;
-    --card: #18253a;
-    --border: #33465f;
-    --border-strong: #5d7290;
-    --text: #f2f5f9;
-    --text-dim: #c0cbdb;
-    --text-faint: #9fadc2;
-    --link: #5fdedb;
-    --accent-fill: #19c0bd;
-    --on-accent: #0a1622;
-    --accent-soft: #123a44;
-    --focus: #8ab4ff;
-    --good: #7ee29a;
-    --good-soft: #163626;
-    --bad: #ff9a92;
-    --bad-soft: #3d1d1f;
-    --warn: #ffd27a;
-    --warn-soft: #3a2f12;
-    --code-bg: #111b2a;
-    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 25%);
+    --bg: #1e1916;
+    --surface: #2b2420;
+    --surface-2: #352d27;
+    --card: #26201c;
+    --border: #3a322b;
+    --border-strong: #7d6d5f;
+    --text: #f2e9de;
+    --text-dim: #d4c6b6;
+    --text-faint: #b9a996;
+    --link: #ecdccb;
+    --accent-fill: #d39a80;
+    --on-accent: #2a1c15;
+    --accent-soft: #3d2c24;
+    --focus: #dfa78d;
+    --good: #aac59b;
+    --good-soft: #27301f;
+    --bad: #e9a5a4;
+    --bad-soft: #3a2324;
+    --warn: #e0c283;
+    --warn-soft: #352b18;
+    --code-bg: #1a1613;
+    --shadow: 0 1px 2px rgb(0 0 0 / 18%), 0 10px 30px rgb(0 0 0 / 16%);
   }
 }
 
@@ -127,7 +131,8 @@ body {
   color: var(--text);
   font-family: var(--sans);
   font-size: 1rem;
-  line-height: 1.6;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
 }
 
 h1,
@@ -136,7 +141,8 @@ h3,
 h4 {
   line-height: 1.25;
   margin: 0 0 0.5em;
-  letter-spacing: -0.01em;
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 
 h1 {
@@ -157,11 +163,13 @@ p {
 
 a {
   color: var(--link);
-  text-underline-offset: 0.18em;
+  text-decoration-color: color-mix(in srgb, var(--link) 60%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
 }
 
 a:hover {
-  text-decoration-thickness: 2px;
+  text-decoration-color: currentcolor;
 }
 
 code,
@@ -172,8 +180,8 @@ pre {
 }
 
 :not(pre) > code {
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
+  padding: 0.1em 0.4em;
+  border-radius: 6px;
   background: var(--surface-2);
   color: var(--text);
   overflow-wrap: anywhere;
@@ -183,14 +191,14 @@ kbd {
   padding: 0.05em 0.4em;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--card);
 }
 
 :focus-visible {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 ::selection {
@@ -239,8 +247,8 @@ kbd {
   top: 0;
   z-index: 20;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
 }
 
 .site-header-inner {
@@ -256,18 +264,19 @@ kbd {
   gap: 10px;
   color: var(--text);
   font-size: 1.1rem;
-  font-weight: 750;
+  font-weight: 700;
   text-decoration: none;
 }
 
 .brand img {
-  border-radius: 7px;
+  border-radius: 9px;
 }
 
 .brand-version {
-  padding: 1px 7px;
-  border: 1px solid var(--border);
+  padding: 1px 8px;
+  border: 0;
   border-radius: 999px;
+  background: var(--surface-2);
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -278,15 +287,15 @@ kbd {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin-left: auto;
 }
 
 .site-nav a {
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  border-radius: 999px;
   color: var(--text-dim);
-  font-weight: 550;
+  font-weight: 500;
   text-decoration: none;
 }
 
@@ -298,7 +307,7 @@ kbd {
 .site-nav a[aria-current="page"] {
   background: var(--accent-soft);
   color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent-fill);
+  font-weight: 600;
 }
 
 .site-header .nav-toggle {
@@ -338,9 +347,10 @@ kbd {
 }
 
 .site-footer {
-  margin-top: 64px;
-  padding: 28px 0 40px;
+  margin-top: 96px;
+  padding: 32px 0 48px;
   border-top: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text-dim);
   font-size: 0.92rem;
 }
@@ -368,21 +378,25 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 8px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--card);
+  min-height: 42px;
+  padding: 9px 20px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .btn:hover {
-  background: var(--surface-2);
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--border));
 }
 
 .btn:disabled {
@@ -402,13 +416,18 @@ kbd {
 
 .btn-sm {
   min-height: 32px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   font-size: 0.88rem;
 }
 
 .btn-ghost {
   border-color: transparent;
   background: transparent;
+}
+
+.btn-ghost:hover {
+  border-color: transparent;
+  background: var(--surface-2);
 }
 
 .icon-btn {
@@ -419,9 +438,9 @@ kbd {
   height: 40px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--card);
-  color: var(--text);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
   cursor: pointer;
 }
 
@@ -444,10 +463,10 @@ kbd {
 }
 
 .field-label {
-  color: var(--text);
+  color: var(--text-dim);
   font-family: var(--mono);
-  font-size: 0.86rem;
-  font-weight: 600;
+  font-size: 0.84rem;
+  font-weight: 500;
 }
 
 .field-hint {
@@ -461,8 +480,8 @@ input[type="search"],
 select,
 textarea {
   width: 100%;
-  min-height: 40px;
-  padding: 7px 10px;
+  min-height: 42px;
+  padding: 8px 12px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--card);
@@ -507,7 +526,7 @@ input[type="checkbox"] {
 
 .code pre {
   margin: 0;
-  padding: 14px 16px;
+  padding: 16px 18px;
   overflow-x: auto;
   color: var(--text);
   line-height: 1.55;
@@ -541,8 +560,8 @@ input[type="checkbox"] {
 }
 
 .tok-keyword {
-  color: var(--link);
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 650;
 }
 
 /* --- misc shared ---------------------------------------------------------- */
@@ -551,13 +570,13 @@ input[type="checkbox"] {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 9px;
-  border: 1px solid var(--border);
+  padding: 3px 11px;
+  border: 0;
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text-dim);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -575,7 +594,7 @@ table {
 
 th,
 td {
-  padding: 9px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   text-align: left;
   vertical-align: top;
@@ -584,7 +603,7 @@ td {
 th {
   background: var(--surface);
   color: var(--text);
-  font-weight: 650;
+  font-weight: 600;
 }
 
 tr:last-child td {
@@ -596,11 +615,10 @@ tr:last-child td {
 }
 
 .callout {
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--accent-fill);
-  border-radius: var(--radius-sm);
-  background: var(--accent-soft);
+  padding: 16px 20px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface-2);
   color: var(--text);
 }
 
@@ -618,7 +636,8 @@ tr:last-child td {
 }
 
 .dialog::backdrop {
-  background: rgb(6 10 16 / 62%);
+  background: rgb(30 22 18 / 45%);
+  backdrop-filter: blur(2px);
 }
 
 .dialog-frame {
@@ -632,7 +651,7 @@ tr:last-child td {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 20px 12px;
+  padding: 20px 24px 14px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -642,7 +661,7 @@ tr:last-child td {
 }
 
 .dialog-body {
-  padding: 16px 20px 20px;
+  padding: 18px 24px 24px;
   overflow-y: auto;
 }
 
@@ -651,7 +670,7 @@ tr:last-child td {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-  padding: 12px 20px;
+  padding: 14px 24px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
