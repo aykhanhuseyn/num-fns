@@ -1,3 +1,4 @@
+import { oneOtherPlural, thousandGroups } from './internal'
 import type { GrammaticalGender, Locale, PluralCategory, WordChunk } from './types'
 
 /**
@@ -258,15 +259,11 @@ function compose(chunks: readonly WordChunk[], gender?: GrammaticalGender): stri
           : chunk.words
       const words = chunk.value === 100 ? 'cien' : baseWords
       if (!chunk.scaleWord) return words
-      if (chunk.scaleIndex === 1) {
-        // "mil" never takes "uno"/"un" — 1000 is "mil", not "un mil" —
-        // and a larger thousands chunk apocopates its trailing
-        // "uno"/"una"/"veintiuno"/"veintiuna" ("veintiún mil", not
-        // "veintiuno mil"; see `apocopate`'s note on feminine "mil").
-        return chunk.value === 1 ? chunk.scaleWord : `${apocopate(words)} ${chunk.scaleWord}`
-      }
-      // "uno"/"veintiuno" apocopate to "un"/"veintiún" before a masculine
-      // scale noun ("un millón", "veintiún millones", "treinta y un millones").
+      // "mil" never takes "uno"/"un": 1000 is "mil", not "un mil".
+      if (chunk.scaleIndex === 1 && chunk.value === 1) return chunk.scaleWord
+      // Before a scale word, "uno"/"una"/"veintiuno"/"veintiuna" apocopate to
+      // "un"/"veintiún": "un millón", "veintiún mil", "treinta y un millones"
+      // (see `apocopate`'s note on feminine "mil").
       return `${apocopate(words)} ${chunk.scaleWord}`
     })
     .join(' ')
@@ -283,22 +280,17 @@ function compose(chunks: readonly WordChunk[], gender?: GrammaticalGender): stri
  * which scale chunk a round-multiple-of-1000 ordinal needs to fuse.
  */
 function scaleChunks(value: number): WordChunk[] {
-  const groups: number[] = []
-  let remaining = value
-  while (remaining > 0) {
-    groups.push(remaining % 1000)
-    remaining = Math.floor(remaining / 1000)
-  }
-
+  const groups = thousandGroups(value)
   const chunks: WordChunk[] = []
   for (let i = groups.length - 1; i >= 0; i--) {
     const groupValue = groups[i] as number
     if (!groupValue) continue
 
     const scaleEntry = SCALES[i] ?? ''
-    const category: PluralCategory = Math.abs(groupValue) === 1 ? 'one' : 'other'
     const scaleWord =
-      typeof scaleEntry === 'string' ? scaleEntry : (scaleEntry[category] ?? scaleEntry.other ?? '')
+      typeof scaleEntry === 'string'
+        ? scaleEntry
+        : (scaleEntry[oneOtherPlural(groupValue)] ?? scaleEntry.other ?? '')
     chunks.push({ value: groupValue, words: renderGroup(groupValue), scaleIndex: i, scaleWord })
   }
   return chunks
@@ -416,7 +408,7 @@ export const es: Locale = {
     compose,
   },
   // Only "millón"/"millardo"/"billón" inflect by count; "mil" never does.
-  plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
+  plural: oneOtherPlural,
   ordinal: {
     separator: '',
     // Written with the masculine ordinal indicator "º" directly after the digits

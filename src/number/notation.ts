@@ -29,6 +29,7 @@ import type {
 } from '../shared/types'
 import { assertGroupSeparator, assertNumericValue } from '../shared/validation'
 import { parseNumber } from './format'
+import { correctFloatingPointNoise, trimTrailingZeros } from './scaled-text'
 import { resolveScaleWord } from './words'
 
 // Maintainer note: `options.locale` was a bare `'az' | 'en'` string until
@@ -88,6 +89,7 @@ function toShortNotationImpl(value: number | bigint, options: ShortNotationOptio
   }
   const digits = resolveDigits(locale.digits, 'toShortNotation')
   const absolute = typeof value === 'bigint' ? absBigInt(value) : Math.abs(value)
+  const sign = signFor(value)
 
   for (const { threshold, short } of locale.notation.scales) {
     if (absolute >= threshold) {
@@ -96,39 +98,16 @@ function toShortNotationImpl(value: number | bigint, options: ShortNotationOptio
         digits,
       )
       const spacer = locale.notation.spaceBeforeShort ? ' ' : ''
-      return `${signFor(value)}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
+      return `${sign}${scaled.replace('.', decimalSeparator)}${spacer}${short}`
     }
   }
 
-  const whole = localizeDigits(scaleToFixed(absolute, 1, 0), digits)
-  return `${signFor(value)}${whole}`
+  return `${sign}${localizeDigits(scaleToFixed(absolute, 1, 0), digits)}`
 }
 
 /** `"-"` for any signed value, `-0` included — a magnitude that rounds away to zero still formats as `"-0"`. */
 function signFor(value: number | bigint): string {
   return isSigned(value) ? '-' : ''
-}
-
-/** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */
-const TRAILING_ZEROS_REGEX = /0+$/
-/** Matches a decimal point left dangling after trailing zeros are stripped, e.g. "2." */
-const TRAILING_DOT_REGEX = /\.$/
-
-function trimTrailingZeros(fixed: string): string {
-  if (!fixed.includes('.')) return fixed
-  return fixed.replace(TRAILING_ZEROS_REGEX, '').replace(TRAILING_DOT_REGEX, '')
-}
-
-/**
- * Snaps a float to the nearest integer when it is within floating-point
- * rounding distance of one (e.g. `4.1 * 1e12` evaluates to
- * `4099999999999.9995` in JS), while leaving genuinely fractional values
- * untouched.
- */
-function correctFloatingPointNoise(value: number): number {
-  const rounded = Math.round(value)
-  const tolerance = 1e-9 * Math.max(1, Math.abs(rounded))
-  return Math.abs(value - rounded) < tolerance ? rounded : value
 }
 
 /**
@@ -200,10 +179,9 @@ export function parseShortNotation(
     const lowerTrimmed = trimmed.toLowerCase()
 
     for (const { threshold, short } of locale.notation.scales) {
-      const suffixToken = `${spacer}${short}`
-      const lowerSuffixToken = suffixToken.toLowerCase()
-      if (lowerTrimmed.endsWith(lowerSuffixToken)) {
-        const numericPart = trimmed.slice(0, trimmed.length - suffixToken.length).trim()
+      const suffix = `${spacer}${short}`
+      if (lowerTrimmed.endsWith(suffix.toLowerCase())) {
+        const numericPart = trimmed.slice(0, trimmed.length - suffix.length).trim()
         if (output === 'bigint') {
           return scaledBigInt(numericPart, threshold, decimalSeparator, 'parseShortNotation')
         }

@@ -2,20 +2,11 @@ import { numberToWords } from '../number/words'
 import type { Locale, WordChunk } from './types'
 
 /**
- * Azerbaijani number vocabulary. Module-private, like every other locale's
- * (`en`, `en-gb`, `es`, `ru` all keep their word lists local): these are
- * `az`'s data, reachable by consumers as `az.words.*`, not as free-standing
- * package exports.
+ * Azerbaijani number vocabulary. It is private to this module, as in every
+ * other locale. Consumers read it as `az.words.*`, not as package exports.
  *
- * They lived in `number/words.ts`, `number/notation.ts` and
- * `shared/constants.ts` until 2026-08-25 — a leftover from the days when
- * those modules hardcoded Azerbaijani, before the `todo.md` §1 locale
- * refactor made them locale-generic. That left eleven `SCREAMING_CASE`
- * names in the package's pinned public surface which no consumer had a
- * reason to import and which would have been semver-locked at 1.0
- * (`todo.md` §3). Nothing outside this file reads them any more —
- * `number/digits.ts`, the last non-`az` consumer, reads `locale.words.zero`
- * / `ones` / `negative` off the `Locale` object like every other module.
+ * Until 2026-08-25 these constants were public exports of `number/` and
+ * `shared/` (`todo.md` §1, §3). Nothing outside this file reads them now.
  */
 
 /** Words for digits 1-9. Index `0` is unused so digits can index directly. */
@@ -107,8 +98,9 @@ function lastVowel(word: string, context: string): string {
   throw new SyntaxError(`${context}: no Azerbaijani vowel found in "${word}"`)
 }
 
-function isVowel(char: string): boolean {
-  return VOWELS.has(char)
+/** The last space-separated word of `text`: "iyirmi bir" gives "bir". */
+function lastWordOf(text: string): string {
+  return text.split(' ').pop() as string
 }
 
 /**
@@ -127,8 +119,7 @@ function azOrdinalSuffix(value: number): string {
     )
   }
 
-  const words = numberToWords(value, { locale: az })
-  const lastWord = words.split(' ').pop() as string
+  const lastWord = lastWordOf(numberToWords(value, { locale: az }))
   return VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord, 'az.ordinal')] as string
 }
 
@@ -147,7 +138,7 @@ function azOrdinalWords(cardinalWords: string): string {
   const lastWord = words.pop() as string
   const lastChar = lastWord[lastWord.length - 1] as string
   const shortSuffix = VOWEL_TO_ORDINAL_SUFFIX[lastVowel(lastWord, 'az.ordinal')] as string
-  const fullSuffix = isVowel(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
+  const fullSuffix = VOWELS.has(lastChar) ? `n${shortSuffix}` : `${shortSuffix[1]}n${shortSuffix}`
 
   return [...words, `${lastWord}${fullSuffix}`].join(' ')
 }
@@ -202,8 +193,8 @@ const VOWEL_TO_LOCATIVE_SUFFIX: Record<string, string> = {
  */
 function azFractionWords(numerator: number, denominator: number): string {
   const denominatorWords = numberToWords(denominator, { locale: az })
-  const denominatorLastWord = denominatorWords.split(' ').pop() as string
-  const suffix = VOWEL_TO_LOCATIVE_SUFFIX[lastVowel(denominatorLastWord, 'az.fractions')] as string
+  const lastWord = lastWordOf(denominatorWords)
+  const suffix = VOWEL_TO_LOCATIVE_SUFFIX[lastVowel(lastWord, 'az.fractions')] as string
   return `${denominatorWords}${suffix} ${numberToWords(numerator, { locale: az })}`
 }
 

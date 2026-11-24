@@ -1,24 +1,7 @@
 import { ordinalToWords } from '../number/suffix'
 import { numberToWords } from '../number/words'
-import type { Locale, PluralCategory, WordChunk } from './types'
-
-/**
- * Irregular English ordinal words — the same table `locale/en.ts` uses.
- * Duplicated rather than imported (see this module's top-level doc comment
- * for why) since `en.ts` doesn't export it.
- */
-const ORDINAL_IRREGULARS: Readonly<Record<string, string>> = {
-  one: 'first',
-  two: 'second',
-  three: 'third',
-  five: 'fifth',
-  eight: 'eighth',
-  nine: 'ninth',
-  twelve: 'twelfth',
-}
-
-/** Splits on whitespace/hyphen while keeping the separator, e.g. "twenty-one" -> ["twenty", "-", "one"]. */
-const WORD_SPLIT_REGEX = /([\s-])/
+import { englishOrdinalSuffix, englishOrdinalWords, oneOtherPlural } from './internal'
+import type { Locale, WordChunk } from './types'
 
 /** Words for digits 1-9. Index `0` is unused so digits can index directly. */
 const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -47,13 +30,6 @@ const TENS = [
   'eighty',
   'ninety',
 ]
-
-function ordinalizeWord(word: string): string {
-  const irregular = ORDINAL_IRREGULARS[word]
-  if (irregular) return irregular
-  if (word.endsWith('y')) return `${word.slice(0, -1)}ieth`
-  return `${word}th`
-}
 
 /**
  * Renders the 0-99 remainder of a group (irregular teens, and a hyphenated
@@ -153,11 +129,11 @@ function fractionWords(numerator: number, denominator: number): string {
  * @since 0.2.0
  */
 // Maintainers (`todo.md` §2's en-GB follow-up; GBP default since
-// 2026-09-06): this file deliberately does not import the word tables from
-// `en.ts`. `en.ts` keeps them file-local, and exporting them would leak
-// through `export * from './en'` into the public `./locale` barrel, which
-// `locale/index.test.ts` pins as "exactly the locale objects". The cost is
-// that the two files' word tables must be kept in sync by hand. The
+// 2026-09-06): this file does not import the word tables from `en.ts`.
+// An export from `en.ts` would leak through `export * from './en'` into the
+// public `./locale` barrel, which `locale/index.test.ts` pins as "exactly
+// the locale objects". Keep the two files' word tables in sync by hand. The
+// ordinal rules are shared through the private `locale/internal.ts`. The
 // `fractions` hook is the one place this file reaches into `number/`; see
 // the `fractionWords` doc comment for why that is cycle-free here.
 export const enGB: Locale = {
@@ -182,38 +158,15 @@ export const enGB: Locale = {
     renderGroup,
     compose,
   },
-  plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
+  plural: oneOtherPlural,
   ordinal: {
     separator: '',
-    suffix: (value: number): string => {
-      if (!Number.isInteger(value) || value < 0) {
-        throw new RangeError(
-          `enGB.ordinal.suffix: value must be a non-negative integer, received ${value}`,
-        )
-      }
-      const mod100 = value % 100
-      if (mod100 >= 11 && mod100 <= 13) return 'th'
-      switch (value % 10) {
-        case 1:
-          return 'st'
-        case 2:
-          return 'nd'
-        case 3:
-          return 'rd'
-        default:
-          return 'th'
-      }
-    },
+    suffix: englishOrdinalSuffix('enGB'),
     // Only the last token of the cardinal reading becomes ordinal — the same
     // rule `en.ts` follows, and it still holds with "and" in the mix, since
     // "and" is never itself the last token: "one hundred and one" ->
     // "one hundred and first".
-    words: (_value: number, cardinalWords: string): string => {
-      const tokens = cardinalWords.split(WORD_SPLIT_REGEX)
-      const lastIndex = tokens.length - 1
-      tokens[lastIndex] = ordinalizeWord(tokens[lastIndex] as string)
-      return tokens.join('')
-    },
+    words: (_value: number, cardinalWords: string): string => englishOrdinalWords(cardinalWords),
   },
   notation: {
     scales: [

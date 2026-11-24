@@ -108,13 +108,14 @@ const QUOTIENT_DIGITS = 25
  * `add` would. The caller guarantees every value is finite.
  */
 export function sumDecimals(values: readonly number[]): Decimal {
-  // Start from the first value rather than `0` at scale 0, so a list of
+  // Start from the first value, not from `0` at scale 0. Then a list of
   // large values (`[1e308, 1e308]`) is not first rewritten over scale 0.
-  let total: Decimal = { digits: ZERO, scale: 0 }
-  values.forEach((value, index) => {
-    total = index === 0 ? toDecimal(value) : addDecimals(total, toDecimal(value))
-  })
-  return total
+  let total: Decimal | undefined
+  for (const value of values) {
+    const next = toDecimal(value)
+    total = total === undefined ? next : addDecimals(total, next)
+  }
+  return total ?? { digits: ZERO, scale: 0 }
 }
 
 /** `a + b`, exactly. */
@@ -139,16 +140,15 @@ export function multiplyDecimals(a: Decimal, b: Decimal): Decimal {
  * sticky digit when the division is inexact (see the body). The
  * dividend is shifted left until the integer quotient is guaranteed to hold
  * at least that many digits: `|x| ≥ 10^(dx-1)` and `|y| < 10^dy`, so
- * `|x·10^shift / y| > 10^(dx-1+shift-dy) = 10^(QUOTIENT_DIGITS-1)`. A JS
+ * `|x·10^shift / y| > 10^(dx-1+shift-dy) = 10^(QUOTIENT_DIGITS-1)`.
  * When `x` already has more digits than that, the shift is negative and
- * `y` is scaled up instead.
- * The caller guarantees `y.digits` is not zero.
+ * `y` is scaled up instead. The caller guarantees `y.digits` is not zero.
  */
 export function divideDecimals(x: Decimal, y: Decimal): Decimal {
   const shift = QUOTIENT_DIGITS + digitCount(y.digits) - digitCount(x.digits)
-  // A dividend with more digits than the quotient needs (an exact sum of
-  // squares can have hundreds) is not shifted left; the divisor is shifted
-  // instead, which keeps `10^shift` a whole power either way.
+  // A dividend can have more digits than the quotient needs (an exact sum
+  // of squares can have hundreds). Then the divisor is shifted, not the
+  // dividend, so the power of ten stays whole.
   const dividend = shift >= 0 ? x.digits * pow10(shift) : x.digits
   const divisor = shift >= 0 ? y.digits : y.digits * pow10(-shift)
   const quotient = dividend / divisor

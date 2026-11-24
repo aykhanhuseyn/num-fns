@@ -1,24 +1,5 @@
-import type { Locale, PluralCategory, WordChunk } from './types'
-
-/**
- * Irregular English ordinal words. Every value not listed here is regular —
- * either a plain `+ 'th'` (four -> fourth, six -> sixth, ten -> tenth,
- * thirteen -> thirteenth, hundred -> hundredth, thousand -> thousandth) or a
- * `y` -> `ieth` swap for the tens (twenty -> twentieth, ninety -> ninetieth),
- * both handled by {@link ordinalizeWord}.
- */
-const ORDINAL_IRREGULARS: Readonly<Record<string, string>> = {
-  one: 'first',
-  two: 'second',
-  three: 'third',
-  five: 'fifth',
-  eight: 'eighth',
-  nine: 'ninth',
-  twelve: 'twelfth',
-}
-
-/** Splits on whitespace/hyphen while keeping the separator, e.g. "twenty-one" -> ["twenty", "-", "one"]. */
-const WORD_SPLIT_REGEX = /([\s-])/
+import { englishOrdinalSuffix, englishOrdinalWords, oneOtherPlural } from './internal'
+import type { Locale, WordChunk } from './types'
 
 /** Words for digits 1-9. Index `0` is unused so digits can index directly. */
 const ONES = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -47,13 +28,6 @@ const TENS = [
   'eighty',
   'ninety',
 ]
-
-function ordinalizeWord(word: string): string {
-  const irregular = ORDINAL_IRREGULARS[word]
-  if (irregular) return irregular
-  if (word.endsWith('y')) return `${word.slice(0, -1)}ieth`
-  return `${word}th`
-}
 
 /**
  * Renders a single 0-999 group as English cardinal words, hyphenating a
@@ -123,37 +97,14 @@ export const en: Locale = {
         .join(' '),
   },
   // Only currency words need the one/other split ("one dollar" / "two dollars").
-  plural: (n: number): PluralCategory => (Math.abs(n) === 1 ? 'one' : 'other'),
+  plural: oneOtherPlural,
   ordinal: {
     separator: '',
-    suffix: (value: number): string => {
-      if (!Number.isInteger(value) || value < 0) {
-        throw new RangeError(
-          `en.ordinal.suffix: value must be a non-negative integer, received ${value}`,
-        )
-      }
-      const mod100 = value % 100
-      if (mod100 >= 11 && mod100 <= 13) return 'th'
-      switch (value % 10) {
-        case 1:
-          return 'st'
-        case 2:
-          return 'nd'
-        case 3:
-          return 'rd'
-        default:
-          return 'th'
-      }
-    },
+    suffix: englishOrdinalSuffix('en'),
     // Only the last word of the cardinal reading becomes ordinal, whether
     // that word is hyphen-joined ("twenty-one" -> "twenty-first") or
     // space-joined ("one hundred one" -> "one hundred first").
-    words: (_value: number, cardinalWords: string): string => {
-      const tokens = cardinalWords.split(WORD_SPLIT_REGEX)
-      const lastIndex = tokens.length - 1
-      tokens[lastIndex] = ordinalizeWord(tokens[lastIndex] as string)
-      return tokens.join('')
-    },
+    words: (_value: number, cardinalWords: string): string => englishOrdinalWords(cardinalWords),
   },
   notation: {
     scales: [

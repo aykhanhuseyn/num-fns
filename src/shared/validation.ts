@@ -1,24 +1,15 @@
 /**
- * Shared `throw`-on-bad-input guards for the common numeric-parameter checks
- * repeated across `src/arithmetic/` and `src/financial/` (see `todo.md` §4,
+ * Shared guards for the common numeric-parameter checks (`todo.md` §4,
  * "Shared range-validation helper instead of repeating checks per module").
  *
- * These are internal implementation helpers, not public API — unlike
- * `shared/types.ts`, they aren't re-exported from
- * `src/index.ts`. A consumer has no use for "assert this is finite"; they
- * only see the `RangeError` a public function throws, which is exactly what
- * these produce. Each `context` argument is the name of the calling public
- * function, matching the `"fnName: ..."` prefix every hand-written error
- * message in the codebase already uses.
+ * These helpers are internal. `src/index.ts` does not export them. A
+ * consumer sees only the error that a public function throws. Each
+ * `context` argument is the name of the public function that calls the
+ * guard, so every message starts with `"fnName: ..."`.
  *
- * Not every existing `Number.isFinite` check in the codebase has been
- * migrated to these yet — `src/number/`, `src/stats/`, and `src/utils/` still
- * validate inline. This currently covers `src/arithmetic/` and
- * `src/financial/`, where the duplication was most exact (`clamp`/`inRange`
- * had a byte-for-byte identical min/max block; every `financial/` function
- * repeats the same finite/rate/non-negative shapes). Migrate other modules
- * opportunistically rather than in one large sweep, to keep each change
- * reviewable.
+ * `src/arithmetic/` and `src/financial/` use these guards. Some modules
+ * still validate inline (`src/stats/` has its own `validateValues`). Move
+ * them here one module at a time, so that each change stays easy to review.
  */
 
 /** Throws `RangeError` unless `value` is a finite number. */

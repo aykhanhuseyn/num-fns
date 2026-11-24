@@ -1,6 +1,5 @@
 import { guardNumber } from '../shared/no-throw'
-import type { VarianceOptions } from './variance'
-import { variance } from './variance'
+import { type VarianceOptions, variance } from './variance'
 
 /**
  * Computes the standard deviation of an array of numbers — the square root
@@ -27,7 +26,5 @@ export function standardDeviation(
   values: readonly number[],
   options: VarianceOptions = {},
 ): number {
-  return guardNumber(() => {
-    return Math.sqrt(variance(values, options))
-  }, options)
+  return guardNumber(() => Math.sqrt(variance(values, options)), options)
 }

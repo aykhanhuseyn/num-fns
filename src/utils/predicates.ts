@@ -23,15 +23,7 @@ const TWO = BigInt(2)
  * @since 0.2.0
  */
 export function isEven(value: number | bigint): boolean {
-  return guardBoolean(() => {
-    if (typeof value === 'bigint') return value % TWO === ZERO
-
-    if (!Number.isInteger(value)) {
-      throw new TypeError(`isEven: value must be an integer, received ${value}`)
-    }
-
-    return value % 2 === 0
-  })
+  return guardBoolean(() => hasEvenParity(value, 'isEven'))
 }
 
 /**
@@ -54,13 +46,14 @@ export function isEven(value: number | bigint): boolean {
  * @since 0.2.0
  */
 export function isOdd(value: number | bigint): boolean {
-  return guardBoolean(() => {
-    if (typeof value === 'bigint') return value % TWO !== ZERO
+  return guardBoolean(() => !hasEvenParity(value, 'isOdd'))
+}
 
-    if (!Number.isInteger(value)) {
-      throw new TypeError(`isOdd: value must be an integer, received ${value}`)
-    }
-
-    return value % 2 !== 0
-  })
+/** Whether an integer is even. Throws `TypeError`, naming `context`, for a non-integer `number`. */
+function hasEvenParity(value: number | bigint, context: string): boolean {
+  if (typeof value === 'bigint') return value % TWO === ZERO
+  if (!Number.isInteger(value)) {
+    throw new TypeError(`${context}: value must be an integer, received ${value}`)
+  }
+  return value % 2 === 0
 }

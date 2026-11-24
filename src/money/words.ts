@@ -81,10 +81,15 @@ export function moneyToWords(value: number | bigint, options: MoneyWordsOptions 
     () => {
       assertNumericValue(value, 'value', 'moneyToWords')
 
-      const { locale = en, currency: code = locale.currency.code } = options
+      const {
+        locale = en,
+        currency: code = locale.currency.code,
+        majorUnit,
+        minorUnit,
+        includeZeroMinor = false,
+      } = options
       const { decimals } = getCurrency(code)
       const units = resolveUnits(locale, code)
-      const { majorUnit, minorUnit, includeZeroMinor = false } = options
 
       const { isNegative, major, minor } =
         typeof value === 'bigint' ? splitBigIntAmount(value) : splitAmount(value, decimals)

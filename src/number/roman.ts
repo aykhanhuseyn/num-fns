@@ -84,11 +84,12 @@ export function fromRoman(roman: string): number {
       throw new SyntaxError(`fromRoman: "${roman}" is not a valid roman numeral`)
     }
 
+    // A symbol before a larger one is subtracted ("IV" is 5 - 1).
     let total = 0
     for (let i = 0; i < normalized.length; i++) {
       const current = ROMAN_VALUES[normalized[i] as string] as number
-      const next = normalized[i + 1] ? ROMAN_VALUES[normalized[i + 1] as string] : undefined
-      total += next && current < next ? -current : current
+      const next = ROMAN_VALUES[normalized[i + 1] ?? ''] ?? 0
+      total += current < next ? -current : current
     }
 
     return total

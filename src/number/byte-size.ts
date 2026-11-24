@@ -4,12 +4,13 @@ import { guardText } from '../shared/no-throw-text'
 import type { ByteSizeOptions, ByteSizeParseOptions } from '../shared/types'
 import { assertNumericValue } from '../shared/validation'
 import { parseNumber } from './format'
+import { correctFloatingPointNoise, trimTrailingZeros } from './scaled-text'
 
 /**
- * Byte-scale exponent/label pairs, largest first — mirrors the descending
- * threshold-scan pattern `toShortNotation` uses for min/mln/mlrd/trln, but
- * keyed by exponent (of `base`) rather than a fixed magnitude, since the
- * magnitude itself depends on the `base` option (1024 vs 1000).
+ * Byte-scale exponent/label pairs, largest first. The scan is the same as
+ * in `toShortNotation`, but each entry holds an exponent of `base`, not a
+ * fixed magnitude: the magnitude changes with the `base` option (1024 or
+ * 1000).
  */
 const BYTE_SCALES: ReadonlyArray<readonly [exponent: number, label: string]> = [
   [5, 'PB'],
@@ -18,28 +19,6 @@ const BYTE_SCALES: ReadonlyArray<readonly [exponent: number, label: string]> = [
   [2, 'MB'],
   [1, 'KB'],
 ]
-
-/** Matches trailing zeros after a decimal point, e.g. the "00" in "2.500". */
-const TRAILING_ZEROS_REGEX = /0+$/
-/** Matches a decimal point left dangling after trailing zeros are stripped, e.g. "2." */
-const TRAILING_DOT_REGEX = /\.$/
-
-function trimTrailingZeros(fixed: string): string {
-  if (!fixed.includes('.')) return fixed
-  return fixed.replace(TRAILING_ZEROS_REGEX, '').replace(TRAILING_DOT_REGEX, '')
-}
-
-/**
- * Snaps a float to the nearest integer when it is within floating-point
- * rounding distance of one, while leaving genuinely fractional values
- * untouched. See `toShortNotation`'s parser for the same tolerance-based
- * approach applied to a different scale table.
- */
-function correctFloatingPointNoise(value: number): number {
-  const rounded = Math.round(value)
-  const tolerance = 1e-9 * Math.max(1, Math.abs(rounded))
-  return Math.abs(value - rounded) < tolerance ? rounded : value
-}
 
 /**
  * Formats a byte count into a human-readable size string, e.g. `1536` becomes
@@ -174,22 +153,19 @@ export function parseByteSize(value: string, options: ByteSizeParseOptions = {})
     const lowerTrimmed = trimmed.toLowerCase()
 
     for (const [exponent, label] of BYTE_SCALES) {
-      const lowerLabel = label.toLowerCase()
-      if (lowerTrimmed.endsWith(lowerLabel)) {
+      if (lowerTrimmed.endsWith(label.toLowerCase())) {
         const numericPart = trimmed.slice(0, trimmed.length - label.length).trim()
+        const threshold = base ** exponent
         if (output === 'bigint') {
-          return scaledBigInt(numericPart, base ** exponent, decimalSeparator, 'parseByteSize')
+          return scaledBigInt(numericPart, threshold, decimalSeparator, 'parseByteSize')
         }
         const numeric = parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator })
-        return correctFloatingPointNoise(numeric * base ** exponent)
+        return correctFloatingPointNoise(numeric * threshold)
       }
     }
 
-    if (lowerTrimmed.endsWith('b')) {
-      const numericPart = trimmed.slice(0, trimmed.length - 1).trim()
-      return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator, output })
-    }
-
-    return parseNumber(trimmed, { thousandsSeparator: '', decimalSeparator, output })
+    // Plain bytes: "500 B", "500B" or a bare "500".
+    const numericPart = lowerTrimmed.endsWith('b') ? trimmed.slice(0, -1).trim() : trimmed
+    return parseNumber(numericPart, { thousandsSeparator: '', decimalSeparator, output })
   }, options)
 }
